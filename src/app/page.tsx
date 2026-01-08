@@ -622,7 +622,11 @@ export default function Home() {
       </nav>
 
       {/* Settings Modal */}
-      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <Settings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onRestartOnboarding={() => setShowOnboarding(true)}
+      />
       <GymManager isOpen={showGymManager} onClose={() => setShowGymManager(false)} />
 
       {/* Debug Modal */}

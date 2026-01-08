@@ -9,9 +9,10 @@ import { Changelog } from './Changelog';
 interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
+  onRestartOnboarding?: () => void;
 }
 
-export function Settings({ isOpen, onClose }: SettingsProps) {
+export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps) {
   const router = useRouter();
   const { signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
@@ -361,6 +362,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                       backgroundColor: 'transparent',
                       border: 'none',
                       cursor: 'pointer',
+                      borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
                     }}
                   >
                     <span style={{ fontSize: '1.5rem' }}>🏋️</span>
@@ -374,6 +376,35 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
+                  {onRestartOnboarding && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onRestartOnboarding();
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ fontSize: '1.5rem' }}>🔄</span>
+                      <div style={{ flex: 1, textAlign: 'left' }}>
+                        <div style={{ fontWeight: 500, color: '#F5F1EA' }}>Restart Onboarding</div>
+                        <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                          Go through setup again
+                        </div>
+                      </div>
+                      <svg style={{ width: '1.25rem', height: '1.25rem', color: 'rgba(245, 241, 234, 0.3)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -402,7 +433,7 @@ export function Settings({ isOpen, onClose }: SettingsProps) {
                       IronVow
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
-                      Version 1.0.0
+                      Version 1.2.0
                     </div>
                   </div>
                   <button
