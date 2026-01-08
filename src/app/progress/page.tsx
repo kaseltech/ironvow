@@ -1,38 +1,64 @@
 'use client';
 
-import { useState } from 'react';
-
-// Mock weight data
-const weightHistory = [
-  { date: 'Dec 1', weight: 185 },
-  { date: 'Dec 8', weight: 184.2 },
-  { date: 'Dec 15', weight: 183.5 },
-  { date: 'Dec 22', weight: 182.8 },
-  { date: 'Dec 29', weight: 182.1 },
-  { date: 'Jan 5', weight: 181.4 },
-  { date: 'Jan 8', weight: 180.6 },
-];
-
-const currentWeight = 180.6;
-const startWeight = 185;
-const targetWeight = 175;
-const progressPercent = ((startWeight - currentWeight) / (startWeight - targetWeight)) * 100;
+import { useState, useMemo } from 'react';
+import { useWeightLogs, useWeightGoal } from '@/hooks/useSupabase';
+import { AuthGuard } from '@/components/AuthGuard';
 
 export default function ProgressPage() {
+  const { logs: weightLogs, loading: logsLoading, addWeightLog } = useWeightLogs(30);
+  const { goal, loading: goalLoading } = useWeightGoal();
+
   const [showWeightInput, setShowWeightInput] = useState(false);
-  const [newWeight, setNewWeight] = useState(currentWeight.toString());
   const [activeView, setActiveView] = useState<'weight' | 'strength'>('weight');
+  const [saving, setSaving] = useState(false);
+
+  // Format weight data for display
+  const weightHistory = useMemo(() => {
+    return weightLogs
+      .slice()
+      .reverse()
+      .map(log => ({
+        date: new Date(log.logged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        weight: log.weight,
+      }));
+  }, [weightLogs]);
+
+  // Get current/start/target weights
+  const currentWeight = weightLogs.length > 0 ? weightLogs[0].weight : 0;
+  const startWeight = goal?.start_weight || currentWeight || 0;
+  const targetWeight = goal?.target_weight || currentWeight || 0;
+  const progressPercent = startWeight !== targetWeight && startWeight > 0
+    ? ((startWeight - currentWeight) / (startWeight - targetWeight)) * 100
+    : 0;
+
+  const [newWeight, setNewWeight] = useState('');
 
   // Calculate chart dimensions
-  const maxWeight = Math.max(...weightHistory.map(w => w.weight)) + 2;
-  const minWeight = Math.min(targetWeight, Math.min(...weightHistory.map(w => w.weight))) - 2;
-  const range = maxWeight - minWeight;
+  const chartWeights = weightHistory.length > 0 ? weightHistory.map(w => w.weight) : [0];
+  const maxWeight = Math.max(...chartWeights, targetWeight) + 2;
+  const minWeight = Math.min(targetWeight, Math.min(...chartWeights)) - 2;
+  const range = maxWeight - minWeight || 1;
 
   const getY = (weight: number) => {
     return 100 - ((weight - minWeight) / range) * 100;
   };
 
-  // PR history mock data
+  const handleLogWeight = async () => {
+    const weight = parseFloat(newWeight);
+    if (isNaN(weight) || weight <= 0) return;
+
+    setSaving(true);
+    try {
+      await addWeightLog(weight);
+      setShowWeightInput(false);
+    } catch (err) {
+      console.error('Failed to log weight:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // PR history - mock for now (will connect later)
   const prHistory = [
     { lift: 'Bench Press', current: 225, previous: 215, date: 'Jan 4' },
     { lift: 'Squat', current: 275, previous: 275, date: 'Dec 28' },
@@ -40,8 +66,17 @@ export default function ProgressPage() {
     { lift: 'OHP', current: 135, previous: 130, date: 'Dec 20' },
   ];
 
+  const loading = logsLoading || goalLoading;
+
   return (
+    <AuthGuard>
     <div className="min-h-screen" style={{ backgroundColor: '#0F2233' }}>
+      {/* Loading state */}
+      {loading && (
+        <div className="fixed inset-0 bg-[#0F2233] flex items-center justify-center z-50">
+          <div className="w-8 h-8 border-2 border-[#C9A75A] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
       {/* Header */}
       <header
         className="safe-area-top"
@@ -150,7 +185,14 @@ export default function ProgressPage() {
                 Weight Trend
               </h2>
 
-              {/* Better Chart */}
+              {weightHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
+                    No weight data yet. Log your first weigh-in to see your progress!
+                  </p>
+                </div>
+              ) : (
+              /* Better Chart */
               <div style={{ position: 'relative', height: '160px', padding: '0 2.5rem 0 0' }}>
                 {/* Y-axis labels */}
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: '20px', width: '35px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -250,6 +292,7 @@ export default function ProgressPage() {
                   ))}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Recent Weigh-ins */}
@@ -446,13 +489,11 @@ export default function ProgressPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  // Would save to DB
-                  setShowWeightInput(false);
-                }}
+                onClick={handleLogWeight}
+                disabled={saving}
                 className="btn-primary flex-1"
               >
-                Save
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -495,5 +536,6 @@ export default function ProgressPage() {
         </div>
       </nav>
     </div>
+    </AuthGuard>
   );
 }
