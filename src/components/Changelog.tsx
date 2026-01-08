@@ -25,6 +25,19 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.0',
+    date: 'January 8, 2026',
+    title: 'Gym Profiles',
+    changes: [
+      { type: 'added', description: 'Named gym profiles - save multiple gyms with their equipment' },
+      { type: 'added', description: 'Preset templates: CrossFit, Hyrox, Commercial, Powerlifting, Hotel, Olympic Lifting' },
+      { type: 'added', description: 'Gym selector when choosing gym location' },
+      { type: 'added', description: 'Set a default gym for quick workout generation' },
+      { type: 'improved', description: 'AI now uses your specific gym\'s equipment for better workout suggestions' },
+      { type: 'changed', description: 'Gym location now requires selecting a gym profile' },
+    ],
+  },
+  {
     version: '1.1.0',
     date: 'January 8, 2026',
     title: 'AI & Equipment Update',

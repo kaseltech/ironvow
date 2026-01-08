@@ -9,6 +9,7 @@ export interface WorkoutRequest {
   injuries?: { bodyPart: string; movementsToAvoid: string[] }[];
   equipment?: string[];
   customEquipment?: string[];
+  gymName?: string;
 }
 
 export interface GeneratedExercise {

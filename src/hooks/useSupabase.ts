@@ -12,6 +12,8 @@ import type {
   WorkoutSession,
   Injury,
   MuscleStrength,
+  EquipmentPreset,
+  GymProfile,
 } from '@/lib/supabase/types';
 
 // Profile hook
@@ -550,4 +552,166 @@ export function useMuscleStrength() {
   }, [fetchMuscleData]);
 
   return { muscleData, loading, refetch: fetchMuscleData };
+}
+
+// Equipment presets hook
+export function useEquipmentPresets() {
+  const [presets, setPresets] = useState<EquipmentPreset[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPresets = async () => {
+      try {
+        setLoading(true);
+        const supabase = getSupabase();
+        const { data, error } = await supabase
+          .from('equipment_presets')
+          .select('*')
+          .order('name');
+
+        if (error) throw error;
+        setPresets(data || []);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPresets();
+  }, []);
+
+  return { presets, loading };
+}
+
+// Gym profiles hook
+export function useGymProfiles() {
+  const { user } = useAuth();
+  const [profiles, setProfiles] = useState<GymProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProfiles = useCallback(async () => {
+    if (!user) {
+      setProfiles([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from('gym_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('is_default', { ascending: false })
+        .order('name');
+
+      if (error) throw error;
+      setProfiles(data || []);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchProfiles();
+  }, [fetchProfiles]);
+
+  const createProfile = async (
+    name: string,
+    gymType: GymProfile['gym_type'],
+    equipmentIds: string[],
+    customEquipment: string[] = [],
+    isDefault: boolean = false
+  ) => {
+    if (!user) return;
+
+    const supabase = getSupabase();
+
+    // If setting as default, unset other defaults first
+    if (isDefault) {
+      await supabase
+        .from('gym_profiles')
+        .update({ is_default: false })
+        .eq('user_id', user.id)
+        .eq('is_default', true);
+    }
+
+    const { data, error } = await supabase
+      .from('gym_profiles')
+      .insert({
+        user_id: user.id,
+        name,
+        gym_type: gymType,
+        equipment_ids: equipmentIds,
+        custom_equipment: customEquipment,
+        is_default: isDefault,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    await fetchProfiles();
+    return data;
+  };
+
+  const updateProfile = async (
+    profileId: string,
+    updates: {
+      name?: string;
+      gym_type?: GymProfile['gym_type'];
+      equipment_ids?: string[];
+      custom_equipment?: string[];
+      is_default?: boolean;
+    }
+  ) => {
+    if (!user) return;
+
+    const supabase = getSupabase();
+
+    // If setting as default, unset other defaults first
+    if (updates.is_default) {
+      await supabase
+        .from('gym_profiles')
+        .update({ is_default: false })
+        .eq('user_id', user.id)
+        .eq('is_default', true);
+    }
+
+    const { data, error } = await supabase
+      .from('gym_profiles')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', profileId)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await fetchProfiles();
+    return data;
+  };
+
+  const deleteProfile = async (profileId: string) => {
+    if (!user) return;
+
+    const supabase = getSupabase();
+    await supabase
+      .from('gym_profiles')
+      .delete()
+      .eq('id', profileId)
+      .eq('user_id', user.id);
+
+    await fetchProfiles();
+  };
+
+  const getDefaultProfile = () => profiles.find(p => p.is_default) || profiles[0];
+
+  return {
+    profiles,
+    loading,
+    createProfile,
+    updateProfile,
+    deleteProfile,
+    getDefaultProfile,
+    refetch: fetchProfiles,
+  };
 }

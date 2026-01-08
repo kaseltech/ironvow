@@ -473,6 +473,67 @@ export type Database = {
           calculated_at?: string;
         };
       };
+      equipment_presets: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          icon: string;
+          equipment_names: string[];
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          icon?: string;
+          equipment_names: string[];
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          icon?: string;
+          equipment_names?: string[];
+          created_at?: string;
+        };
+      };
+      gym_profiles: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          gym_type: 'commercial' | 'crossfit' | 'powerlifting' | 'hotel' | 'custom';
+          equipment_ids: string[];
+          custom_equipment: string[];
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          gym_type?: 'commercial' | 'crossfit' | 'powerlifting' | 'hotel' | 'custom';
+          equipment_ids?: string[];
+          custom_equipment?: string[];
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          gym_type?: 'commercial' | 'crossfit' | 'powerlifting' | 'hotel' | 'custom';
+          equipment_ids?: string[];
+          custom_equipment?: string[];
+          is_default?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {};
     Functions: {
@@ -498,6 +559,8 @@ export type WeightGoal = Database['public']['Tables']['weight_goals']['Row'];
 export type Injury = Database['public']['Tables']['injuries']['Row'];
 export type Equipment = Database['public']['Tables']['equipment']['Row'];
 export type MuscleStrength = Database['public']['Tables']['muscle_strength']['Row'];
+export type EquipmentPreset = Database['public']['Tables']['equipment_presets']['Row'];
+export type GymProfile = Database['public']['Tables']['gym_profiles']['Row'];
 
 // Exercise with joined data
 export type ExerciseWithDetails = Exercise & {

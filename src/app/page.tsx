@@ -6,9 +6,11 @@ import { Logo } from '@/components/Logo';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Onboarding } from '@/components/Onboarding';
 import { useAuth } from '@/context/AuthContext';
-import { useProfile, useInjuries, useEquipment } from '@/hooks/useSupabase';
+import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
 import { generateWorkout, generateWorkoutLocal, type GeneratedWorkout } from '@/lib/generateWorkout';
 import { Settings } from '@/components/Settings';
+import { GymManager } from '@/components/GymManager';
+import type { GymProfile } from '@/lib/supabase/types';
 
 const muscleGroups = [
   { id: 'chest', name: 'Chest', icon: '💪' },
@@ -31,8 +33,11 @@ export default function Home() {
   const { profile, loading: profileLoading, isProfileComplete, refetch: refetchProfile } = useProfile();
   const { injuries } = useInjuries();
   const { userEquipment, allEquipment } = useEquipment();
+  const { profiles: gymProfiles, getDefaultProfile } = useGymProfiles();
 
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [selectedGym, setSelectedGym] = useState<GymProfile | null>(null);
+  const [showGymManager, setShowGymManager] = useState(false);
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
   const [duration, setDuration] = useState(45);
   const [showWorkout, setShowWorkout] = useState(false);
@@ -57,14 +62,27 @@ export default function Home() {
     setError(null);
 
     try {
-      // Get user's equipment for the selected location
-      const locationEquipment = userEquipment
-        .filter(e => e.location === selectedLocation || selectedLocation === 'gym')
-        .map(e => {
-          const eq = allEquipment.find(a => a.id === e.equipment_id);
-          return eq?.name || '';
-        })
-        .filter(Boolean);
+      // Get equipment based on location
+      let locationEquipment: string[] = [];
+      let customEquipmentList: string[] = profile?.custom_equipment || [];
+
+      if (selectedLocation === 'gym' && selectedGym) {
+        // Use selected gym's equipment
+        locationEquipment = selectedGym.equipment_ids
+          .map(id => allEquipment.find(eq => eq.id === id)?.name || '')
+          .filter(Boolean);
+        customEquipmentList = [...customEquipmentList, ...(selectedGym.custom_equipment || [])];
+      } else if (selectedLocation === 'home') {
+        // Use home equipment
+        locationEquipment = userEquipment
+          .filter(e => e.location === 'home')
+          .map(e => {
+            const eq = allEquipment.find(a => a.id === e.equipment_id);
+            return eq?.name || '';
+          })
+          .filter(Boolean);
+      }
+      // For outdoor, we use minimal/no equipment
 
       // Format injuries for the request
       const formattedInjuries = injuries.map(i => ({
@@ -81,7 +99,8 @@ export default function Home() {
         experienceLevel: profile?.experience_level || 'intermediate',
         injuries: formattedInjuries,
         equipment: locationEquipment,
-        customEquipment: profile?.custom_equipment || [],
+        customEquipment: customEquipmentList,
+        gymName: selectedGym?.name,
       };
 
       // Save debug info for inspection
@@ -126,7 +145,8 @@ export default function Home() {
     }
   };
 
-  const canGenerate = selectedLocation && selectedMuscles.length > 0;
+  const canGenerate = selectedLocation && selectedMuscles.length > 0 &&
+    (selectedLocation !== 'gym' || selectedGym !== null);
 
   // Show onboarding for new users
   const needsOnboarding = !profileLoading && !isProfileComplete;
@@ -201,7 +221,15 @@ export default function Home() {
                 {locations.map(loc => (
                   <button
                     key={loc.id}
-                    onClick={() => setSelectedLocation(loc.id)}
+                    onClick={() => {
+                      setSelectedLocation(loc.id);
+                      // Auto-select default gym when gym is selected
+                      if (loc.id === 'gym') {
+                        setSelectedGym(getDefaultProfile() || null);
+                      } else {
+                        setSelectedGym(null);
+                      }
+                    }}
                     style={{
                       background: selectedLocation === loc.id ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
                       border: selectedLocation === loc.id ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.1)',
@@ -216,6 +244,93 @@ export default function Home() {
                 ))}
               </div>
             </div>
+
+            {/* Gym Selector - Only show when gym location selected */}
+            {selectedLocation === 'gym' && (
+              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.15s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Which gym?
+                  </h2>
+                  <button
+                    onClick={() => setShowGymManager(true)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#C9A75A',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Manage Gyms
+                  </button>
+                </div>
+
+                {gymProfiles.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {gymProfiles.map(gym => (
+                      <button
+                        key={gym.id}
+                        onClick={() => setSelectedGym(gym)}
+                        style={{
+                          background: selectedGym?.id === gym.id ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                          border: selectedGym?.id === gym.id ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.1)',
+                          borderRadius: '0.75rem',
+                          padding: '0.75rem 1rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          transition: 'all 0.2s ease',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ color: '#F5F1EA', fontSize: '0.9rem', fontWeight: 500 }}>
+                            {gym.name}
+                            {gym.is_default && (
+                              <span style={{
+                                marginLeft: '0.5rem',
+                                fontSize: '0.625rem',
+                                background: '#C9A75A',
+                                color: '#0F2233',
+                                padding: '0.125rem 0.375rem',
+                                borderRadius: '0.25rem',
+                                fontWeight: 600,
+                              }}>
+                                DEFAULT
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.7rem' }}>
+                            {(gym.equipment_ids?.length || 0) + (gym.custom_equipment?.length || 0)} equipment items
+                          </div>
+                        </div>
+                        {selectedGym?.id === gym.id && (
+                          <span style={{ color: '#C9A75A', fontSize: '1.25rem' }}>✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowGymManager(true)}
+                    style={{
+                      width: '100%',
+                      padding: '1.5rem',
+                      background: 'rgba(15, 34, 51, 0.5)',
+                      border: '2px dashed rgba(201, 167, 90, 0.3)',
+                      borderRadius: '0.75rem',
+                      color: '#C9A75A',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Add Your First Gym
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Muscle Group Selector */}
             <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
@@ -508,6 +623,7 @@ export default function Home() {
 
       {/* Settings Modal */}
       <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <GymManager isOpen={showGymManager} onClose={() => setShowGymManager(false)} />
 
       {/* Debug Modal */}
       {showDebug && debugInfo && (
