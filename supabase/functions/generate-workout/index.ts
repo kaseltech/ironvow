@@ -6,6 +6,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Known bodyweight exercises (no equipment needed) - for outdoor filtering
+const bodyweightExercises = new Set([
+  'push-ups', 'pull-ups', 'chin-ups', 'dips-chest', 'dips-triceps',
+  'lunges', 'bulgarian-split-squat', 'calf-raises', 'glute-bridge',
+  'plank', 'crunches', 'russian-twist', 'hanging-leg-raise',
+  'burpees', 'mountain-climbers', 'jumping-jacks', 'high-knees',
+  'jump-squat', 'box-jumps', 'step-ups', 'walking-lunges',
+  'pike-push-ups', 'diamond-push-ups', 'decline-push-ups', 'wide-push-ups',
+  'bodyweight-squat', 'pistol-squat', 'sissy-squat',
+  'inverted-row', 'australian-pull-ups', 'leg-raises',
+  'flutter-kicks', 'bicycle-crunches', 'dead-bug', 'bird-dog',
+  'superman', 'reverse-lunge', 'side-lunge', 'skater-jumps',
+  'wall-sit', 'single-leg-glute-bridge', 'donkey-kicks', 'fire-hydrants',
+  'side-plank',
+]);
+
+// Helper to check if exercise is bodyweight-compatible
+function isBodyweightExercise(ex: any): boolean {
+  return bodyweightExercises.has(ex.slug) ||
+    ex.name.toLowerCase().includes('bodyweight') ||
+    ex.name.toLowerCase().includes('push-up') ||
+    ex.name.toLowerCase().includes('pull-up') ||
+    ex.name.toLowerCase().includes('lunge') ||
+    ex.name.toLowerCase().includes('plank') ||
+    ex.name.toLowerCase().includes('crunch') ||
+    ex.name.toLowerCase().includes('squat') && !ex.name.toLowerCase().includes('barbell') && !ex.name.toLowerCase().includes('goblet');
+}
+
 interface WorkoutRequest {
   userId: string;
   location: 'gym' | 'home' | 'outdoor';
@@ -115,12 +143,8 @@ serve(async (req) => {
       // Check equipment based on location
       let hasEquipment = false;
       if (location === 'outdoor') {
-        // Outdoor: ONLY bodyweight exercises (no equipment or bodyweight only)
-        const equipReq = ex.equipment_required || [];
-        hasEquipment = equipReq.length === 0 ||
-          equipReq.every((eq: string) =>
-            eq === 'none' || eq === 'bodyweight' || eq === 'pull-up bar' || eq === 'bench'
-          );
+        // Outdoor: ONLY bodyweight exercises
+        hasEquipment = isBodyweightExercise(ex);
       } else if (location === 'gym') {
         // Gym: Check if specific gym equipment is provided, otherwise allow all
         if (allEquipment && allEquipment.length > 0) {
@@ -536,11 +560,8 @@ async function handleSwapRequest(
     // Check equipment based on location
     let hasEquipment = false;
     if (location === 'outdoor') {
-      const equipReq = ex.equipment_required || [];
-      hasEquipment = equipReq.length === 0 ||
-        equipReq.every((eq: string) =>
-          eq === 'none' || eq === 'bodyweight' || eq === 'pull-up bar' || eq === 'bench'
-        );
+      // Outdoor: ONLY bodyweight exercises
+      hasEquipment = isBodyweightExercise(ex);
     } else if (location === 'gym') {
       if (allEquipment && allEquipment.length > 0) {
         const equipReq = ex.equipment_required || [];
