@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { Logo } from '@/components/Logo';
 import { AuthGuard } from '@/components/AuthGuard';
+import { Onboarding } from '@/components/Onboarding';
 import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/hooks/useSupabase';
 
 // Mock data for the demo
 const muscleGroups = [
@@ -35,11 +37,13 @@ const mockWorkout = {
 };
 
 export default function Home() {
+  const { profile, loading: profileLoading, isProfileComplete, refetch: refetchProfile } = useProfile();
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
   const [duration, setDuration] = useState(45);
   const [showWorkout, setShowWorkout] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -57,8 +61,19 @@ export default function Home() {
 
   const canGenerate = selectedLocation && selectedMuscles.length > 0;
 
+  // Show onboarding for new users
+  const needsOnboarding = !profileLoading && !isProfileComplete;
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    refetchProfile();
+  };
+
   return (
     <AuthGuard>
+    {needsOnboarding || showOnboarding ? (
+      <Onboarding onComplete={handleOnboardingComplete} />
+    ) : (
     <div className="min-h-screen" style={{ backgroundColor: '#0F2233' }}>
       {/* Header */}
       <header
@@ -381,6 +396,7 @@ export default function Home() {
         </div>
       </nav>
     </div>
+    )}
     </AuthGuard>
   );
 }
