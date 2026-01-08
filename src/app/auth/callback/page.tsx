@@ -36,17 +36,40 @@ export default function AuthCallback() {
         return;
       }
 
-      // Check for code in query params (PKCE flow)
+      // Check for error in query params
       const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+
+      if (error) {
+        console.error('Auth error:', error, errorDescription);
+        // If already have a session, ignore the error and proceed
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          router.push('/');
+          return;
+        }
+        setStatus('Error: ' + (errorDescription || error));
+        setTimeout(() => router.push('/login?error=auth_failed'), 2000);
+        return;
+      }
+
+      // Check for code in query params (PKCE flow)
       const code = urlParams.get('code');
 
       if (code) {
         setStatus('Exchanging code...');
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: codeError } = await supabase.auth.exchangeCodeForSession(code);
 
-        if (error) {
-          console.error('Code exchange error:', error);
-          setStatus('Error: ' + error.message);
+        if (codeError) {
+          console.error('Code exchange error:', codeError);
+          // Check if we have a session anyway (code might have been used already)
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            router.push('/');
+            return;
+          }
+          setStatus('Error: ' + codeError.message);
           setTimeout(() => router.push('/login?error=auth_failed'), 2000);
           return;
         }
