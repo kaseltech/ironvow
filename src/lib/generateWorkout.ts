@@ -8,6 +8,7 @@ export interface WorkoutRequest {
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
   injuries?: { bodyPart: string; movementsToAvoid: string[] }[];
   equipment?: string[];
+  customEquipment?: string[];
 }
 
 export interface GeneratedExercise {

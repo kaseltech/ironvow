@@ -35,3 +35,4 @@ next-env.d.ts
 # iOS/Capacitor
 /ios/
 /android/
+supabase/.temp/

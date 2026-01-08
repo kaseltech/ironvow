@@ -41,6 +41,8 @@ export default function Home() {
   const [generatedWorkout, setGeneratedWorkout] = useState<GeneratedWorkout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<object | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -79,15 +81,32 @@ export default function Home() {
         experienceLevel: profile?.experience_level || 'intermediate',
         injuries: formattedInjuries,
         equipment: locationEquipment,
+        customEquipment: profile?.custom_equipment || [],
       };
 
+      // Save debug info for inspection
+      setDebugInfo({
+        request: workoutRequest,
+        timestamp: new Date().toISOString(),
+      });
+      console.log('🏋️ Workout Request:', JSON.stringify(workoutRequest, null, 2));
+
       let workout: GeneratedWorkout;
+      let usedAI = false;
       try {
         workout = await generateWorkout(workoutRequest);
+        usedAI = true;
       } catch (edgeFnError) {
         console.warn('Edge function failed, using local generation:', edgeFnError);
         workout = await generateWorkoutLocal(workoutRequest);
       }
+
+      // Update debug info with response
+      setDebugInfo(prev => ({
+        ...prev,
+        response: workout,
+        usedAI,
+      }));
 
       setGeneratedWorkout(workout);
       setShowWorkout(true);
@@ -322,19 +341,36 @@ export default function Home() {
               >
                 ← Back
               </button>
-              <button
-                style={{
-                  background: 'transparent',
-                  border: '1px solid rgba(201, 167, 90, 0.3)',
-                  color: '#C9A75A',
-                  fontSize: '0.75rem',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Save Template
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setShowDebug(true)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(100, 100, 100, 0.3)',
+                    color: 'rgba(245, 241, 234, 0.4)',
+                    fontSize: '0.75rem',
+                    padding: '0.5rem',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                  }}
+                  title="View AI Request"
+                >
+                  🔍
+                </button>
+                <button
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    color: '#C9A75A',
+                    fontSize: '0.75rem',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Save Template
+                </button>
+              </div>
             </div>
 
             <div className="card mb-4">
@@ -472,6 +508,93 @@ export default function Home() {
 
       {/* Settings Modal */}
       <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
+      {/* Debug Modal */}
+      {showDebug && debugInfo && (
+        <div
+          onClick={() => setShowDebug(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              backgroundColor: '#1A3550',
+              borderRadius: '1rem',
+              width: '100%',
+              maxWidth: '500px',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{
+              padding: '1rem',
+              borderBottom: '1px solid rgba(201, 167, 90, 0.2)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <h3 style={{ color: '#F5F1EA', margin: 0, fontSize: '1rem' }}>
+                🔍 AI Request Debug
+              </h3>
+              <button
+                onClick={() => setShowDebug(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#F5F1EA',
+                  fontSize: '1.25rem',
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{
+              padding: '1rem',
+              overflow: 'auto',
+              flex: 1,
+            }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <span style={{
+                  display: 'inline-block',
+                  padding: '0.25rem 0.5rem',
+                  borderRadius: '0.25rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  backgroundColor: (debugInfo as any).usedAI ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                  color: (debugInfo as any).usedAI ? '#10b981' : '#f59e0b',
+                }}>
+                  {(debugInfo as any).usedAI ? '✓ Used AI (Edge Function)' : '⚡ Used Local Generation'}
+                </span>
+              </div>
+              <pre style={{
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                padding: '1rem',
+                borderRadius: '0.5rem',
+                fontSize: '0.7rem',
+                color: '#F5F1EA',
+                overflow: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}>
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     )}
     </AuthGuard>

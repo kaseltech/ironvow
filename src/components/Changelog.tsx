@@ -25,6 +25,20 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.1.0',
+    date: 'January 8, 2026',
+    title: 'AI & Equipment Update',
+    changes: [
+      { type: 'added', description: 'Claude AI integration for intelligent workout generation' },
+      { type: 'added', description: '35+ new garage gym equipment options' },
+      { type: 'added', description: 'Custom equipment input - add your own gear for AI to consider' },
+      { type: 'added', description: 'Settings modal with equipment management' },
+      { type: 'added', description: 'Debug mode to see AI request details (tap version 5x)' },
+      { type: 'improved', description: 'AI now considers your injuries when generating workouts' },
+      { type: 'improved', description: 'Better exercise filtering based on available equipment' },
+    ],
+  },
+  {
     version: '1.0.0',
     date: 'January 8, 2026',
     title: 'Initial Release',

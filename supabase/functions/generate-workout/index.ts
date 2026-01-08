@@ -14,6 +14,7 @@ interface WorkoutRequest {
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
   injuries?: { bodyPart: string; movementsToAvoid: string[] }[];
   equipment?: string[];
+  customEquipment?: string[];
 }
 
 interface GeneratedExercise {
@@ -49,7 +50,10 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: WorkoutRequest = await req.json();
-    const { userId, location, targetMuscles, duration, experienceLevel, injuries, equipment } = body;
+    const { userId, location, targetMuscles, duration, experienceLevel, injuries, equipment, customEquipment } = body;
+
+    // Combine standard and custom equipment
+    const allEquipment = [...(equipment || []), ...(customEquipment || [])];
 
     // Fetch available exercises from database
     let query = supabase.from('exercises').select('*');
@@ -74,7 +78,7 @@ serve(async (req) => {
       // Check if we have required equipment (skip for gym)
       const hasEquipment = location === 'gym' || !ex.equipment_required?.length ||
         ex.equipment_required.every((eq: string) =>
-          equipment?.includes(eq) || eq === 'none' || eq === 'bodyweight'
+          allEquipment?.includes(eq) || eq === 'none' || eq === 'bodyweight'
         );
 
       // Check difficulty level
@@ -105,7 +109,9 @@ serve(async (req) => {
         targetMuscles,
         duration,
         experienceLevel,
-        location
+        location,
+        injuries,
+        allEquipment
       );
     } else {
       workout = generateRuleBased(
@@ -188,7 +194,9 @@ async function generateWithAI(
   targetMuscles: string[],
   duration: number,
   experienceLevel: string,
-  location: string
+  location: string,
+  injuries?: { bodyPart: string; movementsToAvoid: string[] }[],
+  equipment?: string[]
 ): Promise<GeneratedWorkout> {
   const exerciseList = exercises.map(ex => ({
     id: ex.id,
@@ -199,7 +207,22 @@ async function generateWithAI(
     difficulty: ex.difficulty,
   }));
 
-  const prompt = `You are a certified personal trainer creating a workout plan. Generate an optimal ${duration}-minute workout for a ${experienceLevel} level individual at a ${location}, targeting these muscles: ${targetMuscles.join(', ')}.
+  // Build injury context for the prompt
+  let injuryContext = '';
+  if (injuries && injuries.length > 0) {
+    const injuryDescriptions = injuries.map(i =>
+      `${i.bodyPart}${i.movementsToAvoid?.length ? ` (avoid: ${i.movementsToAvoid.join(', ')})` : ''}`
+    ).join('; ');
+    injuryContext = `\n\nIMPORTANT - User has injuries/limitations: ${injuryDescriptions}. Avoid exercises that could aggravate these areas. Provide safer alternatives when possible.`;
+  }
+
+  // Build equipment context
+  let equipmentContext = '';
+  if (equipment && equipment.length > 0) {
+    equipmentContext = `\n\nAvailable equipment: ${equipment.join(', ')}. Prioritize exercises that use this equipment.`;
+  }
+
+  const prompt = `You are a certified personal trainer creating a workout plan. Generate an optimal ${duration}-minute workout for a ${experienceLevel} level individual at a ${location}, targeting these muscles: ${targetMuscles.join(', ')}.${injuryContext}${equipmentContext}
 
 Available exercises (JSON):
 ${JSON.stringify(exerciseList, null, 2)}
@@ -211,6 +234,7 @@ Rules:
 - Rep ranges: strength (3-6), hypertrophy (8-12), endurance (12-15+)
 - Rest periods: compound exercises 90-120s, isolation 60-90s
 - Balance pushing and pulling movements when applicable
+- If user has injuries, prioritize exercises that work around those limitations
 
 Return ONLY valid JSON in this exact format:
 {
