@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile, useEquipment } from '@/hooks/useSupabase';
@@ -31,6 +31,23 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
       setCustomEquipment(profile.custom_equipment);
     }
   }, [profile]);
+
+  // ESC key to close
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        if (showChangelog) {
+          setShowChangelog(false);
+        } else if (showEquipmentEditor) {
+          setShowEquipmentEditor(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isOpen, showChangelog, showEquipmentEditor, onClose]);
 
   const handleSignOut = async () => {
     await signOut();

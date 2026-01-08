@@ -54,6 +54,21 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
     }
   }, [isOpen]);
 
+  // ESC key to close
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        if (viewMode !== 'list') {
+          setViewMode('list');
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isOpen, viewMode, onClose]);
+
   const handleSelectPreset = (preset: EquipmentPreset) => {
     setSelectedPreset(preset);
     setGymName('');
