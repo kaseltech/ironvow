@@ -25,6 +25,18 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.2.1',
+    date: 'January 8, 2026',
+    title: 'AI Workout Fixes',
+    changes: [
+      { type: 'fixed', description: 'Outdoor workouts now correctly use only bodyweight exercises' },
+      { type: 'fixed', description: 'AI now properly focuses on selected muscle groups' },
+      { type: 'improved', description: 'Much better AI prompts for workout generation' },
+      { type: 'improved', description: 'Exercise filtering is now location-aware (outdoor vs gym vs home)' },
+      { type: 'added', description: 'ESC key closes all modals' },
+    ],
+  },
+  {
     version: '1.2.0',
     date: 'January 8, 2026',
     title: 'Gym Profiles',

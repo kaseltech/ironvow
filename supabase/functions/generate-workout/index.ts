@@ -76,11 +76,34 @@ serve(async (req) => {
         muscle => ex.primary_muscles?.includes(muscle) || ex.secondary_muscles?.includes(muscle)
       );
 
-      // Check if we have required equipment (skip for gym)
-      const hasEquipment = location === 'gym' || !ex.equipment_required?.length ||
-        ex.equipment_required.every((eq: string) =>
-          allEquipment?.includes(eq) || eq === 'none' || eq === 'bodyweight'
-        );
+      // Check equipment based on location
+      let hasEquipment = false;
+      if (location === 'outdoor') {
+        // Outdoor: ONLY bodyweight exercises (no equipment or bodyweight only)
+        const equipReq = ex.equipment_required || [];
+        hasEquipment = equipReq.length === 0 ||
+          equipReq.every((eq: string) =>
+            eq === 'none' || eq === 'bodyweight' || eq === 'pull-up bar' || eq === 'bench'
+          );
+      } else if (location === 'gym') {
+        // Gym: Check if specific gym equipment is provided, otherwise allow all
+        if (allEquipment && allEquipment.length > 0) {
+          const equipReq = ex.equipment_required || [];
+          hasEquipment = equipReq.length === 0 ||
+            equipReq.every((eq: string) =>
+              allEquipment.includes(eq) || eq === 'none' || eq === 'bodyweight'
+            );
+        } else {
+          hasEquipment = true; // No specific gym, allow all exercises
+        }
+      } else {
+        // Home: Use available home equipment
+        const equipReq = ex.equipment_required || [];
+        hasEquipment = equipReq.length === 0 ||
+          equipReq.every((eq: string) =>
+            allEquipment?.includes(eq) || eq === 'none' || eq === 'bodyweight'
+          );
+      }
 
       // Check difficulty level
       const appropriateDifficulty = !ex.difficulty ||
@@ -98,6 +121,8 @@ serve(async (req) => {
 
       return targetsMuscle && hasEquipment && appropriateDifficulty && !avoidDueToInjury;
     });
+
+    console.log(`Filtered ${exercises.length} exercises to ${filteredExercises.length} for location=${location}, muscles=${targetMuscles.join(',')}`);
 
     // If we have Anthropic API key, use AI for intelligent selection
     // Otherwise, use rule-based selection
@@ -204,9 +229,34 @@ async function generateWithAI(
     name: ex.name,
     primaryMuscles: ex.primary_muscles,
     secondaryMuscles: ex.secondary_muscles,
+    equipmentRequired: ex.equipment_required,
     isCompound: ex.is_compound,
     difficulty: ex.difficulty,
   }));
+
+  // Build location-specific context
+  let locationContext = '';
+  if (location === 'outdoor') {
+    locationContext = `\n\nLOCATION: OUTDOOR (park, trail, or outdoor space)
+- ONLY use bodyweight exercises or exercises that need no equipment
+- Good outdoor exercises: push-ups, pull-ups (if bar available), dips (bench/bars), lunges, squats, burpees, mountain climbers, planks, running, sprints
+- DO NOT include exercises requiring: dumbbells, barbells, machines, cables, or gym equipment
+- If an exercise needs equipment, SKIP IT`;
+  } else if (location === 'home') {
+    locationContext = `\n\nLOCATION: HOME GYM
+- Only use exercises that require the listed equipment or no equipment
+- If no equipment listed, stick to bodyweight exercises`;
+  } else if (location === 'gym') {
+    locationContext = `\n\nLOCATION: GYM${equipment && equipment.length > 0 ? ` with specific equipment` : ' (commercial gym - full equipment assumed)'}`;
+  }
+
+  // Build equipment context
+  let equipmentContext = '';
+  if (equipment && equipment.length > 0) {
+    equipmentContext = `\nAvailable equipment: ${equipment.join(', ')}. ONLY use exercises that require this equipment or no equipment.`;
+  } else if (location === 'outdoor') {
+    equipmentContext = `\nNo equipment available - bodyweight only.`;
+  }
 
   // Build injury context for the prompt
   let injuryContext = '';
@@ -214,42 +264,45 @@ async function generateWithAI(
     const injuryDescriptions = injuries.map(i =>
       `${i.bodyPart}${i.movementsToAvoid?.length ? ` (avoid: ${i.movementsToAvoid.join(', ')})` : ''}`
     ).join('; ');
-    injuryContext = `\n\nIMPORTANT - User has injuries/limitations: ${injuryDescriptions}. Avoid exercises that could aggravate these areas. Provide safer alternatives when possible.`;
+    injuryContext = `\n\nINJURIES/LIMITATIONS: ${injuryDescriptions}. Avoid exercises that could aggravate these areas.`;
   }
 
-  // Build equipment context
-  let equipmentContext = '';
-  if (equipment && equipment.length > 0) {
-    equipmentContext = `\n\nAvailable equipment: ${equipment.join(', ')}. Prioritize exercises that use this equipment.`;
-  }
+  // Build target muscles emphasis
+  const muscleEmphasis = targetMuscles.length === 1
+    ? `Focus EXCLUSIVELY on ${targetMuscles[0]} - every exercise must target this muscle as primary or secondary.`
+    : targetMuscles.length <= 3
+    ? `Focus on these specific muscles: ${targetMuscles.join(', ')}. Every exercise must target at least one of these muscles.`
+    : `Full body workout targeting: ${targetMuscles.join(', ')}. Include exercises for each muscle group.`;
 
-  const prompt = `You are a certified personal trainer creating a workout plan. Generate an optimal ${duration}-minute workout for a ${experienceLevel} level individual at a ${location}, targeting these muscles: ${targetMuscles.join(', ')}.${injuryContext}${equipmentContext}
+  const prompt = `You are a certified personal trainer. Create a ${duration}-minute ${experienceLevel}-level workout.
 
-Available exercises (JSON):
+TARGET MUSCLES: ${muscleEmphasis}${locationContext}${equipmentContext}${injuryContext}
+
+Available exercises from database (ONLY select from this list):
 ${JSON.stringify(exerciseList, null, 2)}
 
-Rules:
-- Select 4-8 exercises depending on duration
-- Start with compound movements, end with isolation
-- Include appropriate sets (2-4 for beginners, 3-5 for intermediate/advanced)
-- Rep ranges: strength (3-6), hypertrophy (8-12), endurance (12-15+)
-- Rest periods: compound exercises 90-120s, isolation 60-90s
-- Balance pushing and pulling movements when applicable
-- If user has injuries, prioritize exercises that work around those limitations
+STRICT RULES:
+1. ONLY select exercises from the provided list above - use exact exerciseId values
+2. Select 4-8 exercises depending on duration (roughly 1 exercise per 5-8 minutes)
+3. Every exercise MUST target at least one of the specified muscles: ${targetMuscles.join(', ')}
+4. For outdoor: ONLY bodyweight exercises (no equipment)
+5. Start with compound movements, end with isolation
+6. Sets: 2-4 for beginners, 3-5 for intermediate/advanced
+7. Rest: compound 90-120s, isolation 60-90s
 
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON:
 {
-  "name": "Workout name",
-  "description": "Brief description",
+  "name": "Descriptive workout name",
+  "description": "Brief description mentioning target muscles",
   "workoutType": "push|pull|legs|upper|lower|fullbody",
   "exercises": [
     {
-      "exerciseId": "uuid from available exercises",
+      "exerciseId": "exact uuid from list above",
       "name": "Exercise Name",
       "sets": 3,
       "reps": "8-10",
       "restSeconds": 90,
-      "notes": "optional form tips"
+      "notes": "form tip"
     }
   ]
 }`;
