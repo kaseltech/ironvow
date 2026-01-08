@@ -1,50 +1,68 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabase } from '@/lib/supabase/client';
 
 export default function AuthCallback() {
   const router = useRouter();
+  const [status, setStatus] = useState('Processing...');
 
   useEffect(() => {
     const handleCallback = async () => {
       const supabase = getSupabase();
 
-      // Check for hash fragment (implicit flow) or code (PKCE flow)
+      // Get the hash from URL (Supabase puts tokens there)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const queryParams = new URLSearchParams(window.location.search);
-
       const accessToken = hashParams.get('access_token');
-      const code = queryParams.get('code');
+      const refreshToken = hashParams.get('refresh_token');
 
-      if (accessToken) {
-        // Implicit flow - token is in URL hash
-        const refreshToken = hashParams.get('refresh_token');
-        if (refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-        }
-        router.push('/');
-      } else if (code) {
-        // PKCE flow - exchange code for session
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (accessToken && refreshToken) {
+        setStatus('Setting up session...');
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
         if (error) {
-          console.error('Auth error:', error);
-          router.push('/login?error=auth_failed');
+          console.error('Session error:', error);
+          setStatus('Error: ' + error.message);
+          setTimeout(() => router.push('/login?error=auth_failed'), 2000);
           return;
         }
+
+        setStatus('Success! Redirecting...');
+        router.push('/');
+        return;
+      }
+
+      // Check for code in query params (PKCE flow)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+
+      if (code) {
+        setStatus('Exchanging code...');
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (error) {
+          console.error('Code exchange error:', error);
+          setStatus('Error: ' + error.message);
+          setTimeout(() => router.push('/login?error=auth_failed'), 2000);
+          return;
+        }
+
+        setStatus('Success! Redirecting...');
+        router.push('/');
+        return;
+      }
+
+      // No auth params - check if already logged in
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
         router.push('/');
       } else {
-        // No auth params, check if already logged in
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          router.push('/');
-        } else {
-          router.push('/login');
-        }
+        setStatus('No auth data found');
+        setTimeout(() => router.push('/login'), 2000);
       }
     };
 
@@ -59,7 +77,7 @@ export default function AuthCallback() {
           <span className="font-semibold text-[#C9A75A]">Vow</span>
         </div>
         <div className="w-8 h-8 border-2 border-[#C9A75A] border-t-transparent rounded-full animate-spin" />
-        <p className="text-[#8A9BAE] text-sm">Signing you in...</p>
+        <p className="text-[#8A9BAE] text-sm">{status}</p>
       </div>
     </div>
   );
