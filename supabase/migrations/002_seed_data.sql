@@ -161,12 +161,12 @@ INSERT INTO exercises (name, slug, primary_muscles, secondary_muscles, movement_
    ARRAY['Dumbbells at shoulder height', 'Press up and together', 'Lower to starting position']),
 
   ('Lateral Raises', 'lateral-raises',
-   ARRAY['side_delts'], ARRAY[],
+   ARRAY['side_delts'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Arms at sides, slight elbow bend', 'Raise to shoulder height', 'Control the descent']),
 
   ('Front Raises', 'front-raises',
-   ARRAY['front_delts'], ARRAY[],
+   ARRAY['front_delts'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Arms in front of thighs', 'Raise to shoulder height', 'Alternate or both together']),
 
@@ -201,27 +201,27 @@ INSERT INTO exercises (name, slug, primary_muscles, secondary_muscles, movement_
    ARRAY['Arms at sides, palms forward', 'Curl up, squeeze at top', 'Lower with control']),
 
   ('Hammer Curls', 'hammer-curls',
-   ARRAY['biceps', 'forearms'], ARRAY[],
+   ARRAY['biceps', 'forearms'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Neutral grip (palms facing in)', 'Curl up, maintain grip', 'Works brachialis']),
 
   ('Preacher Curl', 'preacher-curl',
-   ARRAY['biceps'], ARRAY[],
+   ARRAY['biceps'], ARRAY[]::TEXT[],
    'isolation', false, 'intermediate',
    ARRAY['Arms on preacher pad', 'Curl up, squeeze bicep', 'Full stretch at bottom']),
 
   ('Tricep Pushdown', 'tricep-pushdown',
-   ARRAY['triceps'], ARRAY[],
+   ARRAY['triceps'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Cable at high position', 'Push down until arms straight', 'Keep elbows at sides']),
 
   ('Skull Crushers', 'skull-crushers',
-   ARRAY['triceps'], ARRAY[],
+   ARRAY['triceps'], ARRAY[]::TEXT[],
    'isolation', false, 'intermediate',
    ARRAY['Lie flat, arms extended', 'Lower bar to forehead', 'Extend back up']),
 
   ('Overhead Tricep Extension', 'overhead-tricep-extension',
-   ARRAY['triceps'], ARRAY[],
+   ARRAY['triceps'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Dumbbell overhead, both hands', 'Lower behind head', 'Extend back up']),
 
@@ -271,17 +271,17 @@ INSERT INTO exercises (name, slug, primary_muscles, secondary_muscles, movement_
    ARRAY['Rear foot elevated on bench', 'Lower until thigh parallel', 'Focus on front leg']),
 
   ('Leg Extension', 'leg-extension',
-   ARRAY['quads'], ARRAY[],
+   ARRAY['quads'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Sit with pad on shins', 'Extend legs fully', 'Squeeze quads at top']),
 
   ('Leg Curl', 'leg-curl',
-   ARRAY['hamstrings'], ARRAY[],
+   ARRAY['hamstrings'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Lie face down', 'Curl heels to glutes', 'Control the descent']),
 
   ('Calf Raises', 'calf-raises',
-   ARRAY['calves'], ARRAY[],
+   ARRAY['calves'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Stand on edge of step', 'Lower heels below platform', 'Rise up on toes']),
 
@@ -306,17 +306,17 @@ INSERT INTO exercises (name, slug, primary_muscles, secondary_muscles, movement_
    ARRAY['Forearms on ground', 'Body in straight line', 'Hold position', 'Dont let hips sag']),
 
   ('Crunches', 'crunches',
-   ARRAY['abs'], ARRAY[],
+   ARRAY['abs'], ARRAY[]::TEXT[],
    'isolation', false, 'beginner',
    ARRAY['Lie on back, knees bent', 'Curl shoulders off ground', 'Squeeze abs at top']),
 
   ('Hanging Leg Raise', 'hanging-leg-raise',
-   ARRAY['abs', 'hip_flexors'], ARRAY[],
+   ARRAY['abs', 'hip_flexors'], ARRAY[]::TEXT[],
    'isolation', false, 'intermediate',
    ARRAY['Hang from bar', 'Raise legs to parallel', 'Lower with control']),
 
   ('Cable Woodchop', 'cable-woodchop',
-   ARRAY['obliques', 'core'], ARRAY[],
+   ARRAY['obliques', 'core'], ARRAY[]::TEXT[],
    'isolation', false, 'intermediate',
    ARRAY['Cable at high or low position', 'Rotate through core', 'Control the movement']),
 
