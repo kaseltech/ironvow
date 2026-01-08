@@ -16,6 +16,9 @@ interface WorkoutRequest {
   equipment?: string[];
   customEquipment?: string[];
   gymName?: string;
+  excludeExerciseIds?: string[]; // For regenerating - exclude previous exercises
+  swapExerciseId?: string; // For swapping - find alternatives for this exercise
+  swapTargetMuscles?: string[]; // Muscles the swapped exercise should target
 }
 
 interface GeneratedExercise {
@@ -51,10 +54,15 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: WorkoutRequest = await req.json();
-    const { userId, location, targetMuscles, duration, experienceLevel, injuries, equipment, customEquipment } = body;
+    const { userId, location, targetMuscles, duration, experienceLevel, injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles } = body;
 
     // Combine standard and custom equipment
     const allEquipment = [...(equipment || []), ...(customEquipment || [])];
+
+    // Handle swap request - return alternatives for a specific exercise
+    if (swapExerciseId && swapTargetMuscles) {
+      return await handleSwapRequest(body, supabase, allEquipment);
+    }
 
     // Fetch available exercises from database
     let query = supabase.from('exercises').select('*');
@@ -122,16 +130,25 @@ serve(async (req) => {
       return targetsMuscle && hasEquipment && appropriateDifficulty && !avoidDueToInjury;
     });
 
-    console.log(`Filtered ${exercises.length} exercises to ${filteredExercises.length} for location=${location}, muscles=${targetMuscles.join(',')}`);
+    // Exclude previously used exercises if regenerating
+    let availableExercises = filteredExercises;
+    if (excludeExerciseIds && excludeExerciseIds.length > 0) {
+      availableExercises = filteredExercises.filter(
+        (ex: any) => !excludeExerciseIds.includes(ex.id)
+      );
+      console.log(`After exclusions: ${availableExercises.length} exercises available`);
+    }
+
+    console.log(`Filtered ${exercises.length} exercises to ${availableExercises.length} for location=${location}, muscles=${targetMuscles.join(',')}`);
 
     // If we have Anthropic API key, use AI for intelligent selection
     // Otherwise, use rule-based selection
     let workout: GeneratedWorkout;
 
-    if (anthropicKey && filteredExercises.length > 0) {
+    if (anthropicKey && availableExercises.length > 0) {
       workout = await generateWithAI(
         anthropicKey,
-        filteredExercises,
+        availableExercises,
         targetMuscles,
         duration,
         experienceLevel,
@@ -141,7 +158,7 @@ serve(async (req) => {
       );
     } else {
       workout = generateRuleBased(
-        filteredExercises,
+        availableExercises,
         targetMuscles,
         duration,
         experienceLevel
@@ -455,4 +472,106 @@ function generateWorkoutName(type: string, level: string): string {
   };
 
   return `${levelPrefix[level] || ''} ${typeNames[type] || 'Workout'}`.trim();
+}
+
+// Handle swap request - find alternative exercises for a given exercise
+async function handleSwapRequest(
+  body: WorkoutRequest,
+  supabase: any,
+  allEquipment: string[]
+): Promise<Response> {
+  const { location, swapExerciseId, swapTargetMuscles, injuries, experienceLevel } = body;
+
+  // Fetch all exercises
+  const { data: exercises, error } = await supabase.from('exercises').select('*');
+
+  if (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Failed to fetch exercises' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Filter to exercises that target the same muscles
+  const alternatives = exercises.filter((ex: any) => {
+    // Don't include the exercise we're swapping
+    if (ex.id === swapExerciseId) return false;
+
+    // Must target at least one of the same muscles
+    const targetsMuscle = swapTargetMuscles?.some(
+      (muscle: string) => ex.primary_muscles?.includes(muscle) || ex.secondary_muscles?.includes(muscle)
+    );
+    if (!targetsMuscle) return false;
+
+    // Check equipment based on location
+    let hasEquipment = false;
+    if (location === 'outdoor') {
+      const equipReq = ex.equipment_required || [];
+      hasEquipment = equipReq.length === 0 ||
+        equipReq.every((eq: string) =>
+          eq === 'none' || eq === 'bodyweight' || eq === 'pull-up bar' || eq === 'bench'
+        );
+    } else if (location === 'gym') {
+      if (allEquipment && allEquipment.length > 0) {
+        const equipReq = ex.equipment_required || [];
+        hasEquipment = equipReq.length === 0 ||
+          equipReq.every((eq: string) =>
+            allEquipment.includes(eq) || eq === 'none' || eq === 'bodyweight'
+          );
+      } else {
+        hasEquipment = true;
+      }
+    } else {
+      const equipReq = ex.equipment_required || [];
+      hasEquipment = equipReq.length === 0 ||
+        equipReq.every((eq: string) =>
+          allEquipment?.includes(eq) || eq === 'none' || eq === 'bodyweight'
+        );
+    }
+    if (!hasEquipment) return false;
+
+    // Check difficulty
+    const appropriateDifficulty = !ex.difficulty ||
+      (experienceLevel === 'beginner' && ex.difficulty !== 'advanced') ||
+      (experienceLevel === 'intermediate') ||
+      (experienceLevel === 'advanced');
+    if (!appropriateDifficulty) return false;
+
+    // Check injuries
+    const avoidDueToInjury = injuries?.some((injury: any) =>
+      injury.movementsToAvoid?.some((movement: string) =>
+        ex.name.toLowerCase().includes(movement.toLowerCase()) ||
+        ex.movement_pattern?.toLowerCase().includes(movement.toLowerCase())
+      )
+    );
+    if (avoidDueToInjury) return false;
+
+    return true;
+  });
+
+  // Sort by how well they match the target muscles (primary muscle match first)
+  alternatives.sort((a: any, b: any) => {
+    const aPrimaryMatch = swapTargetMuscles?.some((m: string) => a.primary_muscles?.includes(m)) ? 1 : 0;
+    const bPrimaryMatch = swapTargetMuscles?.some((m: string) => b.primary_muscles?.includes(m)) ? 1 : 0;
+    return bPrimaryMatch - aPrimaryMatch;
+  });
+
+  // Return top 10 alternatives
+  const topAlternatives = alternatives.slice(0, 10).map((ex: any) => ({
+    id: ex.id,
+    name: ex.name,
+    primaryMuscles: ex.primary_muscles,
+    secondaryMuscles: ex.secondary_muscles,
+    equipmentRequired: ex.equipment_required,
+    isCompound: ex.is_compound,
+    difficulty: ex.difficulty,
+  }));
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      alternatives: topAlternatives,
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
 }

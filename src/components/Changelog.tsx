@@ -25,6 +25,17 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.3.0',
+    date: 'January 8, 2026',
+    title: 'Regenerate & Swap',
+    changes: [
+      { type: 'added', description: 'Regenerate workout - get completely different exercises' },
+      { type: 'added', description: 'Swap individual exercises - pick alternatives that hit the same muscles' },
+      { type: 'improved', description: 'Regenerated workouts exclude your previous exercises' },
+      { type: 'improved', description: 'Swap alternatives filtered by your location and equipment' },
+    ],
+  },
+  {
     version: '1.2.1',
     date: 'January 8, 2026',
     title: 'AI Workout Fixes',

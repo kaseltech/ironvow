@@ -7,7 +7,7 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { Onboarding } from '@/components/Onboarding';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
-import { generateWorkout, generateWorkoutLocal, type GeneratedWorkout } from '@/lib/generateWorkout';
+import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative } from '@/lib/generateWorkout';
 import { Settings } from '@/components/Settings';
 import { GymManager } from '@/components/GymManager';
 import type { GymProfile } from '@/lib/supabase/types';
@@ -48,6 +48,10 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [debugInfo, setDebugInfo] = useState<object | null>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [swappingExerciseIndex, setSwappingExerciseIndex] = useState<number | null>(null);
+  const [swapAlternatives, setSwapAlternatives] = useState<ExerciseAlternative[]>([]);
+  const [loadingAlternatives, setLoadingAlternatives] = useState(false);
+  const [lastWorkoutRequest, setLastWorkoutRequest] = useState<object | null>(null);
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -103,6 +107,9 @@ export default function Home() {
         gymName: selectedGym?.name,
       };
 
+      // Save request for potential regeneration
+      setLastWorkoutRequest(workoutRequest);
+
       // Save debug info for inspection
       setDebugInfo({
         request: workoutRequest,
@@ -143,6 +150,106 @@ export default function Home() {
       sessionStorage.setItem('currentWorkout', JSON.stringify(generatedWorkout));
       router.push('/workout');
     }
+  };
+
+  // Regenerate workout with different exercises
+  const handleRegenerate = async () => {
+    if (!lastWorkoutRequest || !generatedWorkout) return;
+
+    setGenerating(true);
+    setError(null);
+
+    try {
+      // Exclude current exercises
+      const excludeIds = generatedWorkout.exercises
+        .map(ex => ex.exerciseId)
+        .filter(Boolean);
+
+      const regenerateRequest = {
+        ...(lastWorkoutRequest as any),
+        excludeExerciseIds: excludeIds,
+      };
+
+      console.log('🔄 Regenerating with exclusions:', excludeIds);
+
+      let workout: GeneratedWorkout;
+      try {
+        workout = await generateWorkout(regenerateRequest);
+      } catch {
+        workout = await generateWorkoutLocal(regenerateRequest);
+      }
+
+      setGeneratedWorkout(workout);
+      setDebugInfo(prev => ({
+        ...prev,
+        regenerateRequest,
+        regenerateResponse: workout,
+      }));
+    } catch (err) {
+      console.error('Failed to regenerate workout:', err);
+      setError('Failed to regenerate. Try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Open swap modal for an exercise
+  const handleOpenSwap = async (exerciseIndex: number) => {
+    if (!generatedWorkout || !lastWorkoutRequest) return;
+
+    const exercise = generatedWorkout.exercises[exerciseIndex];
+    setSwappingExerciseIndex(exerciseIndex);
+    setLoadingAlternatives(true);
+    setSwapAlternatives([]);
+
+    try {
+      // Get target muscles for this exercise from the workout context
+      const targetMuscles = generatedWorkout.targetMuscles;
+
+      const alternatives = await getSwapAlternatives({
+        userId: user!.id,
+        location: (lastWorkoutRequest as any).location,
+        experienceLevel: (lastWorkoutRequest as any).experienceLevel,
+        injuries: (lastWorkoutRequest as any).injuries,
+        equipment: (lastWorkoutRequest as any).equipment,
+        customEquipment: (lastWorkoutRequest as any).customEquipment,
+        swapExerciseId: exercise.exerciseId,
+        swapTargetMuscles: targetMuscles,
+      });
+
+      setSwapAlternatives(alternatives);
+    } catch (err) {
+      console.error('Failed to get alternatives:', err);
+      setSwapAlternatives([]);
+    } finally {
+      setLoadingAlternatives(false);
+    }
+  };
+
+  // Swap an exercise with selected alternative
+  const handleSwapExercise = (alternative: ExerciseAlternative) => {
+    if (swappingExerciseIndex === null || !generatedWorkout) return;
+
+    const currentExercise = generatedWorkout.exercises[swappingExerciseIndex];
+    const newExercise: GeneratedExercise = {
+      exerciseId: alternative.id,
+      name: alternative.name,
+      sets: currentExercise.sets,
+      reps: currentExercise.reps,
+      restSeconds: currentExercise.restSeconds,
+      notes: currentExercise.notes,
+    };
+
+    const updatedExercises = [...generatedWorkout.exercises];
+    updatedExercises[swappingExerciseIndex] = newExercise;
+
+    setGeneratedWorkout({
+      ...generatedWorkout,
+      exercises: updatedExercises,
+    });
+
+    setSwappingExerciseIndex(null);
+    setSwapAlternatives([]);
   };
 
   const canGenerate = selectedLocation && selectedMuscles.length > 0 &&
@@ -473,6 +580,23 @@ export default function Home() {
                   🔍
                 </button>
                 <button
+                  onClick={handleRegenerate}
+                  disabled={generating}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    color: '#C9A75A',
+                    fontSize: '0.75rem',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '0.5rem',
+                    cursor: generating ? 'not-allowed' : 'pointer',
+                    opacity: generating ? 0.5 : 1,
+                  }}
+                  title="Generate different exercises"
+                >
+                  {generating ? '...' : '🔄 New'}
+                </button>
+                <button
                   style={{
                     background: 'transparent',
                     border: '1px solid rgba(201, 167, 90, 0.3)',
@@ -483,7 +607,7 @@ export default function Home() {
                     cursor: 'pointer',
                   }}
                 >
-                  Save Template
+                  Save
                 </button>
               </div>
             </div>
@@ -549,10 +673,24 @@ export default function Home() {
                       </p>
                     )}
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
                     <div style={{ color: '#C9A75A', fontSize: '0.75rem' }}>
                       {exercise.restSeconds}s rest
                     </div>
+                    <button
+                      onClick={() => handleOpenSwap(i)}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(201, 167, 90, 0.2)',
+                        color: 'rgba(201, 167, 90, 0.7)',
+                        fontSize: '0.625rem',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.25rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Swap
+                    </button>
                   </div>
                 </div>
               ))}
@@ -711,6 +849,138 @@ export default function Home() {
               }}>
                 {JSON.stringify(debugInfo, null, 2)}
               </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Swap Exercise Modal */}
+      {swappingExerciseIndex !== null && (
+        <div
+          onClick={() => {
+            setSwappingExerciseIndex(null);
+            setSwapAlternatives([]);
+          }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 300,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              backgroundColor: '#1A3550',
+              borderRadius: '1.5rem 1.5rem 0 0',
+              width: '100%',
+              maxWidth: '500px',
+              maxHeight: '70vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{
+              padding: '1rem 1.25rem',
+              borderBottom: '1px solid rgba(201, 167, 90, 0.2)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div>
+                <h3 style={{ color: '#F5F1EA', margin: 0, fontSize: '1rem' }}>
+                  Swap Exercise
+                </h3>
+                <p style={{ color: 'rgba(245, 241, 234, 0.5)', margin: 0, fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  Replacing: {generatedWorkout?.exercises[swappingExerciseIndex]?.name}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSwappingExerciseIndex(null);
+                  setSwapAlternatives([]);
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#F5F1EA',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{
+              padding: '1rem',
+              overflow: 'auto',
+              flex: 1,
+            }}>
+              {loadingAlternatives ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(245, 241, 234, 0.6)' }}>
+                  <div className="animate-pulse">Finding alternatives...</div>
+                </div>
+              ) : swapAlternatives.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                  No alternatives found for this exercise.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {swapAlternatives.map(alt => (
+                    <button
+                      key={alt.id}
+                      onClick={() => handleSwapExercise(alt)}
+                      style={{
+                        background: 'rgba(15, 34, 51, 0.5)',
+                        border: '1px solid rgba(201, 167, 90, 0.2)',
+                        borderRadius: '0.75rem',
+                        padding: '0.875rem 1rem',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ color: '#F5F1EA', fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.25rem' }}>
+                        {alt.name}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {alt.primaryMuscles?.map((muscle: string) => (
+                          <span
+                            key={muscle}
+                            style={{
+                              fontSize: '0.625rem',
+                              backgroundColor: 'rgba(201, 167, 90, 0.2)',
+                              color: '#C9A75A',
+                              padding: '0.125rem 0.375rem',
+                              borderRadius: '0.25rem',
+                            }}
+                          >
+                            {muscle}
+                          </span>
+                        ))}
+                        {alt.isCompound && (
+                          <span style={{
+                            fontSize: '0.625rem',
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            color: '#3b82f6',
+                            padding: '0.125rem 0.375rem',
+                            borderRadius: '0.25rem',
+                          }}>
+                            Compound
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

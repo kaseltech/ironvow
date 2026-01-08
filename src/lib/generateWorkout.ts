@@ -10,6 +10,28 @@ export interface WorkoutRequest {
   equipment?: string[];
   customEquipment?: string[];
   gymName?: string;
+  excludeExerciseIds?: string[]; // For regenerating - exclude previous exercises
+}
+
+export interface SwapRequest {
+  userId: string;
+  location: 'gym' | 'home' | 'outdoor';
+  experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+  injuries?: { bodyPart: string; movementsToAvoid: string[] }[];
+  equipment?: string[];
+  customEquipment?: string[];
+  swapExerciseId: string;
+  swapTargetMuscles: string[];
+}
+
+export interface ExerciseAlternative {
+  id: string;
+  name: string;
+  primaryMuscles: string[];
+  secondaryMuscles: string[];
+  equipmentRequired: string[];
+  isCompound: boolean;
+  difficulty: string;
 }
 
 export interface GeneratedExercise {
@@ -50,6 +72,26 @@ export async function generateWorkout(request: WorkoutRequest): Promise<Generate
   }
 
   return data.workout;
+}
+
+// Get alternative exercises for swapping
+export async function getSwapAlternatives(request: SwapRequest): Promise<ExerciseAlternative[]> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase.functions.invoke('generate-workout', {
+    body: request,
+  });
+
+  if (error) {
+    console.error('Swap request error:', error);
+    throw new Error(error.message || 'Failed to get alternatives');
+  }
+
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to get alternatives');
+  }
+
+  return data.alternatives;
 }
 
 // Fallback: Generate workout client-side without AI

@@ -450,7 +450,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                       IronVow
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
-                      Version 1.2.1
+                      Version 1.3.0
                     </div>
                   </div>
                   <button
