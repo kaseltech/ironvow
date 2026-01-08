@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Logo } from '@/components/Logo';
+import { AuthGuard } from '@/components/AuthGuard';
+import { useAuth } from '@/context/AuthContext';
 
 // Mock data for the demo
 const muscleGroups = [
@@ -56,6 +58,7 @@ export default function Home() {
   const canGenerate = selectedLocation && selectedMuscles.length > 0;
 
   return (
+    <AuthGuard>
     <div className="min-h-screen" style={{ backgroundColor: '#0F2233' }}>
       {/* Header */}
       <header
@@ -378,5 +381,6 @@ export default function Home() {
         </div>
       </nav>
     </div>
+    </AuthGuard>
   );
 }
