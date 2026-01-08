@@ -1,89 +1,114 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { AuthGuard } from '@/components/AuthGuard';
 import { useWorkoutSessions, useSetLogs } from '@/hooks/useSupabase';
+import type { GeneratedWorkout } from '@/lib/generateWorkout';
 
-// Mock AI-generated workout data (will be replaced with real generated workouts)
-const workoutData = {
-  name: 'Upper Body Push',
+interface WorkoutExercise {
+  name: string;
+  exerciseId?: string;
+  sets: { target_reps: number; target_weight: number; type: 'warmup' | 'working' }[];
+  rest_seconds: number;
+  notes?: string;
+}
+
+interface WorkoutData {
+  name: string;
+  exercises: WorkoutExercise[];
+}
+
+// Convert GeneratedWorkout to our internal format
+function convertGeneratedWorkout(generated: GeneratedWorkout): WorkoutData {
+  return {
+    name: generated.name,
+    exercises: generated.exercises.map(ex => {
+      // Parse reps (could be "8-10" or "AMRAP" or "12")
+      const repsStr = ex.reps.split('-')[0].replace(/[^0-9]/g, '');
+      const targetReps = parseInt(repsStr) || 10;
+
+      // Create sets array
+      const sets: { target_reps: number; target_weight: number; type: 'warmup' | 'working' }[] = [];
+      for (let i = 0; i < ex.sets; i++) {
+        sets.push({
+          target_reps: targetReps,
+          target_weight: 0, // User will adjust
+          type: 'working',
+        });
+      }
+
+      return {
+        name: ex.name,
+        exerciseId: ex.exerciseId,
+        sets,
+        rest_seconds: ex.restSeconds,
+        notes: ex.notes,
+      };
+    }),
+  };
+}
+
+// Fallback workout if none in sessionStorage
+const fallbackWorkout: WorkoutData = {
+  name: 'Quick Workout',
   exercises: [
     {
-      name: 'Bench Press',
+      name: 'Push-ups',
       sets: [
-        { target_reps: 10, target_weight: 135, type: 'warmup' },
-        { target_reps: 8, target_weight: 165, type: 'working' },
-        { target_reps: 8, target_weight: 165, type: 'working' },
-        { target_reps: 8, target_weight: 165, type: 'working' },
-        { target_reps: 10, target_weight: 155, type: 'working' },
-      ],
-      rest_seconds: 90,
-      notes: 'Control the descent, explode up',
-    },
-    {
-      name: 'Incline DB Press',
-      sets: [
-        { target_reps: 10, target_weight: 50, type: 'working' },
-        { target_reps: 10, target_weight: 50, type: 'working' },
-        { target_reps: 10, target_weight: 50, type: 'working' },
-      ],
-      rest_seconds: 75,
-      notes: 'Full stretch at bottom',
-    },
-    {
-      name: 'Overhead Press',
-      sets: [
-        { target_reps: 8, target_weight: 95, type: 'working' },
-        { target_reps: 8, target_weight: 95, type: 'working' },
-        { target_reps: 8, target_weight: 95, type: 'working' },
-      ],
-      rest_seconds: 90,
-      notes: 'Brace core, no back lean',
-    },
-    {
-      name: 'Lateral Raises',
-      sets: [
-        { target_reps: 15, target_weight: 20, type: 'working' },
-        { target_reps: 15, target_weight: 20, type: 'working' },
-        { target_reps: 15, target_weight: 20, type: 'working' },
+        { target_reps: 15, target_weight: 0, type: 'working' },
+        { target_reps: 15, target_weight: 0, type: 'working' },
+        { target_reps: 15, target_weight: 0, type: 'working' },
       ],
       rest_seconds: 60,
-      notes: 'Slight bend in elbows, lead with pinkies',
-    },
-    {
-      name: 'Tricep Pushdowns',
-      sets: [
-        { target_reps: 12, target_weight: 40, type: 'working' },
-        { target_reps: 12, target_weight: 40, type: 'working' },
-        { target_reps: 12, target_weight: 40, type: 'working' },
-      ],
-      rest_seconds: 60,
-      notes: 'Lock out at bottom, elbows pinned',
+      notes: 'Full range of motion',
     },
   ],
 };
 
 export default function WorkoutPage() {
+  const router = useRouter();
   const { startSession, completeSession } = useWorkoutSessions();
   const { logSet } = useSetLogs();
+
+  // Load workout from sessionStorage or use fallback
+  const workoutData = useMemo<WorkoutData>(() => {
+    if (typeof window === 'undefined') return fallbackWorkout;
+
+    try {
+      const stored = sessionStorage.getItem('currentWorkout');
+      if (stored) {
+        const generated: GeneratedWorkout = JSON.parse(stored);
+        return convertGeneratedWorkout(generated);
+      }
+    } catch (err) {
+      console.error('Failed to parse workout:', err);
+    }
+    return fallbackWorkout;
+  }, []);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [isResting, setIsResting] = useState(false);
   const [restTime, setRestTime] = useState(0);
-  const [completedSets, setCompletedSets] = useState<{ reps: number; weight: number }[][]>(
-    workoutData.exercises.map(() => [])
-  );
+  const [completedSets, setCompletedSets] = useState<{ reps: number; weight: number }[][]>([]);
   const [showComplete, setShowComplete] = useState(false);
   const [adjustedWeight, setAdjustedWeight] = useState<number | null>(null);
   const [showWeightPicker, setShowWeightPicker] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
 
+  // Initialize completedSets when workoutData is loaded
+  useEffect(() => {
+    if (workoutData.exercises.length > 0 && completedSets.length === 0) {
+      setCompletedSets(workoutData.exercises.map(() => []));
+    }
+  }, [workoutData.exercises, completedSets.length]);
+
   // Start workout session on mount
   useEffect(() => {
     const initSession = async () => {
-      if (!sessionStarted) {
+      if (!sessionStarted && workoutData.name) {
         try {
           const session = await startSession(workoutData.name, undefined, 'gym');
           if (session) {
@@ -96,16 +121,45 @@ export default function WorkoutPage() {
       }
     };
     initSession();
-  }, [startSession, sessionStarted]);
+  }, [startSession, sessionStarted, workoutData.name]);
+
+  // Guard against empty exercises
+  if (workoutData.exercises.length === 0) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#0F2233' }}>
+          <p style={{ color: '#F5F1EA', marginBottom: '1rem' }}>No workout found</p>
+          <button onClick={() => router.push('/')} className="btn-primary">
+            Go Back
+          </button>
+        </div>
+      </AuthGuard>
+    );
+  }
 
   const exercise = workoutData.exercises[currentExerciseIndex];
+  if (!exercise) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#0F2233' }}>
+          <p style={{ color: '#F5F1EA', marginBottom: '1rem' }}>Exercise not found</p>
+          <button onClick={() => router.push('/')} className="btn-primary">
+            Go Back
+          </button>
+        </div>
+      </AuthGuard>
+    );
+  }
+
   const currentSet = exercise.sets[currentSetIndex];
   const totalSets = exercise.sets.length;
   const isLastSet = currentSetIndex === totalSets - 1;
   const isLastExercise = currentExerciseIndex === workoutData.exercises.length - 1;
 
   // Use adjusted weight if set, otherwise target
-  const displayWeight = adjustedWeight ?? currentSet.target_weight;
+  const displayWeight = adjustedWeight ?? (currentSet?.target_weight || 0);
+  const targetReps = currentSet?.target_reps || 10;
+  const setType = currentSet?.type || 'working';
 
   // Rest timer
   useEffect(() => {
@@ -141,9 +195,9 @@ export default function WorkoutPage() {
           currentSetIndex + 1,
           weight,
           reps,
-          currentSet.target_weight,
-          currentSet.target_reps,
-          currentSet.type === 'warmup' ? 'warmup' : 'working'
+          currentSet?.target_weight ?? 0,
+          targetReps,
+          setType === 'warmup' ? 'warmup' : 'working'
         );
       } catch (err) {
         console.error('Failed to log set:', err);
@@ -179,7 +233,7 @@ export default function WorkoutPage() {
   };
 
   const adjustWeight = (delta: number) => {
-    setAdjustedWeight(prev => (prev ?? currentSet.target_weight) + delta);
+    setAdjustedWeight(prev => (prev ?? (currentSet?.target_weight || 0)) + delta);
   };
 
   const skipRest = () => {
@@ -210,7 +264,11 @@ export default function WorkoutPage() {
           Great work. You crushed it.
         </p>
         <button
-          onClick={() => window.location.href = '/'}
+          onClick={() => {
+            // Clear the workout from session storage
+            sessionStorage.removeItem('currentWorkout');
+            router.push('/');
+          }}
           className="btn-primary"
         >
           Back to Home
@@ -239,7 +297,10 @@ export default function WorkoutPage() {
       <header className="safe-area-top" style={{ padding: '1rem 1.5rem' }}>
         <div className="flex items-center justify-between">
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => {
+              sessionStorage.removeItem('currentWorkout');
+              router.push('/');
+            }}
             style={{ color: '#C9A75A', fontSize: '1rem', background: 'none', border: 'none' }}
           >
             ✕ End
@@ -334,7 +395,7 @@ export default function WorkoutPage() {
 
             {/* Current set targets */}
             <div className="flex-1 flex flex-col items-center justify-center">
-              {currentSet.type === 'warmup' && (
+              {setType === 'warmup' && (
                 <span style={{
                   color: '#C9A75A',
                   fontSize: '0.75rem',
@@ -455,7 +516,7 @@ export default function WorkoutPage() {
                   <div style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '2rem' }}>×</div>
                   <div className="text-center">
                     <div style={{ fontSize: '4rem', fontWeight: 700, color: '#F5F1EA', lineHeight: 1 }}>
-                      {currentSet.target_reps}
+                      {targetReps}
                     </div>
                     <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>reps</div>
                   </div>
@@ -475,17 +536,17 @@ export default function WorkoutPage() {
         <div className="safe-area-bottom p-6" style={{ background: 'linear-gradient(180deg, transparent, #0F2233 30%)' }}>
           {/* Quick log - hit target */}
           <button
-            onClick={() => handleLogSet(currentSet.target_reps, displayWeight)}
+            onClick={() => handleLogSet(targetReps, displayWeight)}
             className="btn-primary w-full mb-3"
             style={{ fontSize: '1.25rem', padding: '1.25rem' }}
           >
-            Done — {displayWeight} × {currentSet.target_reps} ✓
+            Done — {displayWeight} × {targetReps} ✓
           </button>
 
           {/* Adjust reps row */}
           <div className="flex gap-3">
             <button
-              onClick={() => handleLogSet(currentSet.target_reps - 1, displayWeight)}
+              onClick={() => handleLogSet(targetReps - 1, displayWeight)}
               style={{
                 flex: 1,
                 background: 'rgba(201, 167, 90, 0.1)',
@@ -496,10 +557,10 @@ export default function WorkoutPage() {
                 fontSize: '0.875rem',
               }}
             >
-              {currentSet.target_reps - 1} reps
+              {targetReps - 1} reps
             </button>
             <button
-              onClick={() => handleLogSet(currentSet.target_reps + 1, displayWeight)}
+              onClick={() => handleLogSet(targetReps + 1, displayWeight)}
               style={{
                 flex: 1,
                 background: 'rgba(201, 167, 90, 0.1)',
@@ -510,7 +571,7 @@ export default function WorkoutPage() {
                 fontSize: '0.875rem',
               }}
             >
-              {currentSet.target_reps + 1} reps
+              {targetReps + 1} reps
             </button>
             <button
               onClick={() => setShowWeightPicker(true)}

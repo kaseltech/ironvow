@@ -24,7 +24,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const [weight, setWeight] = useState('');
   const [goalType, setGoalType] = useState<'cut' | 'bulk' | 'maintain' | 'recomp' | null>(null);
   const [targetWeight, setTargetWeight] = useState('');
-  const [equipmentLocation, setEquipmentLocation] = useState<'home' | 'gym'>('gym');
+  const [equipmentLocation, setEquipmentLocation] = useState<'home' | 'gym'>('home');
+  const [customEquipment, setCustomEquipment] = useState<string[]>([]);
+  const [customInput, setCustomInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   const nextStep = () => {
@@ -46,12 +48,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const saveAndContinue = async () => {
     setSaving(true);
     try {
-      // Save profile data
+      // Save profile data including custom equipment
       const heightTotal = parseInt(heightFeet) * 12 + parseInt(heightInches || '0');
       await updateProfile({
         gender: gender || undefined,
         experience_level: experience || undefined,
         height_inches: heightTotal || undefined,
+        custom_equipment: customEquipment.length > 0 ? customEquipment : undefined,
       });
 
       // Save initial weight if provided
@@ -98,6 +101,25 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     acc[category].push(eq);
     return acc;
   }, {} as Record<string, typeof allEquipment>);
+
+  const addCustomEquipment = () => {
+    const trimmed = customInput.trim();
+    if (trimmed && !customEquipment.includes(trimmed)) {
+      setCustomEquipment([...customEquipment, trimmed]);
+      setCustomInput('');
+    }
+  };
+
+  const removeCustomEquipment = (item: string) => {
+    setCustomEquipment(customEquipment.filter(e => e !== item));
+  };
+
+  const handleCustomKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCustomEquipment();
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0F2233' }}>
@@ -480,7 +502,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto space-y-4" style={{ maxHeight: '300px' }}>
+            <div className="flex-1 overflow-y-auto space-y-4" style={{ maxHeight: '250px' }}>
               {Object.entries(groupedEquipment).map(([category, items]) => (
                 <div key={category}>
                   <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
@@ -509,6 +531,90 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Custom Equipment Section */}
+            <div className="mt-4">
+              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                Custom Equipment
+              </h3>
+              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+                Add anything not listed above. The AI will consider these when generating workouts.
+              </p>
+
+              {/* Custom equipment tags */}
+              {customEquipment.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {customEquipment.map(item => (
+                    <span
+                      key={item}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: '0.375rem 0.75rem',
+                        borderRadius: '2rem',
+                        background: 'rgba(74, 222, 128, 0.15)',
+                        border: '1px solid rgba(74, 222, 128, 0.3)',
+                        color: '#4ADE80',
+                        fontSize: '0.8125rem',
+                      }}
+                    >
+                      {item}
+                      <button
+                        onClick={() => removeCustomEquipment(item)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'rgba(74, 222, 128, 0.7)',
+                          fontSize: '1rem',
+                          lineHeight: 1,
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        x
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Input field */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customInput}
+                  onChange={e => setCustomInput(e.target.value)}
+                  onKeyDown={handleCustomKeyDown}
+                  placeholder="e.g., Cable crossover machine, Reverse hyper..."
+                  style={{
+                    flex: 1,
+                    padding: '0.625rem 0.875rem',
+                    borderRadius: '0.5rem',
+                    background: 'rgba(15, 34, 51, 0.8)',
+                    border: '1px solid rgba(201, 167, 90, 0.2)',
+                    color: '#F5F1EA',
+                    fontSize: '0.875rem',
+                  }}
+                />
+                <button
+                  onClick={addCustomEquipment}
+                  disabled={!customInput.trim()}
+                  style={{
+                    padding: '0.625rem 1rem',
+                    borderRadius: '0.5rem',
+                    background: customInput.trim() ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    color: customInput.trim() ? '#C9A75A' : 'rgba(201, 167, 90, 0.4)',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    cursor: customInput.trim() ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  Add
+                </button>
+              </div>
             </div>
 
             <div className="mt-4">

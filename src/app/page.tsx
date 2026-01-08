@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Onboarding } from '@/components/Onboarding';
 import { useAuth } from '@/context/AuthContext';
-import { useProfile } from '@/hooks/useSupabase';
+import { useProfile, useInjuries, useEquipment } from '@/hooks/useSupabase';
+import { generateWorkout, generateWorkoutLocal, type GeneratedWorkout } from '@/lib/generateWorkout';
+import { Settings } from '@/components/Settings';
 
-// Mock data for the demo
 const muscleGroups = [
   { id: 'chest', name: 'Chest', icon: '💪' },
   { id: 'back', name: 'Back', icon: '🔙' },
@@ -23,27 +25,22 @@ const locations = [
   { id: 'outdoor', name: 'Outdoor', icon: '🌳' },
 ];
 
-const mockWorkout = {
-  name: 'Upper Body Push',
-  duration: 45,
-  exercises: [
-    { name: 'Bench Press', sets: 4, reps: '8-10', weight: '165 lbs', rest: 90 },
-    { name: 'Incline Dumbbell Press', sets: 3, reps: '10-12', weight: '50 lbs', rest: 75 },
-    { name: 'Overhead Press', sets: 3, reps: '8-10', weight: '95 lbs', rest: 90 },
-    { name: 'Lateral Raises', sets: 3, reps: '12-15', weight: '20 lbs', rest: 60 },
-    { name: 'Tricep Pushdowns', sets: 3, reps: '12-15', weight: '40 lbs', rest: 60 },
-    { name: 'Dips', sets: 3, reps: 'AMRAP', weight: 'BW', rest: 90 },
-  ],
-};
-
 export default function Home() {
+  const router = useRouter();
+  const { user } = useAuth();
   const { profile, loading: profileLoading, isProfileComplete, refetch: refetchProfile } = useProfile();
+  const { injuries } = useInjuries();
+  const { userEquipment, allEquipment } = useEquipment();
+
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
   const [duration, setDuration] = useState(45);
   const [showWorkout, setShowWorkout] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [generatedWorkout, setGeneratedWorkout] = useState<GeneratedWorkout | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -51,12 +48,63 @@ export default function Home() {
     );
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!user || !selectedLocation) return;
+
     setGenerating(true);
-    setTimeout(() => {
-      setGenerating(false);
+    setError(null);
+
+    try {
+      // Get user's equipment for the selected location
+      const locationEquipment = userEquipment
+        .filter(e => e.location === selectedLocation || selectedLocation === 'gym')
+        .map(e => {
+          const eq = allEquipment.find(a => a.id === e.equipment_id);
+          return eq?.name || '';
+        })
+        .filter(Boolean);
+
+      // Format injuries for the request
+      const formattedInjuries = injuries.map(i => ({
+        bodyPart: i.body_part,
+        movementsToAvoid: i.movements_to_avoid || [],
+      }));
+
+      // Try AI-powered Edge Function first, fall back to local generation
+      const workoutRequest = {
+        userId: user.id,
+        location: selectedLocation as 'gym' | 'home' | 'outdoor',
+        targetMuscles: selectedMuscles,
+        duration,
+        experienceLevel: profile?.experience_level || 'intermediate',
+        injuries: formattedInjuries,
+        equipment: locationEquipment,
+      };
+
+      let workout: GeneratedWorkout;
+      try {
+        workout = await generateWorkout(workoutRequest);
+      } catch (edgeFnError) {
+        console.warn('Edge function failed, using local generation:', edgeFnError);
+        workout = await generateWorkoutLocal(workoutRequest);
+      }
+
+      setGeneratedWorkout(workout);
       setShowWorkout(true);
-    }, 1500);
+    } catch (err) {
+      console.error('Failed to generate workout:', err);
+      setError('Failed to generate workout. Please try again.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleStartWorkout = () => {
+    if (generatedWorkout) {
+      // Store workout in sessionStorage for the workout page
+      sessionStorage.setItem('currentWorkout', JSON.stringify(generatedWorkout));
+      router.push('/workout');
+    }
   };
 
   const canGenerate = selectedLocation && selectedMuscles.length > 0;
@@ -87,6 +135,7 @@ export default function Home() {
         <div className="flex items-center justify-between">
           <Logo size="lg" />
           <button
+            onClick={() => setShowSettings(true)}
             style={{
               background: 'rgba(201, 167, 90, 0.1)',
               border: '1px solid rgba(201, 167, 90, 0.2)',
@@ -217,6 +266,22 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div
+                className="animate-fade-in mb-4 p-3"
+                style={{
+                  background: 'rgba(248, 113, 113, 0.1)',
+                  border: '1px solid #F87171',
+                  borderRadius: '0.5rem',
+                  color: '#F87171',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {error}
+              </div>
+            )}
+
             {/* Generate Button */}
             <button
               onClick={handleGenerate}
@@ -235,12 +300,15 @@ export default function Home() {
               )}
             </button>
           </>
-        ) : (
+        ) : generatedWorkout ? (
           /* Workout Display */
           <div className="animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <button
-                onClick={() => setShowWorkout(false)}
+                onClick={() => {
+                  setShowWorkout(false);
+                  setGeneratedWorkout(null);
+                }}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -278,19 +346,19 @@ export default function Home() {
                     color: '#F5F1EA',
                   }}
                 >
-                  {mockWorkout.name}
+                  {generatedWorkout.name}
                 </h2>
                 <span style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.875rem' }}>
-                  ~{mockWorkout.duration} min
+                  ~{generatedWorkout.duration} min
                 </span>
               </div>
               <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
-                {mockWorkout.exercises.length} exercises • Push focus
+                {generatedWorkout.exercises.length} exercises • {generatedWorkout.workoutType} focus
               </p>
             </div>
 
             <div className="space-y-3">
-              {mockWorkout.exercises.map((exercise, i) => (
+              {generatedWorkout.exercises.map((exercise, i) => (
                 <div
                   key={i}
                   className="card animate-fade-in"
@@ -322,12 +390,17 @@ export default function Home() {
                       {exercise.name}
                     </h3>
                     <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.75rem' }}>
-                      {exercise.sets} sets × {exercise.reps} reps @ {exercise.weight}
+                      {exercise.sets} sets x {exercise.reps} reps
                     </p>
+                    {exercise.notes && (
+                      <p style={{ color: 'rgba(201, 167, 90, 0.6)', fontSize: '0.625rem', marginTop: '0.25rem' }}>
+                        {exercise.notes}
+                      </p>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ color: '#C9A75A', fontSize: '0.75rem' }}>
-                      {exercise.rest}s rest
+                      {exercise.restSeconds}s rest
                     </div>
                   </div>
                 </div>
@@ -335,13 +408,14 @@ export default function Home() {
             </div>
 
             <button
+              onClick={handleStartWorkout}
               className="btn-primary w-full mt-6"
               style={{ fontSize: '1.125rem' }}
             >
               Start Workout
             </button>
           </div>
-        )}
+        ) : null}
       </main>
 
       {/* Bottom Nav Mock */}
@@ -395,6 +469,9 @@ export default function Home() {
           ))}
         </div>
       </nav>
+
+      {/* Settings Modal */}
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
     )}
     </AuthGuard>

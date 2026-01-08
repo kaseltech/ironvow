@@ -57,6 +57,7 @@ export function useProfile() {
     height_inches?: number | null;
     experience_level?: 'beginner' | 'intermediate' | 'advanced' | null;
     preferred_units?: 'imperial' | 'metric';
+    custom_equipment?: string[];
   }) => {
     if (!user) return;
 
