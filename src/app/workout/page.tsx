@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { AuthGuard } from '@/components/AuthGuard';
+import { useWorkoutSessions, useSetLogs } from '@/hooks/useSupabase';
 
-// Mock AI-generated workout data
+// Mock AI-generated workout data (will be replaced with real generated workouts)
 const workoutData = {
   name: 'Upper Body Push',
   exercises: [
@@ -62,6 +64,10 @@ const workoutData = {
 };
 
 export default function WorkoutPage() {
+  const { startSession, completeSession } = useWorkoutSessions();
+  const { logSet } = useSetLogs();
+
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [isResting, setIsResting] = useState(false);
@@ -72,6 +78,25 @@ export default function WorkoutPage() {
   const [showComplete, setShowComplete] = useState(false);
   const [adjustedWeight, setAdjustedWeight] = useState<number | null>(null);
   const [showWeightPicker, setShowWeightPicker] = useState(false);
+  const [sessionStarted, setSessionStarted] = useState(false);
+
+  // Start workout session on mount
+  useEffect(() => {
+    const initSession = async () => {
+      if (!sessionStarted) {
+        try {
+          const session = await startSession(workoutData.name, undefined, 'gym');
+          if (session) {
+            setSessionId(session.id);
+            setSessionStarted(true);
+          }
+        } catch (err) {
+          console.error('Failed to start session:', err);
+        }
+      }
+    };
+    initSession();
+  }, [startSession, sessionStarted]);
 
   const exercise = workoutData.exercises[currentExerciseIndex];
   const currentSet = exercise.sets[currentSetIndex];
@@ -95,7 +120,7 @@ export default function WorkoutPage() {
     return () => clearInterval(interval);
   }, [isResting, restTime]);
 
-  const logSet = (reps: number, weight: number) => {
+  const handleLogSet = async (reps: number, weight: number) => {
     // Save the completed set
     const newCompleted = [...completedSets];
     newCompleted[currentExerciseIndex] = [
@@ -105,9 +130,38 @@ export default function WorkoutPage() {
     setCompletedSets(newCompleted);
     setShowWeightPicker(false);
 
+    // Log to database if session exists
+    // Note: We use exercise name as ID for now since we don't have real exercise IDs
+    // In a real app, this would use the actual exercise UUID from the database
+    if (sessionId) {
+      try {
+        await logSet(
+          sessionId,
+          exercise.name, // Using name as placeholder - would be exercise.id in real app
+          currentSetIndex + 1,
+          weight,
+          reps,
+          currentSet.target_weight,
+          currentSet.target_reps,
+          currentSet.type === 'warmup' ? 'warmup' : 'working'
+        );
+      } catch (err) {
+        console.error('Failed to log set:', err);
+        // Continue anyway - local state is updated
+      }
+    }
+
     // Move to next set or exercise
     if (isLastSet) {
       if (isLastExercise) {
+        // Complete the session
+        if (sessionId) {
+          try {
+            await completeSession(sessionId);
+          } catch (err) {
+            console.error('Failed to complete session:', err);
+          }
+        }
         setShowComplete(true);
       } else {
         setCurrentExerciseIndex(i => i + 1);
@@ -146,6 +200,7 @@ export default function WorkoutPage() {
 
   if (showComplete) {
     return (
+      <AuthGuard>
       <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#0F2233' }}>
         <div className="text-6xl mb-4">🎉</div>
         <h1 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '2rem', color: '#F5F1EA', marginBottom: '0.5rem' }}>
@@ -161,10 +216,12 @@ export default function WorkoutPage() {
           Back to Home
         </button>
       </div>
+      </AuthGuard>
     );
   }
 
   return (
+    <AuthGuard>
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0F2233' }}>
       {/* Progress bar */}
       <div style={{ height: '4px', backgroundColor: 'rgba(201, 167, 90, 0.2)' }}>
@@ -418,7 +475,7 @@ export default function WorkoutPage() {
         <div className="safe-area-bottom p-6" style={{ background: 'linear-gradient(180deg, transparent, #0F2233 30%)' }}>
           {/* Quick log - hit target */}
           <button
-            onClick={() => logSet(currentSet.target_reps, displayWeight)}
+            onClick={() => handleLogSet(currentSet.target_reps, displayWeight)}
             className="btn-primary w-full mb-3"
             style={{ fontSize: '1.25rem', padding: '1.25rem' }}
           >
@@ -428,7 +485,7 @@ export default function WorkoutPage() {
           {/* Adjust reps row */}
           <div className="flex gap-3">
             <button
-              onClick={() => logSet(currentSet.target_reps - 1, displayWeight)}
+              onClick={() => handleLogSet(currentSet.target_reps - 1, displayWeight)}
               style={{
                 flex: 1,
                 background: 'rgba(201, 167, 90, 0.1)',
@@ -442,7 +499,7 @@ export default function WorkoutPage() {
               {currentSet.target_reps - 1} reps
             </button>
             <button
-              onClick={() => logSet(currentSet.target_reps + 1, displayWeight)}
+              onClick={() => handleLogSet(currentSet.target_reps + 1, displayWeight)}
               style={{
                 flex: 1,
                 background: 'rgba(201, 167, 90, 0.1)',
@@ -498,5 +555,6 @@ export default function WorkoutPage() {
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }

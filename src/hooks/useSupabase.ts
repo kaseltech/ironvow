@@ -478,6 +478,44 @@ export function useInjuries() {
   return { injuries, loading, addInjury, removeInjury, refetch: fetchInjuries };
 }
 
+// Set logs hook for workout sessions
+export function useSetLogs(sessionId?: string) {
+  const [sets, setSets] = useState<{ exercise_id: string; set_number: number; weight: number; reps: number }[]>([]);
+
+  const logSet = async (
+    sessionId: string,
+    exerciseId: string,
+    setNumber: number,
+    weight: number,
+    reps: number,
+    targetWeight?: number,
+    targetReps?: number,
+    setType: 'warmup' | 'working' | 'dropset' | 'failure' = 'working'
+  ) => {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('set_logs')
+      .insert({
+        session_id: sessionId,
+        exercise_id: exerciseId,
+        set_number: setNumber,
+        weight,
+        reps,
+        target_weight: targetWeight,
+        target_reps: targetReps,
+        set_type: setType,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    setSets(prev => [...prev, { exercise_id: exerciseId, set_number: setNumber, weight, reps }]);
+    return data;
+  };
+
+  return { sets, logSet };
+}
+
 // Muscle strength hook
 export function useMuscleStrength() {
   const { user } = useAuth();
