@@ -94,6 +94,28 @@ export async function getSwapAlternatives(request: SwapRequest): Promise<Exercis
   return data.alternatives;
 }
 
+// Map broad muscle groups to specific muscles in database
+const muscleMapping: Record<string, string[]> = {
+  'chest': ['chest', 'upper_chest', 'lower_chest'],
+  'back': ['back', 'lats', 'upper_back', 'lower_back', 'rhomboids', 'traps'],
+  'shoulders': ['shoulders', 'front_delts', 'lateral_delts', 'rear_delts', 'delts'],
+  'arms': ['biceps', 'triceps', 'forearms', 'brachialis'],
+  'legs': ['quads', 'hamstrings', 'glutes', 'calves', 'hip_flexors', 'adductors'],
+  'core': ['core', 'abs', 'obliques', 'lower_back', 'transverse_abdominis'],
+};
+
+function expandMuscles(muscles: string[]): string[] {
+  const expanded = new Set<string>();
+  for (const muscle of muscles) {
+    if (muscleMapping[muscle]) {
+      muscleMapping[muscle].forEach(m => expanded.add(m));
+    } else {
+      expanded.add(muscle);
+    }
+  }
+  return Array.from(expanded);
+}
+
 // Fallback: Generate workout client-side without AI
 // This is used when edge function is not deployed or unavailable
 export async function generateWorkoutLocal(request: WorkoutRequest): Promise<GeneratedWorkout> {
@@ -108,7 +130,10 @@ export async function generateWorkoutLocal(request: WorkoutRequest): Promise<Gen
     throw new Error('Failed to fetch exercises');
   }
 
-  const { location, targetMuscles, duration, experienceLevel, injuries, equipment } = request;
+  const { location, targetMuscles: rawTargetMuscles, duration, experienceLevel, injuries, equipment } = request;
+
+  // Expand muscle groups to specific muscles
+  const targetMuscles = expandMuscles(rawTargetMuscles);
 
   // Filter exercises
   const filteredExercises = exercises.filter((ex) => {

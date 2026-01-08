@@ -54,14 +54,42 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: WorkoutRequest = await req.json();
-    const { userId, location, targetMuscles, duration, experienceLevel, injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles } = body;
+    const { userId, location, targetMuscles: rawTargetMuscles, duration, experienceLevel, injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles: rawSwapMuscles } = body;
+
+    // Map broad muscle groups to specific muscles in database
+    const muscleMapping: Record<string, string[]> = {
+      'chest': ['chest', 'upper_chest', 'lower_chest'],
+      'back': ['back', 'lats', 'upper_back', 'lower_back', 'rhomboids', 'traps'],
+      'shoulders': ['shoulders', 'front_delts', 'lateral_delts', 'rear_delts', 'delts'],
+      'arms': ['biceps', 'triceps', 'forearms', 'brachialis'],
+      'legs': ['quads', 'hamstrings', 'glutes', 'calves', 'hip_flexors', 'adductors'],
+      'core': ['core', 'abs', 'obliques', 'lower_back', 'transverse_abdominis'],
+    };
+
+    // Expand muscle groups to specific muscles
+    const expandMuscles = (muscles: string[]): string[] => {
+      const expanded = new Set<string>();
+      for (const muscle of muscles) {
+        if (muscleMapping[muscle]) {
+          muscleMapping[muscle].forEach(m => expanded.add(m));
+        } else {
+          expanded.add(muscle); // Keep as-is if not in mapping
+        }
+      }
+      return Array.from(expanded);
+    };
+
+    const targetMuscles = expandMuscles(rawTargetMuscles || []);
+    const swapTargetMuscles = rawSwapMuscles ? expandMuscles(rawSwapMuscles) : undefined;
+
+    console.log(`Expanded muscles: ${rawTargetMuscles?.join(',')} -> ${targetMuscles.join(',')}`);
 
     // Combine standard and custom equipment
     const allEquipment = [...(equipment || []), ...(customEquipment || [])];
 
     // Handle swap request - return alternatives for a specific exercise
     if (swapExerciseId && swapTargetMuscles) {
-      return await handleSwapRequest(body, supabase, allEquipment);
+      return await handleSwapRequest(body, supabase, allEquipment, swapTargetMuscles);
     }
 
     // Fetch available exercises from database
@@ -478,9 +506,11 @@ function generateWorkoutName(type: string, level: string): string {
 async function handleSwapRequest(
   body: WorkoutRequest,
   supabase: any,
-  allEquipment: string[]
+  allEquipment: string[],
+  expandedSwapMuscles: string[]
 ): Promise<Response> {
-  const { location, swapExerciseId, swapTargetMuscles, injuries, experienceLevel } = body;
+  const { location, swapExerciseId, injuries, experienceLevel } = body;
+  const swapTargetMuscles = expandedSwapMuscles;
 
   // Fetch all exercises
   const { data: exercises, error } = await supabase.from('exercises').select('*');
