@@ -179,6 +179,14 @@ serve(async (req) => {
     const body: WorkoutRequest = await req.json();
     const { userId, location, targetMuscles: rawTargetMuscles, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles: rawSwapMuscles, freeformPrompt } = body;
 
+    console.log('=== GENERATE WORKOUT REQUEST ===');
+    console.log('Location:', location);
+    console.log('Duration:', duration);
+    console.log('Freeform mode:', !!freeformPrompt);
+    console.log('Freeform prompt:', freeformPrompt?.substring(0, 100));
+    console.log('Target muscles:', rawTargetMuscles);
+    console.log('Equipment count:', equipment?.length || 0);
+
     const startTime = Date.now();
 
     // Fetch user profile to get fitness_goal
@@ -423,7 +431,10 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error generating workout:', error);
+    console.error('=== WORKOUT GENERATION ERROR ===');
+    console.error('Error type:', error.constructor.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {
@@ -674,6 +685,10 @@ Return ONLY valid JSON:
 }`;
   }
 
+  console.log('=== CALLING ANTHROPIC API ===');
+  console.log('Prompt length:', prompt.length);
+  console.log('Request type:', freeformPrompt ? 'FREEFORM' : 'STRUCTURED');
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -693,19 +708,34 @@ Return ONLY valid JSON:
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Anthropic API error:', errorText);
-    throw new Error('AI generation failed, falling back to rule-based');
+    throw new Error(`AI generation failed: ${errorText}`);
   }
+
+  console.log('Anthropic API response status:', response.status);
 
   const aiResponse = await response.json();
   const content = aiResponse.content[0]?.text || '';
 
+  console.log('AI response content length:', content.length);
+  console.log('AI response preview:', content.substring(0, 200));
+
   // Extract JSON from response
   const jsonMatch = content.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error('Failed to parse AI response');
+    console.error('Failed to find JSON in AI response');
+    console.error('Full response:', content);
+    throw new Error('Failed to parse AI response - no JSON found');
   }
 
-  const parsed = JSON.parse(jsonMatch[0]);
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+    console.log('Parsed workout:', parsed.name, 'with', parsed.exercises?.length, 'exercises');
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError);
+    console.error('Attempted to parse:', jsonMatch[0].substring(0, 500));
+    throw new Error('Failed to parse AI response - invalid JSON');
+  }
 
   // ==========================================================================
   // HYBRID AI: Fuzzy match AI exercises to database + log unmatched
@@ -772,6 +802,9 @@ Return ONLY valid JSON:
 
   const matchRate = matchedExercises.filter(e => e.exerciseId).length / matchedExercises.length;
   console.log(`Match rate: ${(matchRate * 100).toFixed(0)}% (${matchedExercises.filter(e => e.exerciseId).length}/${matchedExercises.length})`);
+  console.log('=== AI GENERATION COMPLETE ===');
+  console.log('Workout name:', parsed.name);
+  console.log('Exercise count:', matchedExercises.length);
 
   return {
     workout: {
@@ -974,7 +1007,7 @@ async function handleSwapRequest(
   expandedSwapMuscles: string[]
 ): Promise<Response> {
   const { location, swapExerciseId, injuries, experienceLevel } = body;
-  const swapTargetMuscles = expandedSwapMuscles;
+  let swapTargetMuscles = expandedSwapMuscles;
 
   // Fetch all exercises
   const { data: exercises, error } = await supabase.from('exercises').select('*');
@@ -986,16 +1019,30 @@ async function handleSwapRequest(
     );
   }
 
+  // If no target muscles provided, look up the exercise being swapped and use its muscles
+  if (!swapTargetMuscles || swapTargetMuscles.length === 0) {
+    const originalExercise = exercises.find((ex: any) => ex.id === swapExerciseId);
+    if (originalExercise) {
+      swapTargetMuscles = [
+        ...(originalExercise.primary_muscles || []),
+        ...(originalExercise.secondary_muscles || []),
+      ];
+      console.log(`Swap: No target muscles provided, using exercise muscles: ${swapTargetMuscles.join(', ')}`);
+    }
+  }
+
   // Filter to exercises that target the same muscles
   const alternatives = exercises.filter((ex: any) => {
     // Don't include the exercise we're swapping
     if (ex.id === swapExerciseId) return false;
 
-    // Must target at least one of the same muscles
-    const targetsMuscle = swapTargetMuscles?.some(
-      (muscle: string) => ex.primary_muscles?.includes(muscle) || ex.secondary_muscles?.includes(muscle)
-    );
-    if (!targetsMuscle) return false;
+    // Must target at least one of the same muscles (if we have target muscles)
+    if (swapTargetMuscles && swapTargetMuscles.length > 0) {
+      const targetsMuscle = swapTargetMuscles.some(
+        (muscle: string) => ex.primary_muscles?.includes(muscle) || ex.secondary_muscles?.includes(muscle)
+      );
+      if (!targetsMuscle) return false;
+    }
 
     // Check equipment based on location
     let hasEquipment = false;
