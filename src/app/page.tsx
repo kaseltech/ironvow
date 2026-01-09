@@ -229,8 +229,10 @@ export default function Home() {
     setSwapAlternatives([]);
 
     try {
-      // Get target muscles for this exercise from the workout context
-      const targetMuscles = generatedWorkout.targetMuscles;
+      // Use exercise's muscles if available, otherwise fallback to workout's target muscles
+      const targetMuscles = exercise.primaryMuscles?.length
+        ? exercise.primaryMuscles
+        : generatedWorkout.targetMuscles;
 
       const alternatives = await getSwapAlternatives({
         userId: user!.id,
@@ -239,11 +241,11 @@ export default function Home() {
         injuries: (lastWorkoutRequest as any).injuries,
         equipment: (lastWorkoutRequest as any).equipment,
         customEquipment: (lastWorkoutRequest as any).customEquipment,
-        swapExerciseId: exercise.exerciseId,
+        swapExerciseId: exercise.exerciseId || '', // Handle empty ID for unmatched exercises
         swapTargetMuscles: targetMuscles,
       });
 
-      setSwapAlternatives(alternatives);
+      setSwapAlternatives(alternatives || []);
     } catch (err) {
       console.error('Failed to get alternatives:', err);
       setSwapAlternatives([]);
@@ -264,6 +266,8 @@ export default function Home() {
       reps: currentExercise.reps,
       restSeconds: currentExercise.restSeconds,
       notes: currentExercise.notes,
+      primaryMuscles: alternative.primaryMuscles || [],
+      secondaryMuscles: alternative.secondaryMuscles || [],
     };
 
     const updatedExercises = [...generatedWorkout.exercises];
@@ -576,20 +580,65 @@ export default function Home() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setSelectedMuscles(muscleGroups.map(m => m.id))}
-                  style={{
-                    marginTop: '0.5rem',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#C9A75A',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  Select all (Full body)
-                </button>
+                {/* Quick Select Buttons */}
+                <div className="flex flex-wrap gap-2" style={{ marginTop: '0.75rem' }}>
+                  <button
+                    onClick={() => setSelectedMuscles(['chest', 'shoulders', 'triceps'])}
+                    style={{
+                      background: 'rgba(15, 34, 51, 0.5)',
+                      border: '1px solid rgba(201, 167, 90, 0.3)',
+                      borderRadius: '0.5rem',
+                      padding: '0.375rem 0.75rem',
+                      color: '#C9A75A',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Push
+                  </button>
+                  <button
+                    onClick={() => setSelectedMuscles(['back', 'biceps', 'traps'])}
+                    style={{
+                      background: 'rgba(15, 34, 51, 0.5)',
+                      border: '1px solid rgba(201, 167, 90, 0.3)',
+                      borderRadius: '0.5rem',
+                      padding: '0.375rem 0.75rem',
+                      color: '#C9A75A',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Pull
+                  </button>
+                  <button
+                    onClick={() => setSelectedMuscles(['quads', 'hamstrings', 'glutes', 'calves'])}
+                    style={{
+                      background: 'rgba(15, 34, 51, 0.5)',
+                      border: '1px solid rgba(201, 167, 90, 0.3)',
+                      borderRadius: '0.5rem',
+                      padding: '0.375rem 0.75rem',
+                      color: '#C9A75A',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Legs
+                  </button>
+                  <button
+                    onClick={() => setSelectedMuscles(muscleGroups.map(m => m.id))}
+                    style={{
+                      background: 'rgba(15, 34, 51, 0.5)',
+                      border: '1px solid rgba(201, 167, 90, 0.3)',
+                      borderRadius: '0.5rem',
+                      padding: '0.375rem 0.75rem',
+                      color: '#C9A75A',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Full Body
+                  </button>
+                </div>
               </div>
             )}
 
