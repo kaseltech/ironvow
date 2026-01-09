@@ -1,16 +1,29 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useWeightLogs, useWeightGoal } from '@/hooks/useSupabase';
+import { useWeightLogs, useWeightGoal, useProfile } from '@/hooks/useSupabase';
+import { useStrengthData, formatDate, formatVolume } from '@/hooks/useStrengthData';
+import {
+  MAJOR_LIFTS,
+  findStandardForExercise,
+  calculateStrengthScore,
+  getStrengthLabel,
+  getExpected1RM,
+  calculateOverallStrengthLevel,
+  type ExperienceLevel,
+} from '@/lib/strengthStandards';
 import { AuthGuard } from '@/components/AuthGuard';
 
 export default function ProgressPage() {
   const { logs: weightLogs, loading: logsLoading, addWeightLog } = useWeightLogs(30);
   const { goal, loading: goalLoading } = useWeightGoal();
+  const { profile } = useProfile();
+  const { exercisePRs, sessions, loading: strengthLoading } = useStrengthData();
 
   const [showWeightInput, setShowWeightInput] = useState(false);
   const [activeView, setActiveView] = useState<'weight' | 'strength'>('weight');
   const [saving, setSaving] = useState(false);
+  const [newWeight, setNewWeight] = useState('');
 
   // Format weight data for display
   const weightHistory = useMemo(() => {
@@ -31,7 +44,59 @@ export default function ProgressPage() {
     ? ((startWeight - currentWeight) / (startWeight - targetWeight)) * 100
     : 0;
 
-  const [newWeight, setNewWeight] = useState('');
+  // User context for strength calculations
+  const userGender = (profile?.gender as 'male' | 'female') || 'male';
+  const userExperience = (profile?.experience_level as ExperienceLevel) || 'intermediate';
+  const userBodyWeight = currentWeight || 180;
+
+  // Get PRs for major lifts
+  const majorLiftPRs = useMemo(() => {
+    return MAJOR_LIFTS.map(liftName => {
+      const pr = exercisePRs.find(p => {
+        const standard = findStandardForExercise(p.exercise_name);
+        return standard === liftName;
+      });
+
+      const expected = getExpected1RM(liftName, userBodyWeight, userExperience, userGender) || 0;
+      const actual = pr?.estimated_1rm || 0;
+      const score = actual > 0
+        ? calculateStrengthScore(actual, liftName, userBodyWeight, userExperience, userGender)
+        : 0;
+      const { label, color } = getStrengthLabel(score);
+
+      return {
+        lift: liftName,
+        actual,
+        expected,
+        weight: pr?.pr_weight || 0,
+        reps: pr?.pr_reps || 0,
+        date: pr?.achieved_at ? formatDate(pr.achieved_at) : null,
+        score,
+        level: label,
+        levelColor: color,
+      };
+    });
+  }, [exercisePRs, userBodyWeight, userExperience, userGender]);
+
+  // Overall strength level
+  const overallStrength = useMemo(() => {
+    return calculateOverallStrengthLevel(
+      exercisePRs.map(p => ({ exercise_name: p.exercise_name, estimated_1rm: p.estimated_1rm })),
+      userBodyWeight,
+      userExperience,
+      userGender
+    );
+  }, [exercisePRs, userBodyWeight, userExperience, userGender]);
+
+  // Recent session volume
+  const recentVolume = useMemo(() => {
+    // Get sessions from last 7 days
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recentSessions = sessions.filter(s =>
+      new Date(s.started_at).getTime() > weekAgo
+    );
+    return recentSessions.reduce((sum, s) => sum + (s.total_volume || 0), 0);
+  }, [sessions]);
 
   // Calculate chart dimensions
   const chartWeights = weightHistory.length > 0 ? weightHistory.map(w => w.weight) : [0];
@@ -58,15 +123,7 @@ export default function ProgressPage() {
     }
   };
 
-  // PR history - mock for now (will connect later)
-  const prHistory = [
-    { lift: 'Bench Press', current: 225, previous: 215, date: 'Jan 4' },
-    { lift: 'Squat', current: 275, previous: 275, date: 'Dec 28' },
-    { lift: 'Deadlift', current: 315, previous: 305, date: 'Jan 2' },
-    { lift: 'OHP', current: 135, previous: 130, date: 'Dec 20' },
-  ];
-
-  const loading = logsLoading || goalLoading;
+  const loading = logsLoading || goalLoading || strengthLoading;
 
   return (
     <AuthGuard>
@@ -77,6 +134,7 @@ export default function ProgressPage() {
           <div className="w-8 h-8 border-2 border-[#C9A75A] border-t-transparent rounded-full animate-spin" />
         </div>
       )}
+
       {/* Header */}
       <header
         className="safe-area-top"
@@ -161,7 +219,7 @@ export default function ProgressPage() {
                   <div
                     style={{
                       height: '100%',
-                      width: `${Math.min(progressPercent, 100)}%`,
+                      width: `${Math.min(Math.max(progressPercent, 0), 100)}%`,
                       backgroundColor: '#C9A75A',
                       borderRadius: '4px',
                       transition: 'width 0.3s ease',
@@ -192,106 +250,105 @@ export default function ProgressPage() {
                   </p>
                 </div>
               ) : (
-              /* Better Chart */
-              <div style={{ position: 'relative', height: '160px', padding: '0 2.5rem 0 0' }}>
-                {/* Y-axis labels */}
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: '20px', width: '35px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>{maxWeight.toFixed(0)}</span>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>{((maxWeight + minWeight) / 2).toFixed(0)}</span>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>{minWeight.toFixed(0)}</span>
-                </div>
+                <div style={{ position: 'relative', height: '160px', padding: '0 2.5rem 0 0' }}>
+                  {/* Y-axis labels */}
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: '20px', width: '35px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>{maxWeight.toFixed(0)}</span>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>{((maxWeight + minWeight) / 2).toFixed(0)}</span>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>{minWeight.toFixed(0)}</span>
+                  </div>
 
-                {/* Chart area */}
-                <div style={{ marginLeft: '40px', height: '120px', position: 'relative' }}>
-                  {/* Grid lines */}
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    {[0, 1, 2].map(i => (
-                      <div key={i} style={{ borderBottom: '1px solid rgba(201, 167, 90, 0.1)', width: '100%' }} />
+                  {/* Chart area */}
+                  <div style={{ marginLeft: '40px', height: '120px', position: 'relative' }}>
+                    {/* Grid lines */}
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      {[0, 1, 2].map(i => (
+                        <div key={i} style={{ borderBottom: '1px solid rgba(201, 167, 90, 0.1)', width: '100%' }} />
+                      ))}
+                    </div>
+
+                    {/* Target line */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        top: `${getY(targetWeight)}%`,
+                        borderTop: '2px dashed rgba(201, 167, 90, 0.4)',
+                      }}
+                    >
+                      <span style={{
+                        position: 'absolute',
+                        right: '-2.5rem',
+                        top: '-0.5rem',
+                        color: '#C9A75A',
+                        fontSize: '0.625rem',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {targetWeight}
+                      </span>
+                    </div>
+
+                    {/* Data points and line */}
+                    <svg
+                      style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
+                      viewBox={`0 0 ${Math.max(weightHistory.length - 1, 1)} 100`}
+                      preserveAspectRatio="none"
+                    >
+                      {/* Area fill */}
+                      <path
+                        d={`M0,${getY(weightHistory[0].weight)} ${weightHistory.map((w, i) =>
+                          `L${i},${getY(w.weight)}`
+                        ).join(' ')} L${weightHistory.length - 1},100 L0,100 Z`}
+                        fill="url(#gradient)"
+                        opacity="0.3"
+                      />
+                      {/* Line */}
+                      <polyline
+                        fill="none"
+                        stroke="#C9A75A"
+                        strokeWidth="0.15"
+                        strokeLinejoin="round"
+                        points={weightHistory.map((w, i) =>
+                          `${i},${getY(w.weight)}`
+                        ).join(' ')}
+                      />
+                      <defs>
+                        <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#C9A75A" />
+                          <stop offset="100%" stopColor="#C9A75A" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+
+                    {/* Data points as absolute positioned dots */}
+                    {weightHistory.map((w, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          left: `${(i / Math.max(weightHistory.length - 1, 1)) * 100}%`,
+                          top: `${getY(w.weight)}%`,
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          background: '#C9A75A',
+                          transform: 'translate(-50%, -50%)',
+                          boxShadow: '0 0 8px rgba(201, 167, 90, 0.5)',
+                        }}
+                      />
                     ))}
                   </div>
 
-                  {/* Target line */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      right: 0,
-                      top: `${getY(targetWeight)}%`,
-                      borderTop: '2px dashed rgba(201, 167, 90, 0.4)',
-                    }}
-                  >
-                    <span style={{
-                      position: 'absolute',
-                      right: '-2.5rem',
-                      top: '-0.5rem',
-                      color: '#C9A75A',
-                      fontSize: '0.625rem',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {targetWeight}
-                    </span>
+                  {/* X-axis labels */}
+                  <div style={{ marginLeft: '40px', display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                    {weightHistory.filter((_, i) => i === 0 || i === Math.floor(weightHistory.length / 2) || i === weightHistory.length - 1).map((w, i) => (
+                      <span key={i} style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>
+                        {w.date}
+                      </span>
+                    ))}
                   </div>
-
-                  {/* Data points and line */}
-                  <svg
-                    style={{ position: 'absolute', inset: 0, overflow: 'visible' }}
-                    viewBox={`0 0 ${weightHistory.length - 1} 100`}
-                    preserveAspectRatio="none"
-                  >
-                    {/* Area fill */}
-                    <path
-                      d={`M0,${getY(weightHistory[0].weight)} ${weightHistory.map((w, i) =>
-                        `L${i},${getY(w.weight)}`
-                      ).join(' ')} L${weightHistory.length - 1},100 L0,100 Z`}
-                      fill="url(#gradient)"
-                      opacity="0.3"
-                    />
-                    {/* Line */}
-                    <polyline
-                      fill="none"
-                      stroke="#C9A75A"
-                      strokeWidth="0.15"
-                      strokeLinejoin="round"
-                      points={weightHistory.map((w, i) =>
-                        `${i},${getY(w.weight)}`
-                      ).join(' ')}
-                    />
-                    <defs>
-                      <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#C9A75A" />
-                        <stop offset="100%" stopColor="#C9A75A" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-
-                  {/* Data points as absolute positioned dots */}
-                  {weightHistory.map((w, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        position: 'absolute',
-                        left: `${(i / (weightHistory.length - 1)) * 100}%`,
-                        top: `${getY(w.weight)}%`,
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        background: '#C9A75A',
-                        transform: 'translate(-50%, -50%)',
-                        boxShadow: '0 0 8px rgba(201, 167, 90, 0.5)',
-                      }}
-                    />
-                  ))}
                 </div>
-
-                {/* X-axis labels */}
-                <div style={{ marginLeft: '40px', display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                  {weightHistory.filter((_, i) => i === 0 || i === Math.floor(weightHistory.length / 2) || i === weightHistory.length - 1).map((w, i) => (
-                    <span key={i} style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>
-                      {w.date}
-                    </span>
-                  ))}
-                </div>
-              </div>
               )}
             </div>
 
@@ -300,107 +357,170 @@ export default function ProgressPage() {
               <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Recent Weigh-ins
               </h2>
-              <div className="space-y-2">
-                {[...weightHistory].reverse().slice(0, 5).map((w, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between items-center"
-                    style={{
-                      padding: '0.5rem 0',
-                      borderBottom: i < 4 ? '1px solid rgba(201, 167, 90, 0.1)' : 'none',
-                    }}
-                  >
-                    <span style={{ color: 'rgba(245, 241, 234, 0.7)', fontSize: '0.875rem' }}>
-                      {w.date}
-                    </span>
-                    <span style={{ color: '#F5F1EA', fontWeight: 500 }}>
-                      {w.weight} lbs
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {weightHistory.length === 0 ? (
+                <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', textAlign: 'center', padding: '1rem 0' }}>
+                  No weigh-ins logged yet
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {[...weightHistory].reverse().slice(0, 5).map((w, i) => (
+                    <div
+                      key={i}
+                      className="flex justify-between items-center"
+                      style={{
+                        padding: '0.5rem 0',
+                        borderBottom: i < 4 ? '1px solid rgba(201, 167, 90, 0.1)' : 'none',
+                      }}
+                    >
+                      <span style={{ color: 'rgba(245, 241, 234, 0.7)', fontSize: '0.875rem' }}>
+                        {w.date}
+                      </span>
+                      <span style={{ color: '#F5F1EA', fontWeight: 500 }}>
+                        {w.weight} lbs
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         ) : (
           <>
-            {/* Strength PRs */}
+            {/* Overall Strength Level */}
+            <div className="card mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
+                    Overall Strength ({userExperience})
+                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <span style={{ fontSize: '2.5rem', fontWeight: 700, color: '#C9A75A' }}>
+                      {overallStrength.overallScore}
+                    </span>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '1rem' }}>/100</span>
+                  </div>
+                </div>
+                <div style={{
+                  background: 'rgba(201, 167, 90, 0.15)',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                }}>
+                  <span style={{ color: '#C9A75A', fontWeight: 600 }}>
+                    {overallStrength.level}
+                  </span>
+                </div>
+              </div>
+              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
+                Based on your {userExperience} level expected standards at {userBodyWeight} lbs body weight
+              </p>
+            </div>
+
+            {/* Personal Records with Standards */}
             <div className="card mb-4">
               <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Personal Records
               </h2>
-              <div className="space-y-3">
-                {prHistory.map((pr, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      borderRadius: '0.75rem',
-                      padding: '1rem',
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span style={{ color: '#F5F1EA', fontWeight: 500 }}>{pr.lift}</span>
-                      {pr.current > pr.previous && (
+
+              {exercisePRs.length === 0 ? (
+                <div className="text-center py-6">
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                    No lift data yet
+                  </p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
+                    Complete workouts to start tracking your PRs
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {majorLiftPRs.map((pr, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: 'rgba(15, 34, 51, 0.5)',
+                        borderRadius: '0.75rem',
+                        padding: '1rem',
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span style={{ color: '#F5F1EA', fontWeight: 500 }}>{pr.lift}</span>
                         <span style={{
-                          color: '#4ADE80',
+                          color: pr.levelColor,
                           fontSize: '0.75rem',
-                          background: 'rgba(34, 197, 94, 0.1)',
+                          background: `${pr.levelColor}20`,
                           padding: '0.125rem 0.5rem',
                           borderRadius: '1rem',
                         }}>
-                          +{pr.current - pr.previous} lbs
+                          {pr.level}
                         </span>
+                      </div>
+
+                      {pr.actual > 0 ? (
+                        <>
+                          <div className="flex items-baseline gap-2 mb-2">
+                            <span style={{ fontSize: '2rem', fontWeight: 700, color: '#C9A75A' }}>
+                              {pr.actual}
+                            </span>
+                            <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
+                              lbs (e1RM)
+                            </span>
+                            {pr.date && (
+                              <span style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginLeft: 'auto' }}>
+                                {pr.date}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Progress bar to expected */}
+                          <div style={{ marginBottom: '0.5rem' }}>
+                            <div style={{ height: '6px', backgroundColor: 'rgba(201, 167, 90, 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  height: '100%',
+                                  width: `${Math.min((pr.actual / pr.expected) * 100, 100)}%`,
+                                  backgroundColor: pr.levelColor,
+                                  transition: 'width 0.3s ease',
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between">
+                            <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem' }}>
+                              Best: {pr.weight}×{pr.reps}
+                            </span>
+                            <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem' }}>
+                              Expected: {pr.expected} lbs
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ padding: '0.5rem 0' }}>
+                          <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.875rem' }}>
+                            No data yet • Expected: {pr.expected} lbs
+                          </span>
+                        </div>
                       )}
                     </div>
-                    <div className="flex items-baseline gap-2">
-                      <span style={{ fontSize: '2rem', fontWeight: 700, color: '#C9A75A' }}>
-                        {pr.current}
-                      </span>
-                      <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>lbs</span>
-                      <span style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginLeft: 'auto' }}>
-                        {pr.date}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Volume Trend */}
+            {/* Weekly Volume */}
             <div className="card">
               <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Weekly Volume
+                This Week's Volume
               </h2>
-              <div className="flex items-end justify-between gap-2" style={{ height: '120px' }}>
-                {[42000, 38000, 45000, 41000, 48000, 52000, 35000].map((vol, i) => {
-                  const height = (vol / 55000) * 100;
-                  const isThisWeek = i === 5;
-                  return (
-                    <div key={i} className="flex flex-col items-center flex-1">
-                      <div
-                        style={{
-                          width: '100%',
-                          height: `${height}%`,
-                          background: isThisWeek ? '#C9A75A' : 'rgba(201, 167, 90, 0.3)',
-                          borderRadius: '0.25rem 0.25rem 0 0',
-                          transition: 'height 0.3s ease',
-                        }}
-                      />
-                      <span style={{
-                        color: isThisWeek ? '#C9A75A' : 'rgba(245, 241, 234, 0.4)',
-                        fontSize: '0.625rem',
-                        marginTop: '0.5rem',
-                      }}>
-                        {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="text-center mt-4">
-                <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
-                  This week: <span style={{ color: '#C9A75A', fontWeight: 600 }}>52,000 lbs</span> total volume
+              <div className="text-center py-4">
+                <span style={{ fontSize: '2.5rem', fontWeight: 700, color: '#C9A75A' }}>
+                  {formatVolume(recentVolume)}
                 </span>
+                <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '1rem', marginLeft: '0.5rem' }}>
+                  lbs
+                </span>
+                <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  Total volume from {sessions.filter(s => new Date(s.started_at).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000).length} workouts
+                </p>
               </div>
             </div>
           </>

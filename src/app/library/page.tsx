@@ -1,122 +1,287 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useExercises } from '@/hooks/useSupabase';
+import { useStrengthData, formatDaysAgo, formatVolume, formatDate } from '@/hooks/useStrengthData';
+import { useExerciseHistory } from '@/hooks/useExerciseHistory';
 
-// Detailed lift history - this is what AI references
-const liftDatabase = [
-  {
-    id: 'bench-press',
-    name: 'Bench Press',
-    muscleGroups: ['Chest', 'Triceps', 'Shoulders'],
-    pr: { weight: 225, reps: 1, date: 'Jan 4' },
-    estimated1RM: 225,
-    lastWorkout: {
-      date: 'Jan 6',
-      sets: [
-        { weight: 165, reps: 8 },
-        { weight: 165, reps: 8 },
-        { weight: 165, reps: 7 },
-        { weight: 155, reps: 10 },
-      ],
-    },
-    history: [
-      { date: 'Jan 6', topSet: '165×8', volume: 5240, e1rm: 203 },
-      { date: 'Jan 2', topSet: '170×7', volume: 4960, e1rm: 204 },
-      { date: 'Dec 28', topSet: '165×8', volume: 5100, e1rm: 203 },
-      { date: 'Dec 23', topSet: '160×9', volume: 4880, e1rm: 203 },
-      { date: 'Dec 19', topSet: '155×10', volume: 4650, e1rm: 201 },
-      { date: 'Dec 14', topSet: '155×9', volume: 4500, e1rm: 196 },
-    ],
-    trend: 'up', // AI sees you're progressing
-    avgRestDays: 4,
-    preferredRepRange: '8-10',
-    notes: 'Responds well to moderate volume. Stalled at 170, dropped to 165 for more reps.',
-  },
-  {
-    id: 'squat',
-    name: 'Squat',
-    muscleGroups: ['Quads', 'Glutes', 'Hamstrings'],
-    pr: { weight: 275, reps: 1, date: 'Dec 28' },
-    estimated1RM: 275,
-    lastWorkout: {
-      date: 'Jan 5',
-      sets: [
-        { weight: 225, reps: 5 },
-        { weight: 225, reps: 5 },
-        { weight: 225, reps: 5 },
-        { weight: 225, reps: 4 },
-      ],
-    },
-    history: [
-      { date: 'Jan 5', topSet: '225×5', volume: 4275, e1rm: 253 },
-      { date: 'Jan 1', topSet: '225×5', volume: 4500, e1rm: 253 },
-      { date: 'Dec 28', topSet: '275×1', volume: 3850, e1rm: 275 },
-      { date: 'Dec 23', topSet: '235×4', volume: 4200, e1rm: 256 },
-    ],
-    trend: 'stable',
-    avgRestDays: 5,
-    preferredRepRange: '5-6',
-    notes: 'Lower rep preference. Hit PR recently, now building volume base.',
-  },
-  {
-    id: 'deadlift',
-    name: 'Deadlift',
-    muscleGroups: ['Back', 'Hamstrings', 'Glutes'],
-    pr: { weight: 315, reps: 1, date: 'Jan 2' },
-    estimated1RM: 315,
-    lastWorkout: {
-      date: 'Jan 4',
-      sets: [
-        { weight: 275, reps: 5 },
-        { weight: 275, reps: 5 },
-        { weight: 275, reps: 4 },
-      ],
-    },
-    history: [
-      { date: 'Jan 4', topSet: '275×5', volume: 3850, e1rm: 309 },
-      { date: 'Jan 2', topSet: '315×1', volume: 2835, e1rm: 315 },
-      { date: 'Dec 29', topSet: '285×4', volume: 3420, e1rm: 311 },
-    ],
-    trend: 'up',
-    avgRestDays: 5,
-    preferredRepRange: '3-5',
-    notes: 'PR! Pushing hard. May need deload soon.',
-  },
-  {
-    id: 'ohp',
-    name: 'Overhead Press',
-    muscleGroups: ['Shoulders', 'Triceps'],
-    pr: { weight: 135, reps: 1, date: 'Dec 20' },
-    estimated1RM: 135,
-    lastWorkout: {
-      date: 'Jan 6',
-      sets: [
-        { weight: 95, reps: 8 },
-        { weight: 95, reps: 7 },
-        { weight: 95, reps: 6 },
-      ],
-    },
-    history: [
-      { date: 'Jan 6', topSet: '95×8', volume: 1995, e1rm: 117 },
-      { date: 'Jan 1', topSet: '100×6', volume: 1800, e1rm: 116 },
-      { date: 'Dec 27', topSet: '95×8', volume: 1900, e1rm: 117 },
-    ],
-    trend: 'stable',
-    avgRestDays: 5,
-    preferredRepRange: '6-8',
-    notes: 'User has shoulder injury - using lighter weights, higher reps. Avoid behind-neck.',
-  },
-];
+// Format muscle name for display (e.g., "upper_back" → "Upper Back")
+function formatMuscleName(muscle: string): string {
+  return muscle
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Exercise detail component (separate to use useExerciseHistory)
+function ExerciseDetail({
+  exercise,
+  pr,
+  onBack,
+}: {
+  exercise: { id: string; name: string; primary_muscles?: string[] };
+  pr: { pr_weight: number; pr_reps: number; estimated_1rm: number; achieved_at: string } | null;
+  onBack: () => void;
+}) {
+  const { history, loading } = useExerciseHistory(exercise.id);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div
+            className="animate-spin rounded-full h-8 w-8 border-2 mx-auto mb-2"
+            style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: '#C9A75A' }}
+          />
+          <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>Loading history...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasHistory = history && history.sessions.length > 0;
+  const lastSession = hasHistory ? history.sessions[0] : null;
+
+  return (
+    <>
+      {/* PR Card */}
+      <div className="card mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Personal Record</p>
+            {pr ? (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span style={{ fontSize: '3rem', fontWeight: 700, color: '#C9A75A' }}>
+                    {pr.pr_weight}
+                  </span>
+                  <span style={{ color: 'rgba(245, 241, 234, 0.5)' }}>lbs × {pr.pr_reps}</span>
+                </div>
+                <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
+                  Set on {formatDate(pr.achieved_at)}
+                </p>
+              </>
+            ) : (
+              <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                No PR recorded yet
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Est. 1RM</p>
+            <span style={{ fontSize: '1.5rem', fontWeight: 600, color: '#F5F1EA' }}>
+              {pr?.estimated_1rm || '—'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {hasHistory && history ? (
+        <>
+          {/* AI Context Card */}
+          <div
+            className="card mb-4"
+            style={{ background: 'rgba(201, 167, 90, 0.05)', border: '1px solid rgba(201, 167, 90, 0.2)' }}
+          >
+            <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              What AI Knows
+            </h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Trend</span>
+                <p style={{ color: history.trend === 'up' ? '#4ADE80' : history.trend === 'down' ? '#F87171' : '#F5F1EA', fontWeight: 500 }}>
+                  {history.trend === 'up' ? '↑ Progressing' : history.trend === 'down' ? '↓ Needs attention' : '→ Stable'}
+                </p>
+              </div>
+              <div>
+                <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Avg Rest</span>
+                <p style={{ color: '#F5F1EA', fontWeight: 500 }}>{history.avgRestDays || '—'} days</p>
+              </div>
+              <div>
+                <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Preferred Reps</span>
+                <p style={{ color: '#F5F1EA', fontWeight: 500 }}>{history.preferredRepRange}</p>
+              </div>
+              <div>
+                <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Sessions</span>
+                <p style={{ color: '#F5F1EA', fontWeight: 500 }}>{history.sessions.length} logged</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Last Workout */}
+          {lastSession && (
+            <div className="card mb-4">
+              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Last Workout — {formatDate(lastSession.workout_date)}
+              </h3>
+              <div className="space-y-2">
+                {lastSession.sets.map((set, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between"
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      background: 'rgba(15, 34, 51, 0.5)',
+                      borderRadius: '0.5rem',
+                    }}
+                  >
+                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
+                      {set.set_type === 'warmup' ? '🔥 Warmup' : `Set ${set.set_number}`}
+                    </span>
+                    <span style={{ color: '#F5F1EA', fontWeight: 500 }}>
+                      {set.weight} × {set.reps}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {lastSession.sets.length > 0 && (
+                <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginTop: '0.75rem' }}>
+                  AI will suggest starting at <span style={{ color: '#C9A75A' }}>{lastSession.sets[0].weight + 5} lbs</span> next time
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* History Chart - Estimated 1RM over time */}
+          {history.sessions.length > 1 && (
+            <div className="card mb-4">
+              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Strength Progress (Est. 1RM)
+              </h3>
+              <div style={{ height: '100px', display: 'flex', alignItems: 'end', gap: '8px', padding: '0 4px' }}>
+                {[...history.sessions].reverse().slice(-6).map((h, i, arr) => {
+                  const maxE1rm = Math.max(...arr.map(x => x.best_estimated_1rm));
+                  const minE1rm = Math.min(...arr.map(x => x.best_estimated_1rm)) - 10;
+                  const height = maxE1rm > minE1rm
+                    ? ((h.best_estimated_1rm - minE1rm) / (maxE1rm - minE1rm)) * 100
+                    : 50;
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center">
+                      <span style={{ color: '#C9A75A', fontSize: '0.625rem', marginBottom: '4px' }}>
+                        {h.best_estimated_1rm}
+                      </span>
+                      <div
+                        style={{
+                          width: '100%',
+                          height: `${Math.max(height, 10)}%`,
+                          background: i === arr.length - 1 ? '#C9A75A' : 'rgba(201, 167, 90, 0.4)',
+                          borderRadius: '4px 4px 0 0',
+                        }}
+                      />
+                      <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.5rem', marginTop: '4px' }}>
+                        {formatDate(h.workout_date).split(' ')[0]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Full History */}
+          <div className="card">
+            <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Session History
+            </h3>
+            <div className="space-y-2">
+              {history.sessions.map((h, i) => (
+                <div
+                  key={h.session_id}
+                  className="flex items-center justify-between"
+                  style={{
+                    padding: '0.5rem 0',
+                    borderBottom: i < history.sessions.length - 1 ? '1px solid rgba(201, 167, 90, 0.1)' : 'none',
+                  }}
+                >
+                  <div>
+                    <span style={{ color: '#F5F1EA', fontSize: '0.875rem' }}>{formatDate(h.workout_date)}</span>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
+                      Top: {h.top_set}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
+                      {formatVolume(h.total_volume)} vol
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        /* No history state */
+        <div
+          className="card"
+          style={{ background: 'rgba(201, 167, 90, 0.05)', border: '1px solid rgba(201, 167, 90, 0.2)' }}
+        >
+          <div className="text-center py-4">
+            <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+              No workout history for this exercise
+            </p>
+            <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
+              Start a workout including {exercise.name} to track your progress
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function LibraryPage() {
-  const [selectedLift, setSelectedLift] = useState<string | null>(null);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
 
-  const lift = liftDatabase.find(l => l.id === selectedLift);
-  const filteredLifts = liftDatabase.filter(l =>
-    l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.muscleGroups.some(g => g.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Fetch all exercises from database
+  const { exercises, loading: exercisesLoading } = useExercises();
+
+  // Fetch user's PRs
+  const { exercisePRs, loading: prsLoading } = useStrengthData();
+
+  // Merge exercises with user PR data
+  const enrichedExercises = useMemo(() => {
+    return exercises.map(ex => {
+      const pr = exercisePRs.find(p => p.exercise_id === ex.id);
+      return {
+        ...ex,
+        pr,
+        hasHistory: !!pr,
+        muscleGroups: ex.primary_muscles || [],
+      };
+    });
+  }, [exercises, exercisePRs]);
+
+  // Filter exercises
+  const filteredExercises = useMemo(() => {
+    return enrichedExercises.filter(ex => {
+      // Search filter
+      const matchesSearch = searchQuery === '' ||
+        ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ex.muscleGroups.some((g: string) => g.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      // Muscle filter
+      const matchesMuscle = !muscleFilter ||
+        ex.muscleGroups.some((g: string) => g.toLowerCase() === muscleFilter.toLowerCase());
+
+      return matchesSearch && matchesMuscle;
+    });
+  }, [enrichedExercises, searchQuery, muscleFilter]);
+
+  // Get all unique muscle groups for filter
+  const allMuscleGroups = useMemo(() => {
+    const muscles = new Set<string>();
+    exercises.forEach(ex => {
+      (ex.primary_muscles || []).forEach((m: string) => muscles.add(m));
+    });
+    return Array.from(muscles).sort();
+  }, [exercises]);
+
+  // Selected exercise
+  const selectedExercise = enrichedExercises.find(e => e.id === selectedExerciseId);
+
+  const loading = exercisesLoading || prsLoading;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0F2233' }}>
@@ -131,20 +296,30 @@ export default function LibraryPage() {
       >
         <div className="flex items-center justify-between">
           <button
-            onClick={() => selectedLift ? setSelectedLift(null) : window.location.href = '/'}
+            onClick={() => selectedExerciseId ? setSelectedExerciseId(null) : window.location.href = '/'}
             style={{ color: '#C9A75A', background: 'none', border: 'none', fontSize: '1rem' }}
           >
-            ← {selectedLift ? 'Back' : 'Home'}
+            ← {selectedExerciseId ? 'Back' : 'Home'}
           </button>
           <span style={{ color: '#F5F1EA', fontWeight: 600 }}>
-            {selectedLift ? lift?.name : 'Exercise Library'}
+            {selectedExerciseId ? selectedExercise?.name : 'Exercise Library'}
           </span>
           <div style={{ width: '48px' }} />
         </div>
       </header>
 
       <main className="p-4 pb-24">
-        {!selectedLift ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div
+                className="animate-spin rounded-full h-8 w-8 border-2 mx-auto mb-2"
+                style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: '#C9A75A' }}
+              />
+              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>Loading exercises...</p>
+            </div>
+          </div>
+        ) : !selectedExerciseId ? (
           <>
             {/* Search */}
             <div className="mb-4">
@@ -165,6 +340,43 @@ export default function LibraryPage() {
               />
             </div>
 
+            {/* Muscle Filter */}
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => setMuscleFilter(null)}
+                style={{
+                  padding: '0.375rem 0.75rem',
+                  borderRadius: '999px',
+                  background: !muscleFilter ? '#C9A75A' : 'rgba(26, 53, 80, 0.5)',
+                  border: '1px solid rgba(201, 167, 90, 0.2)',
+                  color: !muscleFilter ? '#0F2233' : 'rgba(245, 241, 234, 0.7)',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                All
+              </button>
+              {allMuscleGroups.map(muscle => (
+                <button
+                  key={muscle}
+                  onClick={() => setMuscleFilter(muscleFilter === muscle ? null : muscle)}
+                  style={{
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '999px',
+                    background: muscleFilter === muscle ? '#C9A75A' : 'rgba(26, 53, 80, 0.5)',
+                    border: '1px solid rgba(201, 167, 90, 0.2)',
+                    color: muscleFilter === muscle ? '#0F2233' : 'rgba(245, 241, 234, 0.7)',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {formatMuscleName(muscle)}
+                </button>
+              ))}
+            </div>
+
             {/* Info Banner */}
             <div
               style={{
@@ -182,215 +394,83 @@ export default function LibraryPage() {
 
             {/* Exercise List */}
             <div className="space-y-3">
-              {filteredLifts.map(l => (
-                <button
-                  key={l.id}
-                  onClick={() => setSelectedLift(l.id)}
-                  className="card w-full text-left"
-                  style={{ display: 'block' }}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 style={{ color: '#F5F1EA', fontSize: '1rem', fontWeight: 500 }}>
-                        {l.name}
-                      </h3>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {l.muscleGroups.map(g => (
-                          <span
-                            key={g}
-                            style={{
-                              background: 'rgba(201, 167, 90, 0.1)',
-                              borderRadius: '0.25rem',
-                              padding: '0.125rem 0.375rem',
-                              color: 'rgba(245, 241, 234, 0.6)',
-                              fontSize: '0.625rem',
-                            }}
-                          >
-                            {g}
-                          </span>
-                        ))}
+              {filteredExercises.length === 0 ? (
+                <div className="text-center py-8">
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)' }}>No exercises found</p>
+                </div>
+              ) : (
+                filteredExercises.map(ex => (
+                  <button
+                    key={ex.id}
+                    onClick={() => setSelectedExerciseId(ex.id)}
+                    className="card w-full text-left"
+                    style={{ display: 'block' }}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 style={{ color: '#F5F1EA', fontSize: '1rem', fontWeight: 500 }}>
+                          {ex.name}
+                          {ex.hasHistory && (
+                            <span
+                              style={{
+                                marginLeft: '0.5rem',
+                                fontSize: '0.625rem',
+                                background: 'rgba(74, 222, 128, 0.1)',
+                                color: '#4ADE80',
+                                padding: '0.125rem 0.375rem',
+                                borderRadius: '0.25rem',
+                              }}
+                            >
+                              Done
+                            </span>
+                          )}
+                        </h3>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {ex.muscleGroups.map((g: string) => (
+                            <span
+                              key={g}
+                              style={{
+                                background: 'rgba(201, 167, 90, 0.1)',
+                                borderRadius: '0.25rem',
+                                padding: '0.125rem 0.375rem',
+                                color: 'rgba(245, 241, 234, 0.6)',
+                                fontSize: '0.625rem',
+                              }}
+                            >
+                              {formatMuscleName(g)}
+                            </span>
+                          ))}
+                        </div>
                       </div>
+                      {ex.pr && (
+                        <div className="text-right">
+                          <div style={{ color: '#C9A75A', fontSize: '1.125rem', fontWeight: 700 }}>
+                            {ex.pr.estimated_1rm}
+                          </div>
+                          <div style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>
+                            Est. 1RM
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <div style={{ color: '#C9A75A', fontSize: '1.125rem', fontWeight: 700 }}>
-                        {l.pr.weight}
+                    {ex.pr && (
+                      <div className="flex items-center justify-between">
+                        <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
+                          PR: {ex.pr.pr_weight}×{ex.pr.pr_reps} • {formatDaysAgo(ex.pr.achieved_at)}
+                        </span>
                       </div>
-                      <div style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>
-                        PR
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
-                      Last: {l.lastWorkout.date} • {l.history[0].topSet}
-                    </span>
-                    <span style={{
-                      color: l.trend === 'up' ? '#4ADE80' : l.trend === 'down' ? '#F87171' : '#C9A75A',
-                      fontSize: '0.75rem',
-                    }}>
-                      {l.trend === 'up' ? '↑ Progressing' : l.trend === 'down' ? '↓ Declining' : '→ Stable'}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : lift && (
-          <>
-            {/* Lift Detail View */}
-
-            {/* PR Card */}
-            <div className="card mb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Personal Record</p>
-                  <div className="flex items-baseline gap-2">
-                    <span style={{ fontSize: '3rem', fontWeight: 700, color: '#C9A75A' }}>
-                      {lift.pr.weight}
-                    </span>
-                    <span style={{ color: 'rgba(245, 241, 234, 0.5)' }}>lbs × {lift.pr.reps}</span>
-                  </div>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
-                    Set on {lift.pr.date}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Est. 1RM</p>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 600, color: '#F5F1EA' }}>
-                    {lift.estimated1RM}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* AI Context Card */}
-            <div
-              className="card mb-4"
-              style={{ background: 'rgba(201, 167, 90, 0.05)', border: '1px solid rgba(201, 167, 90, 0.2)' }}
-            >
-              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                What AI Knows
-              </h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Trend</span>
-                  <p style={{ color: lift.trend === 'up' ? '#4ADE80' : '#F5F1EA', fontWeight: 500 }}>
-                    {lift.trend === 'up' ? '↑ Progressing' : lift.trend === 'down' ? '↓ Needs attention' : '→ Stable'}
-                  </p>
-                </div>
-                <div>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Avg Rest</span>
-                  <p style={{ color: '#F5F1EA', fontWeight: 500 }}>{lift.avgRestDays} days</p>
-                </div>
-                <div>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Preferred Reps</span>
-                  <p style={{ color: '#F5F1EA', fontWeight: 500 }}>{lift.preferredRepRange}</p>
-                </div>
-                <div>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Sessions</span>
-                  <p style={{ color: '#F5F1EA', fontWeight: 500 }}>{lift.history.length} logged</p>
-                </div>
-              </div>
-              {lift.notes && (
-                <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.8125rem', marginTop: '0.75rem', fontStyle: 'italic' }}>
-                  "{lift.notes}"
-                </p>
+                    )}
+                  </button>
+                ))
               )}
             </div>
-
-            {/* Last Workout */}
-            <div className="card mb-4">
-              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Last Workout — {lift.lastWorkout.date}
-              </h3>
-              <div className="space-y-2">
-                {lift.lastWorkout.sets.map((set, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between"
-                    style={{
-                      padding: '0.5rem 0.75rem',
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      borderRadius: '0.5rem',
-                    }}
-                  >
-                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
-                      Set {i + 1}
-                    </span>
-                    <span style={{ color: '#F5F1EA', fontWeight: 500 }}>
-                      {set.weight} × {set.reps}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginTop: '0.75rem' }}>
-                AI will suggest starting at <span style={{ color: '#C9A75A' }}>{lift.lastWorkout.sets[0].weight + 5} lbs</span> next time (progressive overload)
-              </p>
-            </div>
-
-            {/* History Chart - Estimated 1RM over time */}
-            <div className="card mb-4">
-              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Strength Progress (Est. 1RM)
-              </h3>
-              <div style={{ height: '100px', display: 'flex', alignItems: 'end', gap: '8px', padding: '0 4px' }}>
-                {[...lift.history].reverse().map((h, i) => {
-                  const maxE1rm = Math.max(...lift.history.map(x => x.e1rm));
-                  const minE1rm = Math.min(...lift.history.map(x => x.e1rm)) - 10;
-                  const height = ((h.e1rm - minE1rm) / (maxE1rm - minE1rm)) * 100;
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center">
-                      <span style={{ color: '#C9A75A', fontSize: '0.625rem', marginBottom: '4px' }}>
-                        {h.e1rm}
-                      </span>
-                      <div
-                        style={{
-                          width: '100%',
-                          height: `${Math.max(height, 10)}%`,
-                          background: i === lift.history.length - 1 ? '#C9A75A' : 'rgba(201, 167, 90, 0.4)',
-                          borderRadius: '4px 4px 0 0',
-                        }}
-                      />
-                      <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.5rem', marginTop: '4px' }}>
-                        {h.date.split(' ')[0]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Full History */}
-            <div className="card">
-              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Session History
-              </h3>
-              <div className="space-y-2">
-                {lift.history.map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between"
-                    style={{
-                      padding: '0.5rem 0',
-                      borderBottom: i < lift.history.length - 1 ? '1px solid rgba(201, 167, 90, 0.1)' : 'none',
-                    }}
-                  >
-                    <div>
-                      <span style={{ color: '#F5F1EA', fontSize: '0.875rem' }}>{h.date}</span>
-                      <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
-                        Top: {h.topSet}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
-                        {(h.volume / 1000).toFixed(1)}k vol
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </>
+        ) : selectedExercise && (
+          <ExerciseDetail
+            exercise={selectedExercise}
+            pr={selectedExercise.pr || null}
+            onBack={() => setSelectedExerciseId(null)}
+          />
         )}
       </main>
 

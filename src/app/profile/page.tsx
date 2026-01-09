@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Logo } from '@/components/Logo';
+import { useState, useMemo } from 'react';
 import { BodyMap } from '@/components/BodyMap';
 import { GymManager } from '@/components/GymManager';
-import { useProfile, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
+import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions } from '@/hooks/useSupabase';
+import { useStrengthData, convertToMuscleStrength, formatVolume, formatDate, formatDaysAgo } from '@/hooks/useStrengthData';
 import { getSupabase } from '@/lib/supabase/client';
+import { MAJOR_LIFTS, findStandardForExercise } from '@/lib/strengthStandards';
 
 type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
 
@@ -17,50 +18,90 @@ const fitnessGoals: { id: FitnessGoal; name: string; description: string; icon: 
   { id: 'general', name: 'General Fitness', description: 'Well-rounded, functional', icon: '🎯' },
 ];
 
-// Mock muscle strength data - derived from workout history
-const muscleStrengthData = [
-  { id: 'chest', name: 'Chest', strength: 78, volume: '12.4k', lastTrained: '2 days', trend: 'up' as const },
-  { id: 'shoulders', name: 'Shoulders', strength: 55, volume: '6.2k', lastTrained: '2 days', trend: 'stable' as const },
-  { id: 'biceps', name: 'Biceps', strength: 72, volume: '4.8k', lastTrained: '4 days', trend: 'up' as const },
-  { id: 'triceps', name: 'Triceps', strength: 68, volume: '5.1k', lastTrained: '2 days', trend: 'up' as const },
-  { id: 'forearms', name: 'Forearms', strength: 45, volume: '2.1k', lastTrained: '4 days', trend: 'stable' as const },
-  { id: 'core', name: 'Core', strength: 52, volume: '3.2k', lastTrained: '3 days', trend: 'stable' as const },
-  { id: 'quads', name: 'Quads', strength: 35, volume: '4.5k', lastTrained: '8 days', trend: 'down' as const },
-  { id: 'hamstrings', name: 'Hamstrings', strength: 28, volume: '2.8k', lastTrained: '8 days', trend: 'down' as const },
-  { id: 'glutes', name: 'Glutes', strength: 32, volume: '3.1k', lastTrained: '8 days', trend: 'down' as const },
-  { id: 'calves', name: 'Calves', strength: 22, volume: '1.2k', lastTrained: '2 weeks', trend: 'down' as const },
-  { id: 'lats', name: 'Lats', strength: 70, volume: '8.2k', lastTrained: '4 days', trend: 'up' as const },
-  { id: 'upper_back', name: 'Upper Back', strength: 65, volume: '6.8k', lastTrained: '4 days', trend: 'stable' as const },
-  { id: 'traps', name: 'Traps', strength: 58, volume: '3.4k', lastTrained: '4 days', trend: 'stable' as const },
-  { id: 'rear_delts', name: 'Rear Delts', strength: 42, volume: '1.8k', lastTrained: '4 days', trend: 'stable' as const },
-  { id: 'lower_back', name: 'Lower Back', strength: 60, volume: '4.2k', lastTrained: '5 days', trend: 'stable' as const },
-];
+// Format height in feet and inches
+function formatHeight(inches: number | null): string {
+  if (!inches) return '—';
+  const feet = Math.floor(inches / 12);
+  const remainingInches = inches % 12;
+  return `${feet}'${remainingInches}"`;
+}
 
-// Mock saved workouts
-const savedWorkouts = [
-  { id: '1', name: 'Upper Body Push', lastRun: '2 days ago', exercises: 5, duration: 45 },
-  { id: '2', name: 'Pull Day', lastRun: '4 days ago', exercises: 6, duration: 50 },
-  { id: '3', name: 'Leg Day', lastRun: '1 week ago', exercises: 5, duration: 55 },
-];
-
-// Mock workout history
-const recentWorkouts = [
-  { id: '1', name: 'Upper Body Push', date: 'Jan 6', duration: 47, volume: 12450 },
-  { id: '2', name: 'Pull Day', date: 'Jan 4', duration: 52, volume: 14200 },
-  { id: '3', name: 'Leg Day', date: 'Jan 2', duration: 58, volume: 18600 },
-  { id: '4', name: 'Upper Body Push', date: 'Dec 30', duration: 44, volume: 11800 },
-];
+// Calculate age from date of birth
+function calculateAge(dob: string | null): number | null {
+  if (!dob) return null;
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 export default function ProfilePage() {
   const { profile, refetch: refetchProfile } = useProfile();
   const { profiles: gymProfiles } = useGymProfiles();
   const { userEquipment, allEquipment } = useEquipment();
+  const { logs: weightLogs } = useWeightLogs(1);
+  const { goal: weightGoal } = useWeightGoal();
+  const { sessions } = useWorkoutSessions(10);
+  const { muscleVolume, exercisePRs, sessions: strengthSessions, loading: strengthLoading } = useStrengthData();
+
   const [activeTab, setActiveTab] = useState<'body' | 'saved' | 'history' | 'settings'>('body');
-  const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [gender, setGender] = useState<'male' | 'female'>((profile?.gender as 'male' | 'female') || 'male');
   const [savingGoal, setSavingGoal] = useState(false);
   const [gymManagerOpen, setGymManagerOpen] = useState(false);
 
+  // Convert muscle volume to strength data for BodyMap
+  const muscleStrengthData = useMemo(() => {
+    if (muscleVolume.length === 0) {
+      // Return empty state data
+      return [];
+    }
+    return convertToMuscleStrength(muscleVolume);
+  }, [muscleVolume]);
+
+  // Get strongest and weakest muscles
+  const { strongest, weakest, imbalances } = useMemo(() => {
+    if (muscleStrengthData.length === 0) {
+      return { strongest: null, weakest: null, imbalances: [] };
+    }
+
+    const sorted = [...muscleStrengthData].sort((a, b) => b.strength - a.strength);
+    const strongest = sorted[0];
+    const weakest = sorted[sorted.length - 1];
+
+    // Find muscles that haven't been trained in over 7 days
+    const imbalances = muscleStrengthData.filter(m => {
+      const match = m.lastTrained.match(/(\d+)/);
+      if (!match) return false;
+      const days = parseInt(match[1]);
+      return m.lastTrained.includes('week') || days > 7;
+    });
+
+    return { strongest, weakest, imbalances };
+  }, [muscleStrengthData]);
+
+  // Get major lift PRs for settings tab
+  const majorLiftPRs = useMemo(() => {
+    return MAJOR_LIFTS.map(liftName => {
+      const pr = exercisePRs.find(p => {
+        const standard = findStandardForExercise(p.exercise_name);
+        return standard === liftName;
+      });
+      return {
+        lift: liftName === 'Overhead Press' ? 'OHP' : liftName,
+        weight: pr?.pr_weight || 0,
+        reps: pr?.pr_reps || 0,
+        estimated_1rm: pr?.estimated_1rm || 0,
+      };
+    });
+  }, [exercisePRs]);
+
   const currentGoal = (profile?.fitness_goal as FitnessGoal) || 'general';
+  const currentWeight = weightLogs[0]?.weight || null;
+  const age = calculateAge(profile?.date_of_birth || null);
 
   // Get equipment names for home gym
   const homeEquipmentIds = userEquipment.filter(ue => ue.location === 'home').map(ue => ue.equipment_id);
@@ -91,6 +132,13 @@ export default function ProfilePage() {
     } finally {
       setSavingGoal(false);
     }
+  };
+
+  // Format duration from seconds
+  const formatDuration = (seconds: number | null): string => {
+    if (!seconds) return '—';
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}`;
   };
 
   return (
@@ -143,27 +191,29 @@ export default function ProfilePage() {
         {activeTab === 'body' && (
           <div>
             {/* Imbalance Alert */}
-            <div
-              style={{
-                background: 'rgba(251, 146, 60, 0.1)',
-                border: '1px solid rgba(251, 146, 60, 0.3)',
-                borderRadius: '0.75rem',
-                padding: '0.75rem 1rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <div className="flex items-start gap-2">
-                <span style={{ fontSize: '1.25rem' }}>⚠️</span>
-                <div>
-                  <p style={{ color: '#FB923C', fontWeight: 500, fontSize: '0.875rem' }}>
-                    Leg day needed!
-                  </p>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.75rem' }}>
-                    Your lower body is lagging behind. Quads, hamstrings, and calves haven't been trained in over a week.
-                  </p>
+            {imbalances.length > 0 && (
+              <div
+                style={{
+                  background: 'rgba(251, 146, 60, 0.1)',
+                  border: '1px solid rgba(251, 146, 60, 0.3)',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 1rem',
+                  marginBottom: '1rem',
+                }}
+              >
+                <div className="flex items-start gap-2">
+                  <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+                  <div>
+                    <p style={{ color: '#FB923C', fontWeight: 500, fontSize: '0.875rem' }}>
+                      {imbalances.length === 1 ? `${imbalances[0].name} needs attention!` : 'Muscle imbalance detected!'}
+                    </p>
+                    <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.75rem' }}>
+                      {imbalances.map(m => m.name).join(', ')} {imbalances.length === 1 ? "hasn't" : "haven't"} been trained recently.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Body Map */}
             <div className="card">
@@ -202,47 +252,87 @@ export default function ProfilePage() {
                 </div>
               </div>
               <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '1rem' }}>
-                Tap a muscle to see details. Colors show relative strength based on your training history.
+                {muscleStrengthData.length > 0
+                  ? 'Tap a muscle to see details. Colors show relative strength based on your training history.'
+                  : 'Complete some workouts to see your muscle balance.'}
               </p>
-              <BodyMap
-                gender={gender}
-                muscleData={muscleStrengthData}
-              />
+              {strengthLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div
+                    className="animate-spin rounded-full h-8 w-8 border-2"
+                    style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: '#C9A75A' }}
+                  />
+                </div>
+              ) : (
+                <BodyMap
+                  gender={gender}
+                  muscleData={muscleStrengthData}
+                />
+              )}
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="card text-center">
-                <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem' }}>Strongest</p>
-                <p style={{ color: '#4ADE80', fontWeight: 600, fontSize: '1rem' }}>Chest</p>
-                <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem' }}>78% strength score</p>
+            {muscleStrengthData.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="card text-center">
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem' }}>Strongest</p>
+                  <p style={{ color: '#4ADE80', fontWeight: 600, fontSize: '1rem' }}>{strongest?.name || '—'}</p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem' }}>{strongest?.strength || 0}% strength score</p>
+                </div>
+                <div className="card text-center">
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem' }}>Needs Work</p>
+                  <p style={{ color: '#F87171', fontWeight: 600, fontSize: '1rem' }}>{weakest?.name || '—'}</p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem' }}>{weakest?.strength || 0}% strength score</p>
+                </div>
               </div>
-              <div className="card text-center">
-                <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem' }}>Needs Work</p>
-                <p style={{ color: '#F87171', fontWeight: 600, fontSize: '1rem' }}>Calves</p>
-                <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem' }}>22% strength score</p>
-              </div>
-            </div>
+            )}
 
             {/* AI Suggestion */}
-            <div
-              className="card mt-4"
-              style={{ background: 'rgba(201, 167, 90, 0.05)', border: '1px solid rgba(201, 167, 90, 0.2)' }}
-            >
-              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>
-                AI Recommendation
-              </h3>
-              <p style={{ color: 'rgba(245, 241, 234, 0.7)', fontSize: '0.8125rem' }}>
-                Based on your muscle balance, your next workout should focus on <span style={{ color: '#F5F1EA', fontWeight: 500 }}>legs and glutes</span>.
-                Consider adding an extra leg day this week to address the imbalance.
-              </p>
-              <button
-                className="btn-primary w-full mt-3"
-                style={{ fontSize: '0.875rem', padding: '0.75rem' }}
+            {imbalances.length > 0 && (
+              <div
+                className="card mt-4"
+                style={{ background: 'rgba(201, 167, 90, 0.05)', border: '1px solid rgba(201, 167, 90, 0.2)' }}
               >
-                Generate Leg Workout
-              </button>
-            </div>
+                <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                  AI Recommendation
+                </h3>
+                <p style={{ color: 'rgba(245, 241, 234, 0.7)', fontSize: '0.8125rem' }}>
+                  Based on your muscle balance, your next workout should focus on <span style={{ color: '#F5F1EA', fontWeight: 500 }}>{imbalances.slice(0, 2).map(m => m.name.toLowerCase()).join(' and ')}</span>.
+                  Consider adding an extra session this week to address the imbalance.
+                </p>
+                <button
+                  className="btn-primary w-full mt-3"
+                  style={{ fontSize: '0.875rem', padding: '0.75rem' }}
+                  onClick={() => window.location.href = '/'}
+                >
+                  Generate Balanced Workout
+                </button>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {muscleStrengthData.length === 0 && !strengthLoading && (
+              <div
+                className="card mt-4"
+                style={{ background: 'rgba(201, 167, 90, 0.05)', border: '1px solid rgba(201, 167, 90, 0.2)' }}
+              >
+                <div className="text-center py-4">
+                  <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                    No workout data yet
+                  </p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
+                    Complete some workouts to see your muscle balance and get personalized recommendations.
+                  </p>
+                  <button
+                    className="btn-primary mt-3"
+                    style={{ fontSize: '0.875rem', padding: '0.75rem 1.5rem' }}
+                    onClick={() => window.location.href = '/'}
+                  >
+                    Start a Workout
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -251,27 +341,14 @@ export default function ProfilePage() {
             <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', marginBottom: '1rem' }}>
               Workouts you've bookmarked to run again
             </p>
-            {savedWorkouts.map(workout => (
-              <div
-                key={workout.id}
-                className="card flex items-center justify-between"
-              >
-                <div>
-                  <h3 style={{ color: '#F5F1EA', fontSize: '1rem', fontWeight: 500 }}>
-                    {workout.name}
-                  </h3>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
-                    {workout.exercises} exercises • ~{workout.duration} min • Last run {workout.lastRun}
-                  </p>
-                </div>
-                <button
-                  className="btn-primary"
-                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-                >
-                  Start
-                </button>
-              </div>
-            ))}
+            <div className="text-center py-8">
+              <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.875rem' }}>
+                No saved workouts yet
+              </p>
+              <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                Bookmark workouts during your session to save them here
+              </p>
+            </div>
           </div>
         )}
 
@@ -280,31 +357,46 @@ export default function ProfilePage() {
             <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', marginBottom: '1rem' }}>
               Your recent workouts
             </p>
-            {recentWorkouts.map(workout => (
-              <div
-                key={workout.id}
-                className="card"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 style={{ color: '#F5F1EA', fontSize: '1rem', fontWeight: 500 }}>
-                    {workout.name}
-                  </h3>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
-                    {workout.date}
-                  </span>
-                </div>
-                <div className="flex gap-4">
-                  <div>
-                    <span style={{ color: '#C9A75A', fontSize: '1rem', fontWeight: 600 }}>{workout.duration}</span>
-                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> min</span>
-                  </div>
-                  <div>
-                    <span style={{ color: '#C9A75A', fontSize: '1rem', fontWeight: 600 }}>{(workout.volume / 1000).toFixed(1)}k</span>
-                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> lbs volume</span>
-                  </div>
-                </div>
+            {strengthSessions.length === 0 ? (
+              <div className="text-center py-8">
+                <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.875rem' }}>
+                  No workout history yet
+                </p>
+                <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  Complete a workout to see it here
+                </p>
               </div>
-            ))}
+            ) : (
+              strengthSessions.map(workout => (
+                <div
+                  key={workout.session_id}
+                  className="card"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 style={{ color: '#F5F1EA', fontSize: '1rem', fontWeight: 500 }}>
+                      {workout.session_name || 'Workout'}
+                    </h3>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
+                      {formatDate(workout.started_at)}
+                    </span>
+                  </div>
+                  <div className="flex gap-4">
+                    <div>
+                      <span style={{ color: '#C9A75A', fontSize: '1rem', fontWeight: 600 }}>{formatDuration(workout.duration_seconds)}</span>
+                      <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> min</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#C9A75A', fontSize: '1rem', fontWeight: 600 }}>{formatVolume(workout.total_volume)}</span>
+                      <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> lbs volume</span>
+                    </div>
+                    <div>
+                      <span style={{ color: '#C9A75A', fontSize: '1rem', fontWeight: 600 }}>{workout.exercise_count}</span>
+                      <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> exercises</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -318,63 +410,69 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span style={{ color: 'rgba(245, 241, 234, 0.7)' }}>Age</span>
-                  <span style={{ color: '#F5F1EA', fontWeight: 500 }}>32</span>
+                  <span style={{ color: '#F5F1EA', fontWeight: 500 }}>{age || '—'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span style={{ color: 'rgba(245, 241, 234, 0.7)' }}>Height</span>
-                  <span style={{ color: '#F5F1EA', fontWeight: 500 }}>5'10"</span>
+                  <span style={{ color: '#F5F1EA', fontWeight: 500 }}>{formatHeight(profile?.height_inches || null)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span style={{ color: 'rgba(245, 241, 234, 0.7)' }}>Weight</span>
-                  <span style={{ color: '#F5F1EA', fontWeight: 500 }}>180 lbs</span>
+                  <span style={{ color: '#F5F1EA', fontWeight: 500 }}>{currentWeight ? `${currentWeight} lbs` : '—'}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span style={{ color: 'rgba(245, 241, 234, 0.7)' }}>Experience</span>
-                  <span style={{ color: '#F5F1EA', fontWeight: 500 }}>Intermediate</span>
+                  <span style={{ color: '#F5F1EA', fontWeight: 500, textTransform: 'capitalize' }}>
+                    {profile?.experience_level || '—'}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Weight Goal */}
-            <div className="card">
-              <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Weight Goal
-              </h2>
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-center flex-1">
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Start</p>
-                  <span style={{ color: '#F5F1EA', fontSize: '1.25rem', fontWeight: 600 }}>185</span>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> lbs</span>
+            {weightGoal && (
+              <div className="card">
+                <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Weight Goal
+                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-center flex-1">
+                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Start</p>
+                    <span style={{ color: '#F5F1EA', fontSize: '1.25rem', fontWeight: 600 }}>{weightGoal.start_weight}</span>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> lbs</span>
+                  </div>
+                  <div style={{ color: '#C9A75A', fontSize: '1.5rem' }}>→</div>
+                  <div className="text-center flex-1">
+                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Current</p>
+                    <span style={{ color: '#C9A75A', fontSize: '1.25rem', fontWeight: 600 }}>{currentWeight || '—'}</span>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> lbs</span>
+                  </div>
+                  <div style={{ color: '#C9A75A', fontSize: '1.5rem' }}>→</div>
+                  <div className="text-center flex-1">
+                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Target</p>
+                    <span style={{ color: '#F5F1EA', fontSize: '1.25rem', fontWeight: 600 }}>{weightGoal.target_weight || '—'}</span>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> lbs</span>
+                  </div>
                 </div>
-                <div style={{ color: '#C9A75A', fontSize: '1.5rem' }}>→</div>
-                <div className="text-center flex-1">
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Current</p>
-                  <span style={{ color: '#C9A75A', fontSize: '1.25rem', fontWeight: 600 }}>180.6</span>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> lbs</span>
-                </div>
-                <div style={{ color: '#C9A75A', fontSize: '1.5rem' }}>→</div>
-                <div className="text-center flex-1">
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Target</p>
-                  <span style={{ color: '#F5F1EA', fontSize: '1.25rem', fontWeight: 600 }}>175</span>
-                  <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}> lbs</span>
+                <div
+                  style={{
+                    background: 'rgba(201, 167, 90, 0.1)',
+                    borderRadius: '0.5rem',
+                    padding: '0.5rem 0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <span style={{ fontSize: '1rem' }}>
+                    {weightGoal.goal_type === 'cut' ? '📉' : weightGoal.goal_type === 'bulk' ? '📈' : '⚖️'}
+                  </span>
+                  <span style={{ color: 'rgba(245, 241, 234, 0.7)', fontSize: '0.8125rem', textTransform: 'capitalize' }}>
+                    {weightGoal.goal_type} — AI will factor recovery needs
+                  </span>
                 </div>
               </div>
-              <div
-                style={{
-                  background: 'rgba(201, 167, 90, 0.1)',
-                  borderRadius: '0.5rem',
-                  padding: '0.5rem 0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontSize: '1rem' }}>📉</span>
-                <span style={{ color: 'rgba(245, 241, 234, 0.7)', fontSize: '0.8125rem' }}>
-                  Lose weight (cut) — AI will factor recovery needs
-                </span>
-              </div>
-            </div>
+            )}
 
             {/* Fitness Goal */}
             <div className="card">
@@ -441,86 +539,10 @@ export default function ProfilePage() {
               <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '1rem' }}>
                 AI will suggest alternatives that work the same muscles without aggravating these areas
               </p>
-
-              {/* Injury Card */}
-              <div
-                style={{
-                  background: 'rgba(15, 34, 51, 0.5)',
-                  border: '1px solid rgba(201, 167, 90, 0.1)',
-                  borderRadius: '0.75rem',
-                  padding: '1rem',
-                }}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontSize: '1.25rem' }}>🦴</span>
-                    <div>
-                      <h3 style={{ color: '#F5F1EA', fontSize: '0.9375rem', fontWeight: 500 }}>
-                        Right Shoulder
-                      </h3>
-                      <span
-                        style={{
-                          fontSize: '0.6875rem',
-                          color: '#EAB308',
-                          background: 'rgba(234, 179, 8, 0.1)',
-                          padding: '0.125rem 0.5rem',
-                          borderRadius: '1rem',
-                        }}
-                      >
-                        Moderate
-                      </span>
-                    </div>
-                  </div>
-                  <button style={{ color: 'rgba(245, 241, 234, 0.3)', background: 'none', border: 'none' }}>
-                    ✕
-                  </button>
-                </div>
-
-                <div style={{ marginTop: '0.75rem' }}>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                    Movements to avoid:
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {['Overhead Press', 'Behind-neck Press', 'Upright Rows'].map(movement => (
-                      <span
-                        key={movement}
-                        style={{
-                          background: 'rgba(239, 68, 68, 0.1)',
-                          border: '1px solid rgba(239, 68, 68, 0.2)',
-                          borderRadius: '0.375rem',
-                          padding: '0.25rem 0.5rem',
-                          color: '#F87171',
-                          fontSize: '0.6875rem',
-                        }}
-                      >
-                        {movement}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '0.75rem' }}>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                    AI will substitute with:
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {['Landmine Press', 'Cable Lateral Raises', 'Face Pulls'].map(movement => (
-                      <span
-                        key={movement}
-                        style={{
-                          background: 'rgba(34, 197, 94, 0.1)',
-                          border: '1px solid rgba(34, 197, 94, 0.2)',
-                          borderRadius: '0.375rem',
-                          padding: '0.25rem 0.5rem',
-                          color: '#4ADE80',
-                          fontSize: '0.6875rem',
-                        }}
-                      >
-                        {movement}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+              <div className="text-center py-4">
+                <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.8125rem' }}>
+                  No injuries recorded
+                </p>
               </div>
             </div>
 
@@ -651,28 +673,38 @@ export default function ProfilePage() {
               <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Personal Records
               </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { lift: 'Bench', weight: 225, reps: 1 },
-                  { lift: 'Squat', weight: 275, reps: 1 },
-                  { lift: 'Deadlift', weight: 315, reps: 1 },
-                  { lift: 'OHP', weight: 135, reps: 1 },
-                ].map(pr => (
-                  <div
-                    key={pr.lift}
-                    style={{
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      borderRadius: '0.5rem',
-                      padding: '0.75rem',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>{pr.lift}</div>
-                    <div style={{ color: '#C9A75A', fontSize: '1.25rem', fontWeight: 700 }}>{pr.weight}</div>
-                    <div style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem' }}>× {pr.reps}</div>
-                  </div>
-                ))}
-              </div>
+              {majorLiftPRs.some(pr => pr.weight > 0) ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {majorLiftPRs.map(pr => (
+                    <div
+                      key={pr.lift}
+                      style={{
+                        background: 'rgba(15, 34, 51, 0.5)',
+                        borderRadius: '0.5rem',
+                        padding: '0.75rem',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>{pr.lift}</div>
+                      <div style={{ color: pr.weight > 0 ? '#C9A75A' : 'rgba(245, 241, 234, 0.3)', fontSize: '1.25rem', fontWeight: 700 }}>
+                        {pr.weight > 0 ? pr.weight : '—'}
+                      </div>
+                      <div style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem' }}>
+                        {pr.reps > 0 ? `× ${pr.reps}` : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.8125rem' }}>
+                    No PRs recorded yet
+                  </p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    Complete workouts to track your PRs
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
