@@ -1,16 +1,28 @@
 import { getSupabase } from '@/lib/supabase/client';
 
+// Workout style determines programming approach (sets/reps/rest/structure)
+export type WorkoutStyle =
+  | 'traditional'  // Hypertrophy-focused, 3-4 sets x 8-12 reps, moderate rest
+  | 'strength'     // 5x5 style, heavy weights, longer rest
+  | 'hiit'         // High intensity intervals, minimal rest, supersets
+  | 'circuit'      // Rotate through exercises with minimal rest
+  | 'wod'          // CrossFit-style WOD (AMRAP, EMOM, For Time)
+  | 'cardio'       // Running intervals, sprints, cardio conditioning
+  | 'mobility';    // Stretching, foam rolling, recovery
+
 export interface WorkoutRequest {
   userId: string;
   location: 'gym' | 'home' | 'outdoor';
   targetMuscles: string[];
   duration: number;
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+  workoutStyle?: WorkoutStyle; // Determines training approach
   injuries?: { bodyPart: string; movementsToAvoid: string[] }[];
   equipment?: string[];
   customEquipment?: string[];
   gymName?: string;
   excludeExerciseIds?: string[]; // For regenerating - exclude previous exercises
+  freeformPrompt?: string; // User's custom description for AI-powered generation
 }
 
 export interface SwapRequest {
@@ -51,6 +63,7 @@ export interface GeneratedWorkout {
   duration: number;
   exercises: GeneratedExercise[];
   workoutType: string;
+  workoutStyle?: WorkoutStyle;
   targetMuscles: string[];
 }
 
@@ -130,7 +143,7 @@ export async function generateWorkoutLocal(request: WorkoutRequest): Promise<Gen
     throw new Error('Failed to fetch exercises');
   }
 
-  const { location, targetMuscles: rawTargetMuscles, duration, experienceLevel, injuries, equipment } = request;
+  const { location, targetMuscles: rawTargetMuscles, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment } = request;
 
   // Expand muscle groups to specific muscles
   const targetMuscles = expandMuscles(rawTargetMuscles);
@@ -198,32 +211,74 @@ export async function generateWorkoutLocal(request: WorkoutRequest): Promise<Gen
     return getFallbackWorkout(targetMuscles, duration, experienceLevel);
   }
 
-  // Determine sets/reps based on experience
-  const getSetsReps = (isCompound: boolean) => {
-    switch (experienceLevel) {
-      case 'beginner':
-        return { sets: isCompound ? 3 : 2, reps: '10-12', rest: isCompound ? 90 : 60 };
-      case 'intermediate':
-        return { sets: isCompound ? 4 : 3, reps: '8-10', rest: isCompound ? 90 : 75 };
-      case 'advanced':
-        return { sets: isCompound ? 4 : 4, reps: '6-10', rest: isCompound ? 120 : 90 };
+  // Determine sets/reps based on workout style and experience
+  const getSetsReps = (isCompound: boolean, movementPattern?: string): { sets: number; reps: string; rest: number } => {
+    switch (workoutStyle) {
+      case 'strength':
+        // 5x5 style - heavy, low reps, long rest
+        return { sets: 5, reps: '5', rest: isCompound ? 180 : 120 };
+
+      case 'hiit':
+        // High intensity - more reps, minimal rest
+        return { sets: 3, reps: '12-15', rest: 30 };
+
+      case 'circuit':
+        // Circuit - moderate reps, very short rest
+        return { sets: 3, reps: '10-12', rest: 15 };
+
+      case 'wod':
+        // CrossFit style - varies, but typically higher volume
+        return { sets: 3, reps: isCompound ? '10-15' : '15-20', rest: 60 };
+
+      case 'cardio':
+        // Cardio exercises use time or distance
+        return { sets: 1, reps: movementPattern === 'cardio' ? '5-10 min' : '30-60s', rest: 60 };
+
+      case 'mobility':
+        // Mobility exercises use holds
+        return { sets: 2, reps: '30-60s hold', rest: 15 };
+
+      case 'traditional':
       default:
-        return { sets: 3, reps: '10-12', rest: 75 };
+        // Traditional hypertrophy - varies by experience
+        switch (experienceLevel) {
+          case 'beginner':
+            return { sets: isCompound ? 3 : 2, reps: '10-12', rest: isCompound ? 90 : 60 };
+          case 'intermediate':
+            return { sets: isCompound ? 4 : 3, reps: '8-10', rest: isCompound ? 90 : 75 };
+          case 'advanced':
+            return { sets: isCompound ? 4 : 4, reps: '6-10', rest: isCompound ? 120 : 90 };
+          default:
+            return { sets: 3, reps: '10-12', rest: 75 };
+        }
     }
   };
 
   // Determine workout type and name
   const workoutType = determineWorkoutType(targetMuscles);
-  const workoutName = generateWorkoutName(workoutType, experienceLevel);
+  const workoutName = generateWorkoutName(workoutType, experienceLevel, workoutStyle);
+
+  // Generate style-specific description
+  const styleDescriptions: Record<string, string> = {
+    strength: '5x5 strength-focused',
+    hiit: 'high-intensity interval',
+    circuit: 'circuit training',
+    wod: 'CrossFit-style WOD',
+    traditional: 'hypertrophy-focused',
+    cardio: 'cardiovascular conditioning',
+    mobility: 'mobility and recovery',
+  };
+  const styleDesc = styleDescriptions[workoutStyle] || 'traditional';
 
   return {
     name: workoutName,
-    description: `${selectedExercises.length} exercises targeting ${targetMuscles.join(', ')}`,
+    description: `${selectedExercises.length} ${styleDesc} exercises targeting ${targetMuscles.join(', ')}`,
     duration,
     workoutType,
+    workoutStyle,
     targetMuscles,
     exercises: selectedExercises.map(ex => {
-      const { sets, reps, rest } = getSetsReps(ex.is_compound);
+      const { sets, reps, rest } = getSetsReps(ex.is_compound, ex.movement_pattern);
       return {
         exerciseId: ex.id,
         name: ex.name,
@@ -252,7 +307,18 @@ function determineWorkoutType(muscles: string[]): string {
   return 'fullbody';
 }
 
-function generateWorkoutName(type: string, level: string): string {
+function generateWorkoutName(type: string, level: string, style: string = 'traditional'): string {
+  // Style-based name prefixes
+  const styleNames: Record<string, string> = {
+    strength: '5x5',
+    hiit: 'HIIT',
+    circuit: 'Circuit',
+    wod: 'WOD',
+    traditional: '',
+    cardio: 'Cardio',
+    mobility: 'Mobility',
+  };
+
   const typeNames: Record<string, string> = {
     push: 'Push Power',
     pull: 'Pull Strength',
@@ -260,6 +326,8 @@ function generateWorkoutName(type: string, level: string): string {
     upper: 'Upper Body',
     lower: 'Lower Body',
     fullbody: 'Full Body Blast',
+    cardio: 'Cardio Session',
+    mobility: 'Recovery Flow',
   };
 
   const levelPrefix: Record<string, string> = {
@@ -268,7 +336,13 @@ function generateWorkoutName(type: string, level: string): string {
     advanced: 'Intense',
   };
 
-  return `${levelPrefix[level] || ''} ${typeNames[type] || 'Workout'}`.trim();
+  const styleName = styleNames[style] || '';
+  const levelName = style === 'traditional' ? (levelPrefix[level] || '') : '';
+  const typeName = typeNames[type] || 'Workout';
+
+  // Combine parts, filtering out empty strings
+  const parts = [styleName, levelName, typeName].filter(Boolean);
+  return parts.join(' ').trim();
 }
 
 // Fallback workout when no exercises match in database

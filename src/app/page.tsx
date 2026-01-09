@@ -7,7 +7,7 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { Onboarding } from '@/components/Onboarding';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
-import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative } from '@/lib/generateWorkout';
+import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle } from '@/lib/generateWorkout';
 import { Settings } from '@/components/Settings';
 import { GymManager } from '@/components/GymManager';
 import type { GymProfile } from '@/lib/supabase/types';
@@ -27,6 +27,16 @@ const locations = [
   { id: 'outdoor', name: 'Outdoor', icon: '🌳' },
 ];
 
+const workoutStyles: { id: WorkoutStyle; name: string; description: string }[] = [
+  { id: 'traditional', name: 'Traditional', description: '3-4 sets × 8-12 reps' },
+  { id: 'strength', name: 'Strength (5×5)', description: '5 sets × 5 reps, heavy' },
+  { id: 'hiit', name: 'HIIT', description: 'High intensity, short rest' },
+  { id: 'circuit', name: 'Circuit', description: 'Back-to-back, minimal rest' },
+  { id: 'wod', name: 'WOD', description: 'CrossFit-style AMRAP/EMOM' },
+  { id: 'cardio', name: 'Cardio', description: 'Running, intervals, conditioning' },
+  { id: 'mobility', name: 'Mobility', description: 'Stretching & recovery' },
+];
+
 export default function Home() {
   const router = useRouter();
   const { user } = useAuth();
@@ -39,6 +49,7 @@ export default function Home() {
   const [selectedGym, setSelectedGym] = useState<GymProfile | null>(null);
   const [showGymManager, setShowGymManager] = useState(false);
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
+  const [selectedWorkoutStyle, setSelectedWorkoutStyle] = useState<WorkoutStyle>('traditional');
   const [duration, setDuration] = useState(45);
   const [showWorkout, setShowWorkout] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -52,6 +63,9 @@ export default function Home() {
   const [swapAlternatives, setSwapAlternatives] = useState<ExerciseAlternative[]>([]);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [lastWorkoutRequest, setLastWorkoutRequest] = useState<object | null>(null);
+  // Freeform AI input
+  const [freeformMode, setFreeformMode] = useState(false);
+  const [freeformPrompt, setFreeformPrompt] = useState('');
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -98,13 +112,15 @@ export default function Home() {
       const workoutRequest = {
         userId: user.id,
         location: selectedLocation as 'gym' | 'home' | 'outdoor',
-        targetMuscles: selectedMuscles,
+        targetMuscles: freeformMode ? [] : selectedMuscles, // Empty if freeform
         duration,
         experienceLevel: profile?.experience_level || 'intermediate',
+        workoutStyle: selectedWorkoutStyle,
         injuries: formattedInjuries,
         equipment: locationEquipment,
         customEquipment: customEquipmentList,
         gymName: selectedGym?.name,
+        freeformPrompt: freeformMode ? freeformPrompt : undefined, // Add freeform prompt
       };
 
       // Save request for potential regeneration
@@ -252,7 +268,12 @@ export default function Home() {
     setSwapAlternatives([]);
   };
 
-  const canGenerate = selectedLocation && selectedMuscles.length > 0 &&
+  // Can generate if:
+  // - Location selected
+  // - Either freeform mode with text, or structured mode with muscles selected
+  // - If gym selected, must have a gym profile
+  const canGenerate = selectedLocation &&
+    (freeformMode ? freeformPrompt.trim().length > 0 : selectedMuscles.length > 0) &&
     (selectedLocation !== 'gym' || selectedGym !== null);
 
   // Show onboarding for new users
@@ -439,44 +460,46 @@ export default function Home() {
               </div>
             )}
 
-            {/* Muscle Group Selector */}
-            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                What do you want to hit?
-              </h2>
-              <div className="grid grid-cols-3 gap-2">
-                {muscleGroups.map(muscle => (
-                  <button
-                    key={muscle.id}
-                    onClick={() => toggleMuscle(muscle.id)}
-                    style={{
-                      background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
-                      border: selectedMuscles.includes(muscle.id) ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.1)',
-                      borderRadius: '0.75rem',
-                      padding: '0.75rem',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <div style={{ fontSize: '1.25rem', marginBottom: '0.125rem' }}>{muscle.icon}</div>
-                    <div style={{ color: '#F5F1EA', fontSize: '0.75rem' }}>{muscle.name}</div>
-                  </button>
-                ))}
+            {/* Muscle Group Selector - Only show in structured mode */}
+            {!freeformMode && (
+              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  What do you want to hit?
+                </h2>
+                <div className="grid grid-cols-3 gap-2">
+                  {muscleGroups.map(muscle => (
+                    <button
+                      key={muscle.id}
+                      onClick={() => toggleMuscle(muscle.id)}
+                      style={{
+                        background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                        border: selectedMuscles.includes(muscle.id) ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.1)',
+                        borderRadius: '0.75rem',
+                        padding: '0.75rem',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <div style={{ fontSize: '1.25rem', marginBottom: '0.125rem' }}>{muscle.icon}</div>
+                      <div style={{ color: '#F5F1EA', fontSize: '0.75rem' }}>{muscle.name}</div>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setSelectedMuscles(['chest', 'back', 'shoulders', 'arms', 'legs', 'core'])}
+                  style={{
+                    marginTop: '0.75rem',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#C9A75A',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Select all (Full body)
+                </button>
               </div>
-              <button
-                onClick={() => setSelectedMuscles(['chest', 'back', 'shoulders', 'arms', 'legs', 'core'])}
-                style={{
-                  marginTop: '0.75rem',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#C9A75A',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-              >
-                Select all (Full body)
-              </button>
-            </div>
+            )}
 
             {/* Duration Selector */}
             <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
@@ -505,6 +528,107 @@ export default function Home() {
                 <span>Quick</span>
                 <span>Full session</span>
               </div>
+            </div>
+
+            {/* Workout Style Selector - Only show in structured mode */}
+            {!freeformMode && (
+              <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.35s' }}>
+                <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Workout Style
+                </h2>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {workoutStyles.map(style => (
+                    <button
+                      key={style.id}
+                      onClick={() => setSelectedWorkoutStyle(style.id)}
+                      className="p-2 rounded-lg transition-all duration-200 text-left"
+                      style={{
+                        background: selectedWorkoutStyle === style.id
+                          ? 'rgba(201, 167, 90, 0.2)'
+                          : 'rgba(245, 241, 234, 0.05)',
+                        border: selectedWorkoutStyle === style.id
+                          ? '1px solid #C9A75A'
+                          : '1px solid rgba(245, 241, 234, 0.1)',
+                      }}
+                    >
+                      <div style={{ color: selectedWorkoutStyle === style.id ? '#C9A75A' : '#F5F1EA', fontSize: '0.875rem', fontWeight: 500 }}>
+                        {style.name}
+                      </div>
+                      <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.7rem', marginTop: '2px' }}>
+                        {style.description}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI Freeform Input Toggle */}
+            <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: freeformMode ? '0.75rem' : 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1rem' }}>✨</span>
+                  <div>
+                    <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                      AI-Powered
+                    </h2>
+                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.7rem', margin: 0 }}>
+                      Describe your ideal workout
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setFreeformMode(!freeformMode)}
+                  style={{
+                    width: '48px',
+                    height: '28px',
+                    borderRadius: '14px',
+                    background: freeformMode ? '#C9A75A' : 'rgba(245, 241, 234, 0.2)',
+                    border: 'none',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: freeformMode ? '22px' : '2px',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '12px',
+                      background: '#F5F1EA',
+                      transition: 'left 0.2s ease',
+                    }}
+                  />
+                </button>
+              </div>
+
+              {freeformMode && (
+                <div className="animate-fade-in">
+                  <textarea
+                    value={freeformPrompt}
+                    onChange={(e) => setFreeformPrompt(e.target.value)}
+                    placeholder="e.g., 'Army-style PT with lots of pushups and running' or 'Quick upper body pump before work' or 'Something brutal - I need to suffer today'"
+                    style={{
+                      width: '100%',
+                      minHeight: '80px',
+                      padding: '0.75rem',
+                      borderRadius: '0.75rem',
+                      background: 'rgba(15, 34, 51, 0.5)',
+                      border: '1px solid rgba(201, 167, 90, 0.2)',
+                      color: '#F5F1EA',
+                      fontSize: '0.875rem',
+                      resize: 'vertical',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.7rem', marginTop: '0.5rem' }}>
+                    AI will interpret your request while respecting your equipment and any injuries.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Error Message */}

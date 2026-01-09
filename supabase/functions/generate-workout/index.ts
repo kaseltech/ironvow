@@ -6,6 +6,91 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// =============================================================================
+// FUZZY MATCHING UTILITIES FOR HYBRID AI
+// =============================================================================
+
+// Normalize exercise name for matching
+function normalizeExerciseName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/['']/g, '')           // Remove apostrophes
+    .replace(/[-_]/g, ' ')          // Replace hyphens/underscores with spaces
+    .replace(/\s+/g, ' ')           // Normalize whitespace
+    .replace(/\(.*?\)/g, '')        // Remove parenthetical notes
+    .replace(/\b(the|a|an)\b/g, '') // Remove articles
+    .replace(/\bdb\b/g, 'dumbbell') // Common abbreviations
+    .replace(/\bbb\b/g, 'barbell')
+    .replace(/\bkb\b/g, 'kettlebell')
+    .replace(/\bohp\b/g, 'overhead press')
+    .replace(/\brdl\b/g, 'romanian deadlift')
+    .trim();
+}
+
+// Calculate similarity score between two strings (0-1)
+function calculateSimilarity(str1: string, str2: string): number {
+  const s1 = normalizeExerciseName(str1);
+  const s2 = normalizeExerciseName(str2);
+
+  // Exact match
+  if (s1 === s2) return 1.0;
+
+  // Check if one contains the other
+  if (s1.includes(s2) || s2.includes(s1)) {
+    const longer = s1.length > s2.length ? s1 : s2;
+    const shorter = s1.length > s2.length ? s2 : s1;
+    return shorter.length / longer.length * 0.9; // Partial match bonus
+  }
+
+  // Word-based matching
+  const words1 = new Set(s1.split(' ').filter(w => w.length > 2));
+  const words2 = new Set(s2.split(' ').filter(w => w.length > 2));
+
+  if (words1.size === 0 || words2.size === 0) return 0;
+
+  let matchingWords = 0;
+  for (const word of words1) {
+    if (words2.has(word)) matchingWords++;
+    // Also check for partial word matches
+    else {
+      for (const w2 of words2) {
+        if (word.includes(w2) || w2.includes(word)) {
+          matchingWords += 0.5;
+          break;
+        }
+      }
+    }
+  }
+
+  const totalWords = Math.max(words1.size, words2.size);
+  return matchingWords / totalWords * 0.85;
+}
+
+// Find best matching exercise from database
+interface ExerciseMatch {
+  exercise: any;
+  score: number;
+}
+
+function findBestMatch(aiExerciseName: string, dbExercises: any[]): ExerciseMatch | null {
+  const MATCH_THRESHOLD = 0.5; // Minimum score to consider a match
+
+  let bestMatch: ExerciseMatch | null = null;
+
+  for (const ex of dbExercises) {
+    // Check against name and slug
+    const nameScore = calculateSimilarity(aiExerciseName, ex.name);
+    const slugScore = ex.slug ? calculateSimilarity(aiExerciseName, ex.slug.replace(/-/g, ' ')) : 0;
+    const score = Math.max(nameScore, slugScore);
+
+    if (score >= MATCH_THRESHOLD && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = { exercise: ex, score };
+    }
+  }
+
+  return bestMatch;
+}
+
 // Known bodyweight exercises (no equipment needed) - for outdoor filtering
 const bodyweightExercises = new Set([
   'push-ups', 'pull-ups', 'chin-ups', 'dips-chest', 'dips-triceps',
@@ -34,12 +119,19 @@ function isBodyweightExercise(ex: any): boolean {
     ex.name.toLowerCase().includes('squat') && !ex.name.toLowerCase().includes('barbell') && !ex.name.toLowerCase().includes('goblet');
 }
 
+// Workout style determines programming approach
+type WorkoutStyle = 'traditional' | 'strength' | 'hiit' | 'circuit' | 'wod' | 'cardio' | 'mobility';
+
+// Fitness goal affects programming (from user profile)
+type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
+
 interface WorkoutRequest {
   userId: string;
   location: 'gym' | 'home' | 'outdoor';
   targetMuscles: string[];
   duration: number; // minutes
   experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+  workoutStyle?: WorkoutStyle; // Training approach (5x5, HIIT, circuit, etc.)
   injuries?: { bodyPart: string; movementsToAvoid: string[] }[];
   equipment?: string[];
   customEquipment?: string[];
@@ -47,6 +139,8 @@ interface WorkoutRequest {
   excludeExerciseIds?: string[]; // For regenerating - exclude previous exercises
   swapExerciseId?: string; // For swapping - find alternatives for this exercise
   swapTargetMuscles?: string[]; // Muscles the swapped exercise should target
+  // NEW: Freeform AI request
+  freeformPrompt?: string; // User's custom description of what they want
 }
 
 interface GeneratedExercise {
@@ -65,6 +159,7 @@ interface GeneratedWorkout {
   duration: number;
   exercises: GeneratedExercise[];
   workoutType: string;
+  workoutStyle?: WorkoutStyle;
   targetMuscles: string[];
 }
 
@@ -82,7 +177,22 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: WorkoutRequest = await req.json();
-    const { userId, location, targetMuscles: rawTargetMuscles, duration, experienceLevel, injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles: rawSwapMuscles } = body;
+    const { userId, location, targetMuscles: rawTargetMuscles, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles: rawSwapMuscles, freeformPrompt } = body;
+
+    const startTime = Date.now();
+
+    // Fetch user profile to get fitness_goal
+    let fitnessGoal: FitnessGoal = 'general';
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('fitness_goal')
+        .eq('user_id', userId)
+        .single();
+      if (profile?.fitness_goal) {
+        fitnessGoal = profile.fitness_goal as FitnessGoal;
+      }
+    }
 
     // Map broad muscle groups to specific muscles in database
     const muscleMapping: Record<string, string[]> = {
@@ -193,28 +303,69 @@ serve(async (req) => {
 
     console.log(`Filtered ${exercises.length} exercises to ${availableExercises.length} for location=${location}, muscles=${targetMuscles.join(',')}`);
 
+    // Determine request type for logging
+    const requestType = freeformPrompt ? 'freeform' : 'structured';
+
     // If we have Anthropic API key, use AI for intelligent selection
     // Otherwise, use rule-based selection
     let workout: GeneratedWorkout;
+    let aiResponse: any = null;
 
-    if (anthropicKey && availableExercises.length > 0) {
-      workout = await generateWithAI(
+    if (anthropicKey) {
+      // Hybrid AI: Pass ALL exercises for fuzzy matching (AI generates freely)
+      const result = await generateWithAI(
         anthropicKey,
-        availableExercises,
+        supabase,        // For logging unmatched exercises
+        exercises,       // ALL exercises for fuzzy matching
         targetMuscles,
         duration,
         experienceLevel,
+        workoutStyle,
+        fitnessGoal,     // NEW: Pass fitness goal
         location,
         injuries,
-        allEquipment
+        allEquipment,
+        freeformPrompt   // NEW: Pass freeform prompt if provided
       );
+      workout = result.workout;
+      aiResponse = result.aiResponse;
     } else {
       workout = generateRuleBased(
         availableExercises,
         targetMuscles,
         duration,
-        experienceLevel
+        experienceLevel,
+        workoutStyle
       );
+    }
+
+    const generationTime = Date.now() - startTime;
+
+    // Log the request for analytics and review
+    try {
+      await supabase.from('workout_requests').insert({
+        user_id: userId,
+        request_type: requestType,
+        workout_style: workoutStyle,
+        target_muscles: targetMuscles,
+        duration,
+        location,
+        user_prompt: freeformPrompt || null,
+        user_context: {
+          experienceLevel,
+          fitnessGoal,
+          injuries: injuries?.length || 0,
+          equipmentCount: allEquipment?.length || 0,
+        },
+        ai_response: aiResponse,
+        ai_model: anthropicKey ? 'claude-3-haiku-20240307' : null,
+        generated_workout: workout,
+        success: true,
+        generation_time_ms: generationTime,
+      });
+    } catch (logError) {
+      console.error('Failed to log workout request:', logError);
+      // Don't fail the request just because logging failed
     }
 
     // Save the workout to database
@@ -283,25 +434,124 @@ serve(async (req) => {
   }
 });
 
+interface AIGenerationResult {
+  workout: GeneratedWorkout;
+  aiResponse: any;
+}
+
 async function generateWithAI(
   apiKey: string,
-  exercises: any[],
+  supabase: any,  // Added for logging unmatched exercises
+  allDbExercises: any[],  // Full database for fuzzy matching
   targetMuscles: string[],
   duration: number,
   experienceLevel: string,
+  workoutStyle: WorkoutStyle,
+  fitnessGoal: FitnessGoal,
   location: string,
   injuries?: { bodyPart: string; movementsToAvoid: string[] }[],
-  equipment?: string[]
-): Promise<GeneratedWorkout> {
-  const exerciseList = exercises.map(ex => ({
-    id: ex.id,
-    name: ex.name,
-    primaryMuscles: ex.primary_muscles,
-    secondaryMuscles: ex.secondary_muscles,
-    equipmentRequired: ex.equipment_required,
-    isCompound: ex.is_compound,
-    difficulty: ex.difficulty,
-  }));
+  equipment?: string[],
+  freeformPrompt?: string
+): Promise<AIGenerationResult> {
+  // Build workout style context
+  const workoutStyleContexts: Record<WorkoutStyle, string> = {
+    traditional: `WORKOUT STYLE: Traditional Hypertrophy
+- Sets: 3-4 per exercise
+- Reps: 8-12 (hypertrophy range)
+- Rest: 60-90 seconds between sets
+- Focus on controlled tempo and mind-muscle connection
+- Start with compound movements, finish with isolation`,
+
+    strength: `WORKOUT STYLE: Strength/5x5
+- Sets: 5 per exercise (5x5 protocol)
+- Reps: 5 (heavy weight, low reps)
+- Rest: 3-5 minutes between sets for full recovery
+- Focus ONLY on compound movements (squat, bench, deadlift, row, press)
+- Prioritize strength gains over pump
+- Maximum 3-4 exercises total`,
+
+    hiit: `WORKOUT STYLE: HIIT (High-Intensity Interval Training)
+- Sets: 3-4 per exercise
+- Reps: 12-15 or timed (30-45 seconds work)
+- Rest: 15-30 seconds between sets (minimal rest!)
+- Include explosive movements when possible
+- Supersets encouraged for intensity
+- Higher exercise count (6-8 exercises)
+- Keep heart rate elevated throughout`,
+
+    circuit: `WORKOUT STYLE: Circuit Training
+- Perform exercises back-to-back with minimal rest
+- Sets: 3 circuits of all exercises
+- Reps: 10-12 per exercise
+- Rest: 10-15 seconds between exercises, 60-90 seconds between circuits
+- Include mix of upper/lower body for balanced fatigue
+- Notes should indicate "Move immediately to next exercise"`,
+
+    wod: `WORKOUT STYLE: WOD (Workout of the Day) / CrossFit Style
+- Format as AMRAP (As Many Rounds As Possible), EMOM (Every Minute On the Minute), or "For Time"
+- Include functional movements
+- Higher reps (15-21 for bodyweight, 10-15 for weighted)
+- Include mix of gymnastics, weightlifting, and cardio elements
+- Rest is built into the format (EMOM) or minimal (AMRAP)
+- In notes, include the specific format (e.g., "AMRAP 15 min" or "EMOM 12 min")`,
+
+    cardio: `WORKOUT STYLE: Cardio / Running
+- Focus on cardiovascular conditioning and endurance
+- Include running intervals, sprints, or steady-state cardio
+- Can include: run/walk intervals, tempo runs, fartlek, hill sprints
+- For intervals: specify work/rest ratios (e.g., "30s sprint / 30s walk")
+- Include warm-up and cool-down
+- Exercises like: sprint intervals, zone 2 running, stair climbing, rowing
+- For non-running: bike intervals, rowing, assault bike`,
+
+    mobility: `WORKOUT STYLE: Mobility / Recovery
+- Focus on flexibility, stretching, and movement quality
+- Include dynamic stretches, static stretches, and foam rolling
+- Hold times for static stretches: 30-60 seconds
+- Flow from one movement to next smoothly
+- Include: hip openers, thoracic mobility, hamstring stretches
+- Can include yoga-inspired movements
+- Low intensity, focus on breath and relaxation
+- Good exercises: world's greatest stretch, pigeon pose, cat-cow, foam rolling`,
+  };
+
+  // Build fitness goal context
+  const goalContexts: Record<FitnessGoal, string> = {
+    cut: `FITNESS GOAL: Fat Loss / Cutting
+- Higher rep ranges (10-15 reps)
+- Shorter rest periods (30-60 seconds)
+- Include supersets where appropriate
+- Prioritize compound movements for calorie burn
+- Add metabolic finishers if time allows`,
+
+    bulk: `FITNESS GOAL: Muscle Building / Bulking
+- Moderate rep ranges (8-12 reps)
+- Longer rest periods (90-120 seconds) for recovery
+- Focus on progressive overload cues in notes
+- Prioritize compound movements first, then isolation
+- Sufficient volume per muscle group`,
+
+    maintain: `FITNESS GOAL: Maintenance
+- Balanced approach with moderate intensity
+- Mix of rep ranges (8-12 reps)
+- Standard rest periods (60-90 seconds)
+- Variety to keep workouts engaging`,
+
+    endurance: `FITNESS GOAL: Endurance
+- Higher rep ranges (15-20 reps) or timed sets
+- Shorter rest periods (30-45 seconds)
+- Include cardio elements where appropriate
+- Focus on muscular endurance, not max strength`,
+
+    general: `FITNESS GOAL: General Fitness
+- Well-rounded approach
+- Mix of strength and conditioning
+- Moderate rep ranges and rest periods
+- Focus on functional movements`,
+  };
+
+  const styleContext = workoutStyleContexts[workoutStyle] || workoutStyleContexts.traditional;
+  const goalContext = goalContexts[fitnessGoal] || goalContexts.general;
 
   // Build location-specific context
   let locationContext = '';
@@ -309,22 +559,21 @@ async function generateWithAI(
     locationContext = `\n\nLOCATION: OUTDOOR (park, trail, or outdoor space)
 - ONLY use bodyweight exercises or exercises that need no equipment
 - Good outdoor exercises: push-ups, pull-ups (if bar available), dips (bench/bars), lunges, squats, burpees, mountain climbers, planks, running, sprints
-- DO NOT include exercises requiring: dumbbells, barbells, machines, cables, or gym equipment
-- If an exercise needs equipment, SKIP IT`;
+- DO NOT include exercises requiring: dumbbells, barbells, machines, cables, or gym equipment`;
   } else if (location === 'home') {
     locationContext = `\n\nLOCATION: HOME GYM
-- Only use exercises that require the listed equipment or no equipment
-- If no equipment listed, stick to bodyweight exercises`;
+- Only use exercises that can be done with limited equipment
+- Focus on movements that work well in small spaces`;
   } else if (location === 'gym') {
-    locationContext = `\n\nLOCATION: GYM${equipment && equipment.length > 0 ? ` with specific equipment` : ' (commercial gym - full equipment assumed)'}`;
+    locationContext = `\n\nLOCATION: GYM${equipment && equipment.length > 0 ? ` with equipment: ${equipment.slice(0, 15).join(', ')}${equipment.length > 15 ? '...' : ''}` : ' (commercial gym - full equipment assumed)'}`;
   }
 
   // Build equipment context
   let equipmentContext = '';
-  if (equipment && equipment.length > 0) {
-    equipmentContext = `\nAvailable equipment: ${equipment.join(', ')}. ONLY use exercises that require this equipment or no equipment.`;
-  } else if (location === 'outdoor') {
+  if (location === 'outdoor') {
     equipmentContext = `\nNo equipment available - bodyweight only.`;
+  } else if (equipment && equipment.length > 0) {
+    equipmentContext = `\nAvailable equipment includes: ${equipment.slice(0, 20).join(', ')}. Prioritize exercises using this equipment.`;
   }
 
   // Build injury context for the prompt
@@ -338,36 +587,84 @@ async function generateWithAI(
 
   // Build target muscles emphasis
   const muscleEmphasis = targetMuscles.length === 1
-    ? `Focus EXCLUSIVELY on ${targetMuscles[0]} - every exercise must target this muscle as primary or secondary.`
+    ? `Focus EXCLUSIVELY on ${targetMuscles[0]} - every exercise must target this muscle.`
     : targetMuscles.length <= 3
-    ? `Focus on these specific muscles: ${targetMuscles.join(', ')}. Every exercise must target at least one of these muscles.`
-    : `Full body workout targeting: ${targetMuscles.join(', ')}. Include exercises for each muscle group.`;
+    ? `Focus on these specific muscles: ${targetMuscles.join(', ')}.`
+    : `Full body workout targeting: ${targetMuscles.join(', ')}.`;
 
-  const prompt = `You are a certified personal trainer. Create a ${duration}-minute ${experienceLevel}-level workout.
+  // Build the prompt - different for freeform vs structured
+  let prompt: string;
+
+  if (freeformPrompt) {
+    // FREEFORM PROMPT - User describes what they want
+    prompt = `You are a certified personal trainer. A user has requested a custom workout.
+
+USER REQUEST: "${freeformPrompt}"
+
+USER CONTEXT:
+- Experience Level: ${experienceLevel}
+- Location: ${location}
+- Duration: ${duration} minutes
+${goalContext}
+${locationContext}${equipmentContext}${injuryContext}
+
+Interpret the user's request and create an appropriate workout. Consider their experience level, available equipment, and any limitations.
+
+RULES:
+1. Use standard exercise names (e.g., "Barbell Bench Press", "Dumbbell Curl", "Pull-ups", "Sprint Intervals")
+2. Honor the user's request - if they want something specific, give it to them
+3. Respect equipment and injury constraints
+4. If they mention military/bootcamp style, include exercises like: 8-count bodybuilders, flutter kicks, scissor kicks, burpees, push-ups, sit-ups
+5. If they mention running/cardio, include: sprint intervals, tempo runs, fartlek, run/walk intervals
+6. Match the workout duration to ${duration} minutes
+
+Return ONLY valid JSON:
+{
+  "name": "Descriptive workout name based on their request",
+  "description": "Brief description of what this workout accomplishes",
+  "workoutType": "push|pull|legs|upper|lower|fullbody|cardio|mobility",
+  "exercises": [
+    {
+      "name": "Exercise Name",
+      "primaryMuscle": "main muscle or system targeted",
+      "sets": 3,
+      "reps": "8-10 or time-based like 30s",
+      "restSeconds": 60,
+      "notes": "form tip or interval details"
+    }
+  ]
+}`;
+  } else {
+    // STRUCTURED PROMPT - Standard workout generation
+    prompt = `You are a certified personal trainer. Create a ${duration}-minute ${experienceLevel}-level workout.
+
+${styleContext}
+
+${goalContext}
 
 TARGET MUSCLES: ${muscleEmphasis}${locationContext}${equipmentContext}${injuryContext}
 
-Available exercises from database (ONLY select from this list):
-${JSON.stringify(exerciseList, null, 2)}
+Generate a complete workout using your knowledge of fitness exercises. Use common, well-known exercise names.
+The exercises will be matched to our database automatically.
 
-STRICT RULES:
-1. ONLY select exercises from the provided list above - use exact exerciseId values
-2. Select 4-8 exercises depending on duration (roughly 1 exercise per 5-8 minutes)
-3. Every exercise MUST target at least one of the specified muscles: ${targetMuscles.join(', ')}
-4. For outdoor: ONLY bodyweight exercises (no equipment)
-5. Start with compound movements, end with isolation
-6. Sets: 2-4 for beginners, 3-5 for intermediate/advanced
-7. Rest: compound 90-120s, isolation 60-90s
+RULES:
+1. Use standard exercise names (e.g., "Barbell Bench Press", "Dumbbell Curl", "Pull-ups")
+2. Follow the WORKOUT STYLE and FITNESS GOAL guidelines above
+3. Every exercise should target the specified muscles: ${targetMuscles.join(', ')}
+4. For outdoor: ONLY bodyweight exercises
+5. Adjust exercise count based on style (strength=3-4, circuit/hiit=6-8, traditional=5-6, cardio=4-6, mobility=8-12)
+6. For cardio style: include running intervals, sprints, or cardio machine work
+7. For mobility style: include stretches, foam rolling, and movement prep
 
 Return ONLY valid JSON:
 {
   "name": "Descriptive workout name",
-  "description": "Brief description mentioning target muscles",
-  "workoutType": "push|pull|legs|upper|lower|fullbody",
+  "description": "Brief description of the workout",
+  "workoutType": "push|pull|legs|upper|lower|fullbody|cardio|mobility",
   "exercises": [
     {
-      "exerciseId": "exact uuid from list above",
       "name": "Exercise Name",
+      "primaryMuscle": "main muscle targeted",
       "sets": 3,
       "reps": "8-10",
       "restSeconds": 90,
@@ -375,6 +672,7 @@ Return ONLY valid JSON:
     }
   ]
 }`;
+  }
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -409,13 +707,88 @@ Return ONLY valid JSON:
 
   const parsed = JSON.parse(jsonMatch[0]);
 
+  // ==========================================================================
+  // HYBRID AI: Fuzzy match AI exercises to database + log unmatched
+  // ==========================================================================
+  const matchedExercises: GeneratedExercise[] = [];
+  const unmatchedLog: { name: string; context: any }[] = [];
+
+  for (const aiExercise of parsed.exercises) {
+    const match = findBestMatch(aiExercise.name, allDbExercises);
+
+    if (match) {
+      // Found a match - use the database exercise ID
+      console.log(`✓ Matched "${aiExercise.name}" → "${match.exercise.name}" (score: ${match.score.toFixed(2)})`);
+      matchedExercises.push({
+        exerciseId: match.exercise.id,
+        name: match.exercise.name, // Use DB name for consistency
+        sets: aiExercise.sets,
+        reps: String(aiExercise.reps),
+        restSeconds: aiExercise.restSeconds,
+        notes: aiExercise.notes,
+      });
+    } else {
+      // No match found - log for later review and still include in workout
+      console.log(`✗ Unmatched exercise: "${aiExercise.name}"`);
+      unmatchedLog.push({
+        name: aiExercise.name,
+        context: {
+          primaryMuscle: aiExercise.primaryMuscle,
+          sets: aiExercise.sets,
+          reps: aiExercise.reps,
+          workoutStyle,
+          location,
+        },
+      });
+
+      // Include unmatched exercise with empty ID (client will display AI name)
+      matchedExercises.push({
+        exerciseId: '', // Empty = unmatched, use AI-provided name
+        name: aiExercise.name,
+        sets: aiExercise.sets,
+        reps: String(aiExercise.reps),
+        restSeconds: aiExercise.restSeconds,
+        notes: aiExercise.notes,
+      });
+    }
+  }
+
+  // Log unmatched exercises to database for future improvement
+  if (unmatchedLog.length > 0) {
+    console.log(`Logging ${unmatchedLog.length} unmatched exercises to database...`);
+    for (const unmatched of unmatchedLog) {
+      try {
+        await supabase.rpc('log_unmatched_exercise', {
+          p_ai_name: unmatched.name,
+          p_normalized_name: normalizeExerciseName(unmatched.name),
+          p_context: unmatched.context,
+        });
+      } catch (logError) {
+        console.error('Failed to log unmatched exercise:', logError);
+        // Don't fail the whole request just because logging failed
+      }
+    }
+  }
+
+  const matchRate = matchedExercises.filter(e => e.exerciseId).length / matchedExercises.length;
+  console.log(`Match rate: ${(matchRate * 100).toFixed(0)}% (${matchedExercises.filter(e => e.exerciseId).length}/${matchedExercises.length})`);
+
   return {
-    name: parsed.name,
-    description: parsed.description,
-    duration,
-    workoutType: parsed.workoutType,
-    targetMuscles,
-    exercises: parsed.exercises,
+    workout: {
+      name: parsed.name,
+      description: parsed.description,
+      duration,
+      workoutType: parsed.workoutType,
+      workoutStyle,
+      targetMuscles,
+      exercises: matchedExercises,
+    },
+    aiResponse: {
+      prompt: freeformPrompt || null,
+      rawResponse: parsed,
+      matchRate: matchRate,
+      unmatchedCount: unmatchedLog.length,
+    },
   };
 }
 
@@ -423,10 +796,18 @@ function generateRuleBased(
   exercises: any[],
   targetMuscles: string[],
   duration: number,
-  experienceLevel: string
+  experienceLevel: string,
+  workoutStyle: WorkoutStyle = 'traditional'
 ): GeneratedWorkout {
-  // Determine number of exercises based on duration
-  const exerciseCount = Math.min(Math.floor(duration / 8), 8);
+  // Determine number of exercises based on duration and style
+  let exerciseCount = Math.min(Math.floor(duration / 8), 8);
+
+  // Adjust exercise count based on workout style
+  if (workoutStyle === 'strength') {
+    exerciseCount = Math.min(exerciseCount, 4); // Strength: fewer exercises
+  } else if (workoutStyle === 'hiit' || workoutStyle === 'circuit') {
+    exerciseCount = Math.min(Math.floor(duration / 5), 8); // HIIT/Circuit: more exercises
+  }
 
   // Prioritize compound movements
   const compounds = exercises.filter(ex => ex.is_compound);
@@ -444,41 +825,82 @@ function generateRuleBased(
   sortByRelevance(compounds);
   sortByRelevance(isolations);
 
-  // Select exercises: 60% compound, 40% isolation
-  const compoundCount = Math.ceil(exerciseCount * 0.6);
-  const isolationCount = exerciseCount - compoundCount;
+  // Select exercises: ratio depends on workout style
+  let compoundCount: number;
+  let isolationCount: number;
+
+  if (workoutStyle === 'strength') {
+    // Strength: almost all compounds
+    compoundCount = Math.min(exerciseCount, compounds.length);
+    isolationCount = 0;
+  } else {
+    // Other styles: 60% compound, 40% isolation
+    compoundCount = Math.ceil(exerciseCount * 0.6);
+    isolationCount = exerciseCount - compoundCount;
+  }
 
   const selectedExercises = [
     ...compounds.slice(0, compoundCount),
     ...isolations.slice(0, isolationCount),
   ];
 
-  // Determine sets and reps based on experience
-  const getSetsReps = (isCompound: boolean) => {
-    switch (experienceLevel) {
-      case 'beginner':
-        return { sets: isCompound ? 3 : 2, reps: '10-12', rest: isCompound ? 90 : 60 };
-      case 'intermediate':
-        return { sets: isCompound ? 4 : 3, reps: '8-10', rest: isCompound ? 90 : 75 };
-      case 'advanced':
-        return { sets: isCompound ? 4 : 4, reps: '6-10', rest: isCompound ? 120 : 90 };
+  // Determine sets and reps based on workout style
+  const getSetsReps = (isCompound: boolean, movementPattern?: string): { sets: number; reps: string; rest: number } => {
+    switch (workoutStyle) {
+      case 'strength':
+        return { sets: 5, reps: '5', rest: isCompound ? 180 : 120 };
+      case 'hiit':
+        return { sets: 3, reps: '12-15', rest: 30 };
+      case 'circuit':
+        return { sets: 3, reps: '10-12', rest: 15 };
+      case 'wod':
+        return { sets: 3, reps: isCompound ? '10-15' : '15-20', rest: 60 };
+      case 'cardio':
+        // Cardio exercises use time or distance
+        return { sets: 1, reps: movementPattern === 'cardio' ? '5-10 min' : '30-60s', rest: 60 };
+      case 'mobility':
+        // Mobility exercises use holds or reps with longer durations
+        return { sets: 2, reps: '30-60s hold', rest: 15 };
+      case 'traditional':
       default:
-        return { sets: 3, reps: '10-12', rest: 75 };
+        switch (experienceLevel) {
+          case 'beginner':
+            return { sets: isCompound ? 3 : 2, reps: '10-12', rest: isCompound ? 90 : 60 };
+          case 'intermediate':
+            return { sets: isCompound ? 4 : 3, reps: '8-10', rest: isCompound ? 90 : 75 };
+          case 'advanced':
+            return { sets: isCompound ? 4 : 4, reps: '6-10', rest: isCompound ? 120 : 90 };
+          default:
+            return { sets: 3, reps: '10-12', rest: 75 };
+        }
     }
   };
 
   // Determine workout name
   const workoutType = determineWorkoutType(targetMuscles);
-  const workoutName = generateWorkoutName(workoutType, experienceLevel);
+  const workoutName = generateWorkoutName(workoutType, experienceLevel, workoutStyle);
+
+  // Generate style-specific description
+  const styleDescriptions: Record<string, string> = {
+    strength: '5x5 strength-focused',
+    hiit: 'high-intensity interval',
+    circuit: 'circuit training',
+    wod: 'CrossFit-style WOD',
+    traditional: 'hypertrophy-focused',
+    cardio: 'cardiovascular conditioning',
+    mobility: 'mobility and recovery',
+  };
+  const styleDesc = styleDescriptions[workoutStyle] || 'traditional';
 
   return {
     name: workoutName,
-    description: `${exerciseCount} exercises targeting ${targetMuscles.join(', ')}`,
+    description: `${selectedExercises.length} ${styleDesc} exercises targeting ${targetMuscles.join(', ')}`,
     duration,
     workoutType,
+    workoutStyle,
     targetMuscles,
     exercises: selectedExercises.map(ex => {
-      const { sets, reps, rest } = getSetsReps(ex.is_compound);
+      const { sets, reps, rest } = getSetsReps(ex.is_compound, ex.movement_pattern);
       return {
         exerciseId: ex.id,
         name: ex.name,
@@ -507,7 +929,18 @@ function determineWorkoutType(muscles: string[]): string {
   return 'fullbody';
 }
 
-function generateWorkoutName(type: string, level: string): string {
+function generateWorkoutName(type: string, level: string, style: string = 'traditional'): string {
+  // Style-based name prefixes
+  const styleNames: Record<string, string> = {
+    strength: '5x5',
+    hiit: 'HIIT',
+    circuit: 'Circuit',
+    wod: 'WOD',
+    traditional: '',
+    cardio: 'Cardio',
+    mobility: 'Mobility',
+  };
+
   const typeNames: Record<string, string> = {
     push: 'Push Power',
     pull: 'Pull Strength',
@@ -515,6 +948,8 @@ function generateWorkoutName(type: string, level: string): string {
     upper: 'Upper Body',
     lower: 'Lower Body',
     fullbody: 'Full Body Blast',
+    cardio: 'Cardio Session',
+    mobility: 'Recovery Flow',
   };
 
   const levelPrefix: Record<string, string> = {
@@ -523,7 +958,12 @@ function generateWorkoutName(type: string, level: string): string {
     advanced: 'Intense',
   };
 
-  return `${levelPrefix[level] || ''} ${typeNames[type] || 'Workout'}`.trim();
+  const styleName = styleNames[style] || '';
+  const levelName = style === 'traditional' ? (levelPrefix[level] || '') : '';
+  const typeName = typeNames[type] || 'Workout';
+
+  const parts = [styleName, levelName, typeName].filter(Boolean);
+  return parts.join(' ').trim();
 }
 
 // Handle swap request - find alternative exercises for a given exercise

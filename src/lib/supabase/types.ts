@@ -19,6 +19,7 @@ export type Database = {
           experience_level: 'beginner' | 'intermediate' | 'advanced' | null;
           preferred_units: 'imperial' | 'metric';
           custom_equipment: string[];
+          fitness_goal: 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +32,7 @@ export type Database = {
           experience_level?: 'beginner' | 'intermediate' | 'advanced' | null;
           preferred_units?: 'imperial' | 'metric';
           custom_equipment?: string[];
+          fitness_goal?: 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
           created_at?: string;
           updated_at?: string;
         };
@@ -43,6 +45,7 @@ export type Database = {
           experience_level?: 'beginner' | 'intermediate' | 'advanced' | null;
           preferred_units?: 'imperial' | 'metric';
           custom_equipment?: string[];
+          fitness_goal?: 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
           created_at?: string;
           updated_at?: string;
         };
@@ -504,7 +507,7 @@ export type Database = {
           id: string;
           user_id: string;
           name: string;
-          gym_type: 'commercial' | 'crossfit' | 'powerlifting' | 'hotel' | 'custom';
+          gym_type: 'commercial' | 'crossfit' | 'powerlifting' | 'olympic' | 'hotel' | 'home' | 'hiit' | 'calisthenics' | 'outdoor' | 'custom';
           equipment_ids: string[];
           custom_equipment: string[];
           is_default: boolean;
@@ -515,7 +518,7 @@ export type Database = {
           id?: string;
           user_id: string;
           name: string;
-          gym_type?: 'commercial' | 'crossfit' | 'powerlifting' | 'hotel' | 'custom';
+          gym_type?: 'commercial' | 'crossfit' | 'powerlifting' | 'olympic' | 'hotel' | 'home' | 'hiit' | 'calisthenics' | 'outdoor' | 'custom';
           equipment_ids?: string[];
           custom_equipment?: string[];
           is_default?: boolean;
@@ -526,7 +529,7 @@ export type Database = {
           id?: string;
           user_id?: string;
           name?: string;
-          gym_type?: 'commercial' | 'crossfit' | 'powerlifting' | 'hotel' | 'custom';
+          gym_type?: 'commercial' | 'crossfit' | 'powerlifting' | 'olympic' | 'hotel' | 'home' | 'hiit' | 'calisthenics' | 'outdoor' | 'custom';
           equipment_ids?: string[];
           custom_equipment?: string[];
           is_default?: boolean;

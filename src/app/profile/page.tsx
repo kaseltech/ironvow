@@ -3,6 +3,18 @@
 import { useState } from 'react';
 import { Logo } from '@/components/Logo';
 import { BodyMap } from '@/components/BodyMap';
+import { useProfile } from '@/hooks/useSupabase';
+import { getSupabase } from '@/lib/supabase/client';
+
+type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
+
+const fitnessGoals: { id: FitnessGoal; name: string; description: string; icon: string }[] = [
+  { id: 'cut', name: 'Cut', description: 'Fat loss, higher reps, shorter rest', icon: '📉' },
+  { id: 'bulk', name: 'Bulk', description: 'Muscle gain, moderate reps, longer rest', icon: '💪' },
+  { id: 'maintain', name: 'Maintain', description: 'Balanced approach, variety', icon: '⚖️' },
+  { id: 'endurance', name: 'Endurance', description: 'Higher reps, cardio integration', icon: '🏃' },
+  { id: 'general', name: 'General Fitness', description: 'Well-rounded, functional', icon: '🎯' },
+];
 
 // Mock muscle strength data - derived from workout history
 const muscleStrengthData = [
@@ -39,8 +51,31 @@ const recentWorkouts = [
 ];
 
 export default function ProfilePage() {
+  const { profile, refetch: refetchProfile } = useProfile();
   const [activeTab, setActiveTab] = useState<'body' | 'saved' | 'history' | 'settings'>('body');
   const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [savingGoal, setSavingGoal] = useState(false);
+
+  const currentGoal = (profile?.fitness_goal as FitnessGoal) || 'general';
+
+  const handleGoalChange = async (goalId: FitnessGoal) => {
+    if (!profile?.id) return;
+
+    setSavingGoal(true);
+    try {
+      const supabase = getSupabase();
+      await supabase
+        .from('profiles')
+        .update({ fitness_goal: goalId })
+        .eq('id', profile.id);
+
+      refetchProfile();
+    } catch (err) {
+      console.error('Failed to save goal:', err);
+    } finally {
+      setSavingGoal(false);
+    }
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0F2233' }}>
@@ -325,31 +360,56 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Training Goals */}
+            {/* Fitness Goal */}
             <div className="card">
-              <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Training Goals
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {['Hypertrophy', 'Strength'].map(goal => (
-                  <span
-                    key={goal}
+              <div className="flex items-center justify-between mb-3">
+                <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Fitness Goal
+                </h2>
+                {savingGoal && (
+                  <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
+                    Saving...
+                  </span>
+                )}
+              </div>
+              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+                AI will adjust workouts based on your goal
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {fitnessGoals.map(goal => (
+                  <button
+                    key={goal.id}
+                    onClick={() => handleGoalChange(goal.id)}
+                    disabled={savingGoal}
                     style={{
-                      background: 'rgba(201, 167, 90, 0.2)',
-                      border: '1px solid rgba(201, 167, 90, 0.3)',
-                      borderRadius: '2rem',
-                      padding: '0.5rem 1rem',
-                      color: '#C9A75A',
-                      fontSize: '0.875rem',
+                      background: currentGoal === goal.id
+                        ? 'rgba(201, 167, 90, 0.2)'
+                        : 'rgba(15, 34, 51, 0.5)',
+                      border: currentGoal === goal.id
+                        ? '2px solid #C9A75A'
+                        : '1px solid rgba(201, 167, 90, 0.1)',
+                      borderRadius: '0.75rem',
+                      padding: '0.75rem',
+                      textAlign: 'left',
+                      cursor: savingGoal ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      opacity: savingGoal ? 0.7 : 1,
                     }}
                   >
-                    {goal}
-                  </span>
+                    <div style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{goal.icon}</div>
+                    <div style={{
+                      color: currentGoal === goal.id ? '#C9A75A' : '#F5F1EA',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                    }}>
+                      {goal.name}
+                    </div>
+                    <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', marginTop: '0.125rem' }}>
+                      {goal.description}
+                    </div>
+                  </button>
                 ))}
               </div>
-              <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginTop: '0.75rem' }}>
-                Primary: Hypertrophy (8-12 rep ranges) • Secondary: Strength (lower reps, heavier)
-              </p>
             </div>
 
             {/* Injuries & Limitations */}

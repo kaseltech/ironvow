@@ -254,29 +254,205 @@ npx cap open ios
 
 ## TODO / Roadmap
 
-### Phase 1: Core Functionality
-- [ ] Connect mock UI to real Supabase data
-- [ ] Implement auth (email + Apple Sign In)
-- [ ] Wire up workout generation API endpoint
-- [ ] Save/load workouts from database
-- [ ] Log completed sets to database
+### Phase 1: Core Functionality ✅
+- [x] Connect mock UI to real Supabase data
+- [x] Implement auth (email + Apple Sign In)
+- [x] Wire up workout generation API endpoint (Edge Function)
+- [x] Save/load workouts from database
+- [x] Log completed sets to database
 
-### Phase 2: Intelligence
-- [ ] Calculate muscle strength scores from logged data
-- [ ] Implement PR detection and tracking
-- [ ] Build progressive overload suggestions
-- [ ] Add trend analysis per exercise
+### Phase 2: Intelligence ✅
+- [x] AI-powered workout generation with Claude 3 Haiku
+- [x] Muscle group expansion (UI groups → specific muscles)
+- [x] Injury awareness in generation
+- [x] Equipment-aware filtering
+- [x] Bodyweight exercise filtering for outdoor
 
-### Phase 3: Polish
+### Phase 3: Gym Profiles & Equipment ✅
+- [x] Multi-select gym presets (combine Commercial + Powerlifting + CrossFit, etc.)
+- [x] Equipment merging from multiple presets
+- [x] Expanded equipment library (100+ items)
+- [x] 14 comprehensive equipment presets
+- [x] New gym types (olympic, home, hiit, calisthenics, outdoor)
+
+### Phase 4: Workout Styles ✅
+- [x] 5 workout styles: Traditional, Strength (5x5), HIIT, Circuit, WOD
+- [x] Style-specific sets/reps/rest programming
+- [x] Style-aware AI prompts
+- [x] Workout style selector UI
+
+### Phase 5: Hybrid AI ✅
+- [x] Free-form AI generation (not constrained to DB)
+- [x] Fuzzy matching AI exercises to database
+- [x] Unmatched exercise logging for DB improvement
+- [x] Self-improving exercise database
+
+### Phase 6: Comprehensive Libraries ✅
+- [x] Deep-dive CrossFit exercise library (30+ Olympic/skill exercises)
+- [x] HIIT/Conditioning exercises (25+ movements)
+- [x] Hyrox-specific movements (18 exercises)
+- [x] 5x5/Strength program exercises (35+ variations)
+
+### Phase 7: Polish
 - [ ] Generate app assets via Midjourney
 - [ ] Implement body map with real data
 - [ ] Add charts with real weight/volume data
 - [ ] iOS app icon and splash screen
 
-### Phase 4: Launch
+### Phase 8: Launch
 - [ ] TestFlight beta
 - [ ] App Store submission
 - [ ] Marketing site at ironvow.app
+
+---
+
+## Development Log
+
+### January 8, 2026 - Session 2: AI Generation Improvements
+
+**Issues Fixed:**
+1. **Muscle Group Mismatch** - UI sent broad groups ("arms", "legs") but DB had specific muscles ("biceps", "quads"). Added muscle mapping expansion in Edge Function.
+
+2. **Outdoor Workout Bug** - Gym equipment was appearing in outdoor workouts. Added `isBodyweightExercise()` helper and bodyweight exercise filtering.
+
+3. **Missing Bodyweight Exercises** - Created `005_bodyweight_exercises.sql` migration with 25+ bodyweight exercises.
+
+**Features Added:**
+
+**Gym Profiles (Multi-Select Presets):**
+- Rewrote `GymManager.tsx` with 3-step flow: List → Select Presets → Customize
+- Multi-select presets with checkbox UI
+- Equipment merging from all selected presets
+- "Start from scratch" option
+
+**Equipment Expansion (`006_expanded_equipment.sql`):**
+- 100+ new equipment items across categories
+- Specialty barbells (Olympic, Safety Squat Bar, Buffalo Bar, etc.)
+- Full commercial gym machine lineup
+- CrossFit/Hyrox equipment (Sleds, Sandbags, SkiErgs)
+- 14 comprehensive presets:
+  - Large Commercial Gym, Basic Commercial Gym
+  - CrossFit Box, Hyrox Training, Powerlifting Gym
+  - Olympic Weightlifting, Strength Training (5x5)
+  - HIIT/Circuit Training, Calisthenics/Street Workout
+  - Hotel/Travel, Full Home Gym, Home Basics
+  - Bodyweight Only, Outdoor/Park Workout
+
+**Workout Styles:**
+- Added `WorkoutStyle` type: traditional, strength, hiit, circuit, wod
+- Style-specific AI prompts with detailed programming instructions
+- Style-specific sets/reps/rest in local fallback
+- Workout style selector UI on main page
+- Style-aware naming (e.g., "5x5 Push Power", "HIIT Full Body Blast")
+
+**Files Modified:**
+- `supabase/functions/generate-workout/index.ts` - Muscle mapping, bodyweight filtering, workout styles
+- `supabase/migrations/005_bodyweight_exercises.sql` - 25+ bodyweight exercises
+- `supabase/migrations/006_expanded_equipment.sql` - Equipment + presets expansion
+- `src/lib/generateWorkout.ts` - WorkoutStyle type, style-aware local generation
+- `src/lib/supabase/types.ts` - New gym types
+- `src/components/GymManager.tsx` - Multi-select preset UI
+- `src/app/page.tsx` - Workout style selector UI
+
+### January 8, 2026 - Session 3: Hybrid AI Implementation
+
+**Hybrid AI with Fuzzy Matching:**
+- AI now generates exercises freely (not constrained to DB)
+- Fuzzy matching algorithm matches AI exercises to database:
+  - `normalizeExerciseName()` - standardizes names (db→dumbbell, ohp→overhead press, etc.)
+  - `calculateSimilarity()` - word-based matching with partial match support
+  - `findBestMatch()` - finds best DB match above 0.5 threshold
+- Unmatched exercises logged to `unmatched_exercises` table for DB improvement
+
+**Database Changes (`007_unmatched_exercises.sql`):**
+- `unmatched_exercises` table with occurrence tracking
+- `log_unmatched_exercise()` function for upsert operations
+- Status workflow: pending → added/rejected/merged
+- View for admin to review most requested exercises
+
+**Files Modified:**
+- `supabase/functions/generate-workout/index.ts` - Fuzzy matching utilities, free-form AI prompt
+- `supabase/migrations/007_unmatched_exercises.sql` - Unmatched exercise logging
+
+### January 9, 2026 - Session 4: Comprehensive Exercise Library
+
+**Exercise Library Expansion (`008_comprehensive_exercises.sql`):**
+Added 106 new exercises across four categories:
+
+**CrossFit/Olympic Lifting (30+):**
+- Full Olympic lifts: Clean, Snatch, Clean & Jerk (with power/hang variations)
+- Overhead: Push Press, Push Jerk, Split Jerk
+- Gymnastics: Muscle-ups, HSPU, Toes-to-Bar, Rope Climbs
+- WOD Staples: Thrusters, Wall Balls, Double Unders, Pistols
+
+**HIIT/Conditioning (25+):**
+- Cardio machines: Assault Bike, Echo Bike, Ski Erg
+- Battle ropes (waves, slams)
+- Locomotion: Bear Crawl, Crab Walk, Inchworm
+- Plyometrics: Squat/Lunge/Tuck Jumps, Plyo Push-ups
+- Complex movements: Devil Press, Man Makers, Burpee Box Jump
+
+**Hyrox-Specific (18):**
+- Sled Push/Pull
+- Carries: Farmers, Sandbag
+- Sandbag movements: Lunges, Shoulder, Clean, Over Shoulder
+- Kettlebells: Swing, Snatch, Clean, Clean & Press
+- Event distances: Rowing 1000m, Ski Erg 1000m
+
+**Strength/5x5 Variations (35+):**
+- Squat variations: Low/High Bar, Pause, Box, Safety Bar, Zercher
+- Deadlift variations: Sumo, Deficit, Block Pull, Trap Bar, Snatch Grip
+- Bench variations: Pause, Close/Wide Grip, Floor Press, Spoto, Larsen
+- Overhead variations: Strict, BTN, Z Press, Pin Press
+- Row variations: Pendlay, Seal, Meadows, Kroc, T-Bar
+- Accessories: Good Mornings, Reverse Hyper, Belt Squat, Hack Squat
+
+**Files Modified:**
+- `supabase/migrations/008_comprehensive_exercises.sql` - 106 new exercises
+
+### January 9, 2026 - Session 5: Goals, Logging, and Freeform AI
+
+**Major Features:**
+
+1. **Fitness Goal Setting:**
+   - Added `fitness_goal` column to profiles (cut/bulk/maintain/endurance/general)
+   - Goal selector UI in Profile Settings page
+   - AI prompts now adjust based on goal (reps, rest, volume)
+
+2. **AI Request Logging:**
+   - Created `workout_requests` table to log all AI generation requests
+   - Logs both structured and freeform requests
+   - Tracks: prompt, response, generation time, success/failure
+   - View for admin to review freeform requests
+
+3. **Freeform AI Input:**
+   - Toggle to switch between structured and freeform modes
+   - Text input where users can describe their ideal workout
+   - Examples: "Army-style PT", "Quick pump before work", "Something brutal"
+   - AI interprets request while respecting equipment/injury constraints
+
+4. **New Workout Styles:**
+   - Added `cardio` style (running intervals, sprints, conditioning)
+   - Added `mobility` style (stretching, foam rolling, recovery)
+   - 7 total styles: Traditional, Strength, HIIT, Circuit, WOD, Cardio, Mobility
+
+5. **More Exercises (`009_goals_logging_exercises.sql`):**
+   - 15 Cardio/Running exercises (intervals, tempo runs, fartlek)
+   - 28 Mobility/Stretching exercises (dynamic, static, foam rolling)
+   - 24 Military/Bootcamp exercises (8-count bodybuilders, flutter kicks, etc.)
+
+**Database Changes:**
+- `profiles.fitness_goal` - User's current training goal
+- `workout_requests` table - AI request/response logging
+- 67 new exercises in migration 009
+
+**Files Modified:**
+- `supabase/migrations/009_goals_logging_exercises.sql` - Goals, logging, exercises
+- `supabase/functions/generate-workout/index.ts` - Goal-aware prompts, freeform handling
+- `src/lib/generateWorkout.ts` - Added cardio/mobility styles, freeformPrompt
+- `src/lib/supabase/types.ts` - Added fitness_goal to Profile type
+- `src/app/page.tsx` - Freeform AI input toggle and textarea
+- `src/app/profile/page.tsx` - Fitness goal selector in Settings tab
 
 ---
 
@@ -285,4 +461,4 @@ npx cap open ios
 
 ---
 
-*Last updated: January 8, 2026*
+*Last updated: January 9, 2026*
