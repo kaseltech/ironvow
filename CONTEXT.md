@@ -454,6 +454,77 @@ Added 106 new exercises across four categories:
 - `src/app/page.tsx` - Freeform AI input toggle and textarea
 - `src/app/profile/page.tsx` - Fitness goal selector in Settings tab
 
+### January 9, 2026 - Session 6: Run Tracking, Set Logging, and AI Fixes
+
+**Major Features:**
+
+1. **GPS Run Tracking:**
+   - New `/run` page with real-time GPS tracking via Capacitor Geolocation
+   - Voice announcements using Web Speech API (configurable: quarter/half/full mile)
+   - Live stats: distance, pace, elapsed time, current speed
+   - Pause/resume/finish controls with split times
+   - Run summary screen with mile splits
+   - iOS permissions for location (foreground and background)
+
+2. **Improved Workout Set Logging:**
+   - Fixed exercise_id to use real UUIDs (was using exercise name)
+   - Offline queue with localStorage for logging sets without connection
+   - Edit/delete logged sets during workout
+   - Tappable set chips showing completed sets
+   - Pending sync indicator for offline sets
+
+3. **AI Workout Generator Fixes:**
+   - Fixed 401 auth error - Supabase anon key was in wrong format (publishable vs JWT)
+   - Deployed Edge Function with `--no-verify-jwt` flag
+   - Added time budget constraints to AI prompts
+   - AI now calculates realistic workout duration: (sets × 40s) + rest ≤ total time
+   - 15-min workout now correctly generates 2-3 exercises instead of 5+
+
+4. **UI Improvements:**
+   - Logo component now supports `href` prop for navigation
+   - Clickable IronVow logo returns to home from any page
+   - "Go for a Run" button on main page
+
+**Database Changes:**
+- `run_sessions` table for storing run data with route_data JSONB
+- `run_goals` table for run targets (future use)
+- Migration: `011_run_tracking.sql`
+
+**Files Modified:**
+- `src/app/run/page.tsx` - New GPS run tracking page
+- `src/app/page.tsx` - Added run button, clickable logo
+- `src/app/workout/page.tsx` - Set editing, offline queue, real exercise IDs
+- `src/hooks/useSupabase.ts` - LoggedSet interface, offline queue functions, edit/delete
+- `src/components/Logo.tsx` - Added href prop for navigation
+- `src/lib/generateWorkout.ts` - Debug logging (reverted)
+- `supabase/functions/generate-workout/index.ts` - Time budget constraints in prompts
+- `supabase/migrations/011_run_tracking.sql` - Run tracking tables
+- `ios/App/App/Info.plist` - Location permission descriptions
+- `.env.local` - Fixed Supabase anon key format (JWT instead of publishable)
+
+---
+
+## Future Work / Wishlist
+
+### High Priority
+- [ ] **Apple HealthKit Integration**
+  - Read steps, heart rate, sleep data from Oura/Apple Watch
+  - Write workouts back to Apple Health
+  - Requires: Xcode HealthKit capability, Info.plist descriptions
+  - Plugin: `@AcquiredSupport/capacitor-healthkit` or similar
+
+### Medium Priority
+- [ ] **Manual Activity Logging** - Quick log for walks, yoga, stretching without GPS
+- [ ] **Run History & Analytics** - View past runs, weekly mileage, pace trends
+- [ ] **Workout Templates** - Save favorite AI workouts for quick re-use
+- [ ] **Rest Timer Notifications** - Push notification when rest period ends
+
+### Low Priority / Nice to Have
+- [ ] **Social Features** - Share workouts, compete with friends
+- [ ] **Wearable Integration** - Direct Oura/Garmin/Whoop API connections
+- [ ] **Apple Watch Companion** - Quick logging from watch
+- [ ] **Workout Streaks & Achievements** - Gamification elements
+
 ---
 
 ## Related Projects
