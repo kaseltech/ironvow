@@ -481,42 +481,253 @@ export function useInjuries() {
   return { injuries, loading, addInjury, removeInjury, refetch: fetchInjuries };
 }
 
-// Set logs hook for workout sessions
-export function useSetLogs(sessionId?: string) {
-  const [sets, setSets] = useState<{ exercise_id: string; set_number: number; weight: number; reps: number }[]>([]);
+// Logged set with full details
+export interface LoggedSet {
+  id: string;
+  session_id: string;
+  exercise_id: string;
+  exercise_name: string; // For display when exercise_id is missing
+  set_number: number;
+  weight: number;
+  reps: number;
+  target_weight?: number;
+  target_reps?: number;
+  set_type: 'warmup' | 'working' | 'dropset' | 'failure';
+  logged_at: string;
+  synced: boolean; // For offline queue
+}
 
+// Offline queue storage key
+const OFFLINE_QUEUE_KEY = 'ironvow_offline_sets';
+
+// Get pending sets from localStorage
+function getPendingSets(): LoggedSet[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Save pending sets to localStorage
+function savePendingSets(sets: LoggedSet[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(sets));
+}
+
+// Set logs hook for workout sessions with offline support
+export function useSetLogs() {
+  const [sets, setSets] = useState<LoggedSet[]>([]);
+  const [pendingSync, setPendingSync] = useState(0);
+
+  // Load any pending offline sets on mount
+  useEffect(() => {
+    const pending = getPendingSets();
+    if (pending.length > 0) {
+      setPendingSync(pending.length);
+      // Try to sync them
+      syncPendingSets();
+    }
+  }, []);
+
+  // Sync pending offline sets to database
+  const syncPendingSets = async () => {
+    const pending = getPendingSets();
+    if (pending.length === 0) return;
+
+    const supabase = getSupabase();
+    const stillPending: LoggedSet[] = [];
+
+    for (const set of pending) {
+      try {
+        const { error } = await supabase
+          .from('set_logs')
+          .upsert({
+            id: set.id,
+            session_id: set.session_id,
+            exercise_id: set.exercise_id || null, // Allow null for unmatched exercises
+            set_number: set.set_number,
+            weight: set.weight,
+            reps: set.reps,
+            target_weight: set.target_weight,
+            target_reps: set.target_reps,
+            set_type: set.set_type,
+          });
+
+        if (error) {
+          console.error('Failed to sync set:', error);
+          stillPending.push(set);
+        }
+      } catch {
+        stillPending.push(set);
+      }
+    }
+
+    savePendingSets(stillPending);
+    setPendingSync(stillPending.length);
+  };
+
+  // Log a new set (with offline fallback)
   const logSet = async (
     sessionId: string,
-    exerciseId: string,
+    exerciseId: string | null, // Can be null for unmatched AI exercises
+    exerciseName: string,
     setNumber: number,
     weight: number,
     reps: number,
     targetWeight?: number,
     targetReps?: number,
     setType: 'warmup' | 'working' | 'dropset' | 'failure' = 'working'
-  ) => {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from('set_logs')
-      .insert({
-        session_id: sessionId,
-        exercise_id: exerciseId,
-        set_number: setNumber,
-        weight,
-        reps,
-        target_weight: targetWeight,
-        target_reps: targetReps,
-        set_type: setType,
-      })
-      .select()
-      .single();
+  ): Promise<LoggedSet> => {
+    const tempId = crypto.randomUUID();
+    const loggedAt = new Date().toISOString();
 
-    if (error) throw error;
-    setSets(prev => [...prev, { exercise_id: exerciseId, set_number: setNumber, weight, reps }]);
-    return data;
+    const newSet: LoggedSet = {
+      id: tempId,
+      session_id: sessionId,
+      exercise_id: exerciseId || '',
+      exercise_name: exerciseName,
+      set_number: setNumber,
+      weight,
+      reps,
+      target_weight: targetWeight,
+      target_reps: targetReps,
+      set_type: setType,
+      logged_at: loggedAt,
+      synced: false,
+    };
+
+    // Add to local state immediately
+    setSets(prev => [...prev, newSet]);
+
+    // Try to sync to database
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from('set_logs')
+        .insert({
+          session_id: sessionId,
+          exercise_id: exerciseId || null,
+          set_number: setNumber,
+          weight,
+          reps,
+          target_weight: targetWeight,
+          target_reps: targetReps,
+          set_type: setType,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update with real ID from database
+      const syncedSet = { ...newSet, id: data.id, synced: true };
+      setSets(prev => prev.map(s => s.id === tempId ? syncedSet : s));
+      return syncedSet;
+    } catch (err) {
+      console.warn('Failed to sync set, queuing offline:', err);
+      // Add to offline queue
+      const pending = getPendingSets();
+      pending.push(newSet);
+      savePendingSets(pending);
+      setPendingSync(pending.length);
+      return newSet;
+    }
   };
 
-  return { sets, logSet };
+  // Edit an existing set
+  const editSet = async (
+    setId: string,
+    updates: { weight?: number; reps?: number; set_type?: 'warmup' | 'working' | 'dropset' | 'failure' }
+  ): Promise<boolean> => {
+    // Update local state immediately
+    setSets(prev => prev.map(s =>
+      s.id === setId ? { ...s, ...updates } : s
+    ));
+
+    // Find the set to check if it's synced
+    const set = sets.find(s => s.id === setId);
+    if (!set) return false;
+
+    // If not synced yet, just update the pending queue
+    if (!set.synced) {
+      const pending = getPendingSets();
+      const updatedPending = pending.map(s =>
+        s.id === setId ? { ...s, ...updates } : s
+      );
+      savePendingSets(updatedPending);
+      return true;
+    }
+
+    // Sync update to database
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .from('set_logs')
+        .update(updates)
+        .eq('id', setId);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('Failed to update set:', err);
+      return false;
+    }
+  };
+
+  // Delete a logged set
+  const deleteSet = async (setId: string): Promise<boolean> => {
+    const set = sets.find(s => s.id === setId);
+    if (!set) return false;
+
+    // Remove from local state
+    setSets(prev => prev.filter(s => s.id !== setId));
+
+    // If not synced, remove from pending queue
+    if (!set.synced) {
+      const pending = getPendingSets();
+      savePendingSets(pending.filter(s => s.id !== setId));
+      setPendingSync(prev => Math.max(0, prev - 1));
+      return true;
+    }
+
+    // Delete from database
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .from('set_logs')
+        .delete()
+        .eq('id', setId);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('Failed to delete set:', err);
+      // Re-add to local state on failure
+      setSets(prev => [...prev, set]);
+      return false;
+    }
+  };
+
+  // Get sets for a specific exercise in the current session
+  const getSetsForExercise = (exerciseId: string | null, exerciseName: string): LoggedSet[] => {
+    return sets.filter(s =>
+      (exerciseId && s.exercise_id === exerciseId) ||
+      (!exerciseId && s.exercise_name === exerciseName)
+    );
+  };
+
+  return {
+    sets,
+    logSet,
+    editSet,
+    deleteSet,
+    getSetsForExercise,
+    pendingSync,
+    syncPendingSets,
+  };
 }
 
 // Muscle strength hook

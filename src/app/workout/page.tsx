@@ -3,12 +3,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthGuard } from '@/components/AuthGuard';
-import { useWorkoutSessions, useSetLogs } from '@/hooks/useSupabase';
+import { useWorkoutSessions, useSetLogs, type LoggedSet } from '@/hooks/useSupabase';
 import type { GeneratedWorkout } from '@/lib/generateWorkout';
 
 interface WorkoutExercise {
   name: string;
-  exerciseId?: string;
+  exerciseId: string | null; // Can be null for unmatched AI exercises
   sets: { target_reps: number; target_weight: number; type: 'warmup' | 'working' }[];
   rest_seconds: number;
   notes?: string;
@@ -40,7 +40,7 @@ function convertGeneratedWorkout(generated: GeneratedWorkout): WorkoutData {
 
       return {
         name: ex.name,
-        exerciseId: ex.exerciseId,
+        exerciseId: ex.exerciseId || null, // Use real ID or null
         sets,
         rest_seconds: ex.restSeconds,
         notes: ex.notes,
@@ -55,6 +55,7 @@ const fallbackWorkout: WorkoutData = {
   exercises: [
     {
       name: 'Push-ups',
+      exerciseId: null,
       sets: [
         { target_reps: 15, target_weight: 0, type: 'working' },
         { target_reps: 15, target_weight: 0, type: 'working' },
@@ -69,7 +70,7 @@ const fallbackWorkout: WorkoutData = {
 export default function WorkoutPage() {
   const router = useRouter();
   const { startSession, completeSession } = useWorkoutSessions();
-  const { logSet } = useSetLogs();
+  const { sets: loggedSets, logSet, editSet, deleteSet, getSetsForExercise, pendingSync } = useSetLogs();
 
   // Load workout from sessionStorage or use fallback
   const workoutData = useMemo<WorkoutData>(() => {
@@ -92,18 +93,15 @@ export default function WorkoutPage() {
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [isResting, setIsResting] = useState(false);
   const [restTime, setRestTime] = useState(0);
-  const [completedSets, setCompletedSets] = useState<{ reps: number; weight: number }[][]>([]);
   const [showComplete, setShowComplete] = useState(false);
   const [adjustedWeight, setAdjustedWeight] = useState<number | null>(null);
   const [showWeightPicker, setShowWeightPicker] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
 
-  // Initialize completedSets when workoutData is loaded
-  useEffect(() => {
-    if (workoutData.exercises.length > 0 && completedSets.length === 0) {
-      setCompletedSets(workoutData.exercises.map(() => []));
-    }
-  }, [workoutData.exercises, completedSets.length]);
+  // Edit mode state
+  const [editingSet, setEditingSet] = useState<LoggedSet | null>(null);
+  const [editWeight, setEditWeight] = useState(0);
+  const [editReps, setEditReps] = useState(0);
 
   // Start workout session on mount
   useEffect(() => {
@@ -156,8 +154,15 @@ export default function WorkoutPage() {
   const isLastSet = currentSetIndex === totalSets - 1;
   const isLastExercise = currentExerciseIndex === workoutData.exercises.length - 1;
 
-  // Use adjusted weight if set, otherwise target
-  const displayWeight = adjustedWeight ?? (currentSet?.target_weight || 0);
+  // Get logged sets for current exercise
+  const exerciseLoggedSets = getSetsForExercise(exercise.exerciseId, exercise.name);
+  const completedSetCount = exerciseLoggedSets.length;
+
+  // Use adjusted weight if set, otherwise target or last logged weight
+  const lastLoggedWeight = exerciseLoggedSets.length > 0
+    ? exerciseLoggedSets[exerciseLoggedSets.length - 1].weight
+    : null;
+  const displayWeight = adjustedWeight ?? lastLoggedWeight ?? (currentSet?.target_weight || 0);
   const targetReps = currentSet?.target_reps || 10;
   const setType = currentSet?.type || 'working';
 
@@ -175,46 +180,36 @@ export default function WorkoutPage() {
   }, [isResting, restTime]);
 
   const handleLogSet = async (reps: number, weight: number) => {
-    // Save the completed set
-    const newCompleted = [...completedSets];
-    newCompleted[currentExerciseIndex] = [
-      ...newCompleted[currentExerciseIndex],
-      { reps, weight }
-    ];
-    setCompletedSets(newCompleted);
+    if (!sessionId) return;
+
     setShowWeightPicker(false);
 
-    // Log to database if session exists
-    // Note: We use exercise name as ID for now since we don't have real exercise IDs
-    // In a real app, this would use the actual exercise UUID from the database
-    if (sessionId) {
-      try {
-        await logSet(
-          sessionId,
-          exercise.name, // Using name as placeholder - would be exercise.id in real app
-          currentSetIndex + 1,
-          weight,
-          reps,
-          currentSet?.target_weight ?? 0,
-          targetReps,
-          setType === 'warmup' ? 'warmup' : 'working'
-        );
-      } catch (err) {
-        console.error('Failed to log set:', err);
-        // Continue anyway - local state is updated
-      }
+    // Log to database with proper exercise ID
+    try {
+      await logSet(
+        sessionId,
+        exercise.exerciseId, // Real UUID or null
+        exercise.name,
+        currentSetIndex + 1,
+        weight,
+        reps,
+        currentSet?.target_weight ?? 0,
+        targetReps,
+        setType === 'warmup' ? 'warmup' : 'working'
+      );
+    } catch (err) {
+      console.error('Failed to log set:', err);
+      // Continue anyway - offline queue will handle it
     }
 
     // Move to next set or exercise
     if (isLastSet) {
       if (isLastExercise) {
         // Complete the session
-        if (sessionId) {
-          try {
-            await completeSession(sessionId);
-          } catch (err) {
-            console.error('Failed to complete session:', err);
-          }
+        try {
+          await completeSession(sessionId);
+        } catch (err) {
+          console.error('Failed to complete session:', err);
         }
         setShowComplete(true);
       } else {
@@ -233,7 +228,7 @@ export default function WorkoutPage() {
   };
 
   const adjustWeight = (delta: number) => {
-    setAdjustedWeight(prev => (prev ?? (currentSet?.target_weight || 0)) + delta);
+    setAdjustedWeight(prev => (prev ?? lastLoggedWeight ?? (currentSet?.target_weight || 0)) + delta);
   };
 
   const skipRest = () => {
@@ -247,9 +242,32 @@ export default function WorkoutPage() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Handle editing a logged set
+  const openEditSet = (set: LoggedSet) => {
+    setEditingSet(set);
+    setEditWeight(set.weight);
+    setEditReps(set.reps);
+  };
+
+  const saveEditSet = async () => {
+    if (!editingSet) return;
+
+    await editSet(editingSet.id, {
+      weight: editWeight,
+      reps: editReps,
+    });
+    setEditingSet(null);
+  };
+
+  const handleDeleteSet = async (setId: string) => {
+    if (confirm('Delete this set?')) {
+      await deleteSet(setId);
+    }
+  };
+
   // Calculate overall progress
   const totalExerciseSets = workoutData.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
-  const completedTotal = completedSets.reduce((acc, sets) => acc + sets.length, 0);
+  const completedTotal = loggedSets.length;
   const progressPercent = (completedTotal / totalExerciseSets) * 100;
 
   if (showComplete) {
@@ -263,9 +281,13 @@ export default function WorkoutPage() {
         <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '2rem' }}>
           Great work. You crushed it.
         </p>
+        {pendingSync > 0 && (
+          <p style={{ color: '#C9A75A', fontSize: '0.875rem', marginBottom: '1rem' }}>
+            ⏳ {pendingSync} sets syncing...
+          </p>
+        )}
         <button
           onClick={() => {
-            // Clear the workout from session storage
             sessionStorage.removeItem('currentWorkout');
             router.push('/');
           }}
@@ -305,9 +327,16 @@ export default function WorkoutPage() {
           >
             ✕ End
           </button>
-          <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
-            {currentExerciseIndex + 1} / {workoutData.exercises.length}
-          </span>
+          <div className="flex items-center gap-2">
+            {pendingSync > 0 && (
+              <span style={{ color: '#C9A75A', fontSize: '0.75rem' }}>
+                ⏳ {pendingSync}
+              </span>
+            )}
+            <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
+              {currentExerciseIndex + 1} / {workoutData.exercises.length}
+            </span>
+          </div>
           <button style={{ color: '#C9A75A', fontSize: '1rem', background: 'none', border: 'none' }}>
             ↻ Swap
           </button>
@@ -355,11 +384,11 @@ export default function WorkoutPage() {
           /* EXERCISE SCREEN */
           <div className="flex-1 flex flex-col">
             {/* Exercise name */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-4">
               <h1
                 style={{
                   fontFamily: 'var(--font-libre-baskerville)',
-                  fontSize: '2rem',
+                  fontSize: '1.75rem',
                   color: '#F5F1EA',
                   marginBottom: '0.5rem',
                 }}
@@ -373,8 +402,38 @@ export default function WorkoutPage() {
               )}
             </div>
 
+            {/* Completed sets (tappable to edit) */}
+            {exerciseLoggedSets.length > 0 && (
+              <div className="mb-4">
+                <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                  Completed Sets (tap to edit)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {exerciseLoggedSets.map((set, i) => (
+                    <button
+                      key={set.id}
+                      onClick={() => openEditSet(set)}
+                      style={{
+                        background: set.synced ? 'rgba(34, 197, 94, 0.1)' : 'rgba(201, 167, 90, 0.1)',
+                        border: `1px solid ${set.synced ? 'rgba(34, 197, 94, 0.3)' : 'rgba(201, 167, 90, 0.3)'}`,
+                        borderRadius: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        color: '#F5F1EA',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>{set.weight}</span>
+                      <span style={{ color: 'rgba(245, 241, 234, 0.5)' }}> × </span>
+                      <span style={{ fontWeight: 600 }}>{set.reps}</span>
+                      {!set.synced && <span style={{ color: '#C9A75A', marginLeft: '0.25rem' }}>⏳</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Set indicator */}
-            <div className="flex justify-center gap-2 mb-8">
+            <div className="flex justify-center gap-2 mb-6">
               {exercise.sets.map((set, i) => (
                 <div
                   key={i}
@@ -382,8 +441,8 @@ export default function WorkoutPage() {
                     width: i === currentSetIndex ? '2.5rem' : '0.75rem',
                     height: '0.75rem',
                     borderRadius: '0.375rem',
-                    backgroundColor: i < currentSetIndex
-                      ? '#C9A75A'
+                    backgroundColor: i < completedSetCount
+                      ? '#22C55E' // Green for completed
                       : i === currentSetIndex
                         ? '#C9A75A'
                         : 'rgba(201, 167, 90, 0.2)',
@@ -612,6 +671,167 @@ export default function WorkoutPage() {
             <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.875rem' }}>
               {workoutData.exercises[currentExerciseIndex + 1].sets.length} sets
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Set Modal */}
+      {editingSet && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '1.5rem',
+          }}
+          onClick={() => setEditingSet(null)}
+        >
+          <div
+            style={{
+              background: '#1A3550',
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              width: '100%',
+              maxWidth: '320px',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ color: '#F5F1EA', fontSize: '1.25rem', marginBottom: '1rem', textAlign: 'center' }}>
+              Edit Set {editingSet.set_number}
+            </h3>
+
+            {/* Weight adjustment */}
+            <div className="mb-4">
+              <label style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                Weight (lbs)
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEditWeight(w => Math.max(0, w - 5))}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '0.5rem',
+                    background: 'rgba(201, 167, 90, 0.1)',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    color: '#C9A75A',
+                    fontSize: '1.25rem',
+                  }}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={editWeight}
+                  onChange={e => setEditWeight(parseInt(e.target.value) || 0)}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(15, 34, 51, 0.5)',
+                    border: '1px solid rgba(201, 167, 90, 0.2)',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem',
+                    color: '#F5F1EA',
+                    fontSize: '1.25rem',
+                    textAlign: 'center',
+                  }}
+                />
+                <button
+                  onClick={() => setEditWeight(w => w + 5)}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '0.5rem',
+                    background: 'rgba(201, 167, 90, 0.1)',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    color: '#C9A75A',
+                    fontSize: '1.25rem',
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Reps adjustment */}
+            <div className="mb-6">
+              <label style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                Reps
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEditReps(r => Math.max(0, r - 1))}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '0.5rem',
+                    background: 'rgba(201, 167, 90, 0.1)',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    color: '#C9A75A',
+                    fontSize: '1.25rem',
+                  }}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  value={editReps}
+                  onChange={e => setEditReps(parseInt(e.target.value) || 0)}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(15, 34, 51, 0.5)',
+                    border: '1px solid rgba(201, 167, 90, 0.2)',
+                    borderRadius: '0.5rem',
+                    padding: '0.75rem',
+                    color: '#F5F1EA',
+                    fontSize: '1.25rem',
+                    textAlign: 'center',
+                  }}
+                />
+                <button
+                  onClick={() => setEditReps(r => r + 1)}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '0.5rem',
+                    background: 'rgba(201, 167, 90, 0.1)',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    color: '#C9A75A',
+                    fontSize: '1.25rem',
+                  }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleDeleteSet(editingSet.id)}
+                style={{
+                  flex: 1,
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '0.75rem',
+                  padding: '0.875rem',
+                  color: '#EF4444',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Delete
+              </button>
+              <button
+                onClick={saveEditSet}
+                className="btn-primary"
+                style={{ flex: 2 }}
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}
