@@ -154,4 +154,39 @@
 
 ---
 
-*Add notes here as development progresses*
+## Recent Development (January 2026)
+
+### Session 7 - Movement Patterns & Rehab
+
+**Movement Pattern System:**
+- Exercises now tagged with movement patterns: `overhead`, `impact`, `spinal_loading`, `deep_knee_flexion`, `hip_hinge`, `rotation`, `wrist_loading`
+- Used for injury-aware exercise recommendations
+- Contraindications auto-set based on patterns
+
+**Rehab Exercise Library:**
+- 40+ rehab/stretching exercises added
+- Categories: shoulder, neck/cervical, lower back, knee, hip mobility
+- Tagged with `rehab_for` to indicate which injuries they help
+- New "Rehab/Prehab" workout style
+
+**Workout Styles (8 total):**
+1. Traditional - Hypertrophy focused
+2. Strength (5x5) - Heavy, compound
+3. HIIT - High intensity intervals
+4. Circuit - Back-to-back, minimal rest
+5. WOD - CrossFit AMRAP/EMOM
+6. Cardio - Running, conditioning
+7. Mobility - Stretching, recovery
+8. Rehab - Injury prevention, prehab
+
+### Resolved Questions
+
+1. **AI Provider:** Claude 3 Haiku via Anthropic API (fast, cost-effective)
+2. **Exercise demos:** Text descriptions + form cues for now
+3. **Offline mode:** Workout logging queues locally, syncs when online
+4. **Social:** Keeping it personal for now
+5. **Wearables:** Apple HealthKit integration planned
+
+---
+
+*Last updated: January 8, 2026*

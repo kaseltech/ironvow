@@ -502,6 +502,62 @@ Added 106 new exercises across four categories:
 - `ios/App/App/Info.plist` - Location permission descriptions
 - `.env.local` - Fixed Supabase anon key format (JWT instead of publishable)
 
+### January 8, 2026 - Session 7: Muscle Targeting, Swap Improvements, Movement Patterns
+
+**Major Features:**
+
+1. **Granular Muscle Targeting:**
+   - Expanded from 6 broad groups to 13 specific muscles (biceps, triceps, quads, hamstrings, glutes, calves, forearms, traps, abs, obliques)
+   - Added Push/Pull/Legs/Full Body quick select buttons
+   - Stricter AI muscle targeting rules (Push workout no longer generates squats)
+
+2. **Style-Aware Swap Alternatives:**
+   - Swap alternatives now consider workout style (CrossFit → CrossFit exercises)
+   - Style-based exercise patterns for WOD, HIIT, Strength, Circuit, etc.
+   - Equipment leniency for WOD style (allows common CrossFit equipment)
+
+3. **Movement Pattern Tagging System:**
+   - New database columns: `movement_patterns`, `contraindications`, `rehab_for`
+   - Tagged high-risk exercises with patterns (overhead, impact, spinal_loading, deep_knee_flexion, hip_hinge, rotation, wrist_loading)
+   - Contraindications based on injury patterns
+   - GIN indexes for efficient array queries
+
+4. **Rehab/Stretching Exercises:**
+   - Added 40+ rehab exercises for shoulder, neck, back, knee, and hip
+   - Categories: shoulder rehab, cervical rehab, lower back rehab, knee rehab, hip mobility
+   - Exercises tagged with `rehab_for` indicating which injuries they help
+
+5. **New Workout Styles:**
+   - Added Rehab/Prehab workout style for injury prevention and recovery
+   - 8 total styles: Traditional, Strength, HIIT, Circuit, WOD, Cardio, Mobility, Rehab
+
+6. **UI Enhancements:**
+   - Movement pattern tags (purple) displayed on exercises
+   - Rehab indicator (green) for rehabilitation exercises
+   - Equipment search filter in GymManager
+   - Primary/secondary muscle tags on exercises
+
+7. **UX Fixes:**
+   - Onboarding number fields now only accept numeric input
+   - Removed confusing placeholder numbers (e.g., "180" that looked like real values)
+   - Added `inputMode="numeric"` for proper mobile keyboards
+
+**Database Changes:**
+- Migration: `012_movement_patterns_rehab.sql`
+  - Added `movement_patterns TEXT[]` column
+  - Added `contraindications TEXT[]` column
+  - Added `rehab_for TEXT[]` column
+  - Tagged existing exercises with movement patterns
+  - Added 40+ rehab/stretching exercises
+
+**Files Modified:**
+- `src/app/page.tsx` - Muscle picker, quick selects, movement tags UI
+- `src/lib/generateWorkout.ts` - Rehab style, movementPatterns interface
+- `src/components/GymManager.tsx` - Equipment search filter
+- `src/components/Onboarding.tsx` - Numeric input fixes
+- `supabase/functions/generate-workout/index.ts` - Style-aware swaps, rehab style, movement patterns
+- `supabase/migrations/012_movement_patterns_rehab.sql` - Movement patterns + rehab exercises
+
 ---
 
 ## Future Work / Wishlist
@@ -532,4 +588,4 @@ Added 106 new exercises across four categories:
 
 ---
 
-*Last updated: January 9, 2026*
+*Last updated: January 8, 2026 (Session 7)*
