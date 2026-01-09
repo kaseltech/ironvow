@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { BodyMap } from '@/components/BodyMap';
+import { MuscleStatsModal } from '@/components/MuscleStatsModal';
 import { GymManager } from '@/components/GymManager';
 import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions } from '@/hooks/useSupabase';
 import { useStrengthData, convertToMuscleStrength, formatVolume, formatDate, formatDaysAgo } from '@/hooks/useStrengthData';
@@ -54,6 +55,9 @@ export default function ProfilePage() {
   const [gender, setGender] = useState<'male' | 'female'>((profile?.gender as 'male' | 'female') || 'male');
   const [savingGoal, setSavingGoal] = useState(false);
   const [gymManagerOpen, setGymManagerOpen] = useState(false);
+  const [muscleStatsOpen, setMuscleStatsOpen] = useState(false);
+  const [selectedMuscleId, setSelectedMuscleId] = useState<string | null>(null);
+  const [selectedMuscleName, setSelectedMuscleName] = useState<string>('');
 
   // Convert muscle volume to strength data for BodyMap
   const muscleStrengthData = useMemo(() => {
@@ -270,6 +274,11 @@ export default function ProfilePage() {
                 <BodyMap
                   gender={gender}
                   muscleData={muscleStrengthData}
+                  onMuscleSelect={(muscle) => {
+                    setSelectedMuscleId(muscle.id);
+                    setSelectedMuscleName(muscle.name);
+                    setMuscleStatsOpen(true);
+                  }}
                 />
               )}
             </div>
@@ -753,6 +762,16 @@ export default function ProfilePage() {
 
       {/* Gym Manager Modal */}
       <GymManager isOpen={gymManagerOpen} onClose={() => setGymManagerOpen(false)} />
+
+      {/* Muscle Stats Modal */}
+      <MuscleStatsModal
+        isOpen={muscleStatsOpen}
+        onClose={() => setMuscleStatsOpen(false)}
+        muscleId={selectedMuscleId}
+        muscleName={selectedMuscleName}
+        exercisePRs={exercisePRs}
+        muscleVolume={muscleVolume}
+      />
     </div>
   );
 }

@@ -35,86 +35,86 @@ const getLabel = (strength: number) => {
   return 'Undertrained';
 };
 
-// Muscle regions calibrated to the actual body images
-// The figure is centered and takes ~60% width, starts at y ~5%
-// Coordinates are percentages of the container
+// Muscle regions precisely calibrated to anatomy image white lines
+// Coordinates are percentages of the container (400x400 max)
+// Key: Non-overlapping regions - shoulders separate from chest
 
 const frontMuscleRegions = [
-  // Traps (neck area)
-  { id: 'traps', name: 'Traps', x: 40, y: 10, w: 20, h: 5 },
+  // TRAPS - narrow band below neck, above shoulders
+  { id: 'traps', name: 'Traps', x: 42, y: 8, w: 16, h: 4 },
 
-  // Shoulders (deltoids) - left and right
-  { id: 'shoulders', name: 'Left Shoulder', x: 26, y: 14, w: 12, h: 9 },
-  { id: 'shoulders', name: 'Right Shoulder', x: 62, y: 14, w: 12, h: 9 },
+  // SHOULDERS (Deltoids) - rounded caps on outer arms, NOT touching chest
+  { id: 'shoulders', name: 'Left Delt', x: 24, y: 12, w: 10, h: 8 },
+  { id: 'shoulders', name: 'Right Delt', x: 66, y: 12, w: 10, h: 8 },
 
-  // Chest - main pectoral area
-  { id: 'chest', name: 'Left Chest', x: 33, y: 18, w: 15, h: 12 },
-  { id: 'chest', name: 'Right Chest', x: 52, y: 18, w: 15, h: 12 },
+  // CHEST - inner pec area only, between shoulders
+  { id: 'chest', name: 'Left Pec', x: 35, y: 15, w: 12, h: 10 },
+  { id: 'chest', name: 'Right Pec', x: 53, y: 15, w: 12, h: 10 },
 
-  // Biceps - left and right
-  { id: 'biceps', name: 'Left Bicep', x: 21, y: 23, w: 8, h: 14 },
-  { id: 'biceps', name: 'Right Bicep', x: 71, y: 23, w: 8, h: 14 },
+  // BICEPS - front of upper arms, outside of torso
+  { id: 'biceps', name: 'Left Bicep', x: 20, y: 21, w: 6, h: 12 },
+  { id: 'biceps', name: 'Right Bicep', x: 74, y: 21, w: 6, h: 12 },
 
-  // Forearms - left and right
-  { id: 'forearms', name: 'Left Forearm', x: 17, y: 38, w: 8, h: 14 },
-  { id: 'forearms', name: 'Right Forearm', x: 75, y: 38, w: 8, h: 14 },
+  // FOREARMS - lower arms
+  { id: 'forearms', name: 'Left Forearm', x: 16, y: 35, w: 6, h: 14 },
+  { id: 'forearms', name: 'Right Forearm', x: 78, y: 35, w: 6, h: 14 },
 
-  // Core / Abs - center
-  { id: 'core', name: 'Abs', x: 40, y: 31, w: 20, h: 18 },
+  // ABS - center column, below chest
+  { id: 'core', name: 'Abs', x: 42, y: 27, w: 16, h: 18 },
 
-  // Obliques - sides of core
-  { id: 'obliques', name: 'Left Oblique', x: 32, y: 35, w: 8, h: 12 },
-  { id: 'obliques', name: 'Right Oblique', x: 60, y: 35, w: 8, h: 12 },
+  // OBLIQUES - sides of abs (narrower)
+  { id: 'obliques', name: 'Left Oblique', x: 34, y: 32, w: 7, h: 10 },
+  { id: 'obliques', name: 'Right Oblique', x: 59, y: 32, w: 7, h: 10 },
 
-  // Quads - left and right thighs
-  { id: 'quads', name: 'Left Quad', x: 32, y: 52, w: 14, h: 24 },
-  { id: 'quads', name: 'Right Quad', x: 54, y: 52, w: 14, h: 24 },
+  // QUADS - front of thighs
+  { id: 'quads', name: 'Left Quad', x: 34, y: 50, w: 12, h: 22 },
+  { id: 'quads', name: 'Right Quad', x: 54, y: 50, w: 12, h: 22 },
 
-  // Adductors - inner thigh
-  { id: 'adductors', name: 'Adductors', x: 45, y: 56, w: 10, h: 14 },
+  // ADDUCTORS - inner thigh gap
+  { id: 'adductors', name: 'Adductors', x: 46, y: 54, w: 8, h: 12 },
 
-  // Calves - front view (tibialis)
-  { id: 'calves', name: 'Left Calf', x: 35, y: 78, w: 10, h: 14 },
-  { id: 'calves', name: 'Right Calf', x: 55, y: 78, w: 10, h: 14 },
+  // CALVES - tibialis anterior (front shin)
+  { id: 'calves', name: 'Left Calf', x: 36, y: 76, w: 8, h: 14 },
+  { id: 'calves', name: 'Right Calf', x: 56, y: 76, w: 8, h: 14 },
 ];
 
 const backMuscleRegions = [
-  // Traps - upper back / neck
-  { id: 'traps', name: 'Traps', x: 38, y: 12, w: 24, h: 10 },
+  // TRAPS - diamond shape from neck to mid-back
+  { id: 'traps', name: 'Traps', x: 40, y: 8, w: 20, h: 12 },
 
-  // Shoulders (rear delts) - left and right
-  { id: 'shoulders', name: 'Left Rear Delt', x: 26, y: 14, w: 12, h: 9 },
-  { id: 'shoulders', name: 'Right Rear Delt', x: 62, y: 14, w: 12, h: 9 },
+  // REAR DELTS - back of shoulders
+  { id: 'shoulders', name: 'Left Rear Delt', x: 24, y: 12, w: 10, h: 8 },
+  { id: 'shoulders', name: 'Right Rear Delt', x: 66, y: 12, w: 10, h: 8 },
 
-  // Lats - left and right
-  { id: 'lats', name: 'Left Lat', x: 28, y: 22, w: 14, h: 18 },
-  { id: 'lats', name: 'Right Lat', x: 58, y: 22, w: 14, h: 18 },
+  // LATS - large fan-shaped muscles on sides
+  { id: 'lats', name: 'Left Lat', x: 28, y: 20, w: 12, h: 16 },
+  { id: 'lats', name: 'Right Lat', x: 60, y: 20, w: 12, h: 16 },
 
-  // Upper back (rhomboids area)
-  { id: 'upper_back', name: 'Upper Back', x: 40, y: 22, w: 20, h: 14 },
+  // UPPER BACK (Rhomboids) - between shoulder blades
+  { id: 'upper_back', name: 'Upper Back', x: 41, y: 18, w: 18, h: 12 },
 
-  // Lower back (erector spinae)
-  { id: 'lower_back', name: 'Lower Back', x: 42, y: 38, w: 16, h: 10 },
+  // LOWER BACK (Erectors) - center lower back
+  { id: 'lower_back', name: 'Lower Back', x: 43, y: 34, w: 14, h: 10 },
 
-  // Triceps - left and right
-  { id: 'triceps', name: 'Left Tricep', x: 19, y: 23, w: 8, h: 14 },
-  { id: 'triceps', name: 'Right Tricep', x: 73, y: 23, w: 8, h: 14 },
+  // TRICEPS - back of upper arms
+  { id: 'triceps', name: 'Left Tricep', x: 18, y: 21, w: 6, h: 12 },
+  { id: 'triceps', name: 'Right Tricep', x: 76, y: 21, w: 6, h: 12 },
 
-  // Forearms - left and right
-  { id: 'forearms', name: 'Left Forearm', x: 16, y: 38, w: 8, h: 14 },
-  { id: 'forearms', name: 'Right Forearm', x: 76, y: 38, w: 8, h: 14 },
+  // FOREARMS - back of lower arms
+  { id: 'forearms', name: 'Left Forearm', x: 15, y: 35, w: 6, h: 14 },
+  { id: 'forearms', name: 'Right Forearm', x: 79, y: 35, w: 6, h: 14 },
 
-  // Glutes
-  { id: 'glutes', name: 'Left Glute', x: 34, y: 46, w: 14, h: 10 },
-  { id: 'glutes', name: 'Right Glute', x: 52, y: 46, w: 14, h: 10 },
+  // GLUTES - clearly defined in image
+  { id: 'glutes', name: 'Left Glute', x: 36, y: 44, w: 12, h: 10 },
+  { id: 'glutes', name: 'Right Glute', x: 52, y: 44, w: 12, h: 10 },
 
-  // Hamstrings - left and right
-  { id: 'hamstrings', name: 'Left Hamstring', x: 34, y: 56, w: 12, h: 18 },
-  { id: 'hamstrings', name: 'Right Hamstring', x: 54, y: 56, w: 12, h: 18 },
+  // HAMSTRINGS - back of thighs
+  { id: 'hamstrings', name: 'Left Hamstring', x: 36, y: 55, w: 10, h: 16 },
+  { id: 'hamstrings', name: 'Right Hamstring', x: 54, y: 55, w: 10, h: 16 },
 
-  // Calves - back view
-  { id: 'calves', name: 'Left Calf', x: 36, y: 76, w: 10, h: 14 },
-  { id: 'calves', name: 'Right Calf', x: 54, y: 76, w: 10, h: 14 },
+  // CALVES - gastrocnemius (back of lower leg)
+  { id: 'calves', name: 'Left Calf', x: 38, y: 74, w: 8, h: 14 },
+  { id: 'calves', name: 'Right Calf', x: 54, y: 74, w: 8, h: 14 },
 ];
 
 export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
@@ -130,15 +130,21 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
     return muscleData.find(m => m.id === id);
   };
 
-  const handleMuscleClick = (id: string) => {
+  const handleMuscleClick = (id: string, regionName: string) => {
     setSelectedMuscle(prev => prev === id ? null : id);
     const muscle = getMuscleData(id);
-    if (muscle && onMuscleSelect) {
-      onMuscleSelect(muscle);
+    if (onMuscleSelect) {
+      // Always call onMuscleSelect, even if no data exists
+      onMuscleSelect({
+        id,
+        name: muscle?.name || regionName.replace('_', ' '),
+        strength: muscle?.strength ?? 0,
+        volume: muscle?.volume ?? '0 lbs',
+        lastTrained: muscle?.lastTrained ?? 'Never',
+        trend: muscle?.trend ?? 'stable',
+      });
     }
   };
-
-  const selected = selectedMuscle ? getMuscleData(selectedMuscle) : null;
 
   return (
     <div>
@@ -212,7 +218,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
             return (
               <button
                 key={`${region.id}-${idx}`}
-                onClick={() => handleMuscleClick(region.id)}
+                onClick={() => handleMuscleClick(region.id, region.name)}
                 onMouseEnter={() => setHoveredRegion(idx)}
                 onMouseLeave={() => setHoveredRegion(null)}
                 style={{
@@ -258,66 +264,10 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
         ))}
       </div>
 
-      {/* Selected Muscle Info */}
-      {selectedMuscle && (
-        <div
-          className="mt-4 p-3"
-          style={{
-            background: 'rgba(15, 34, 51, 0.5)',
-            borderRadius: '0.75rem',
-            border: selected ? `2px solid ${getColor(selected.strength)}` : '2px solid rgba(201, 167, 90, 0.3)',
-          }}
-        >
-          {selected ? (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <h4 style={{ color: '#F5F1EA', fontWeight: 600 }}>{selected.name}</h4>
-                <span
-                  style={{
-                    color: getColor(selected.strength),
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  {getLabel(selected.strength)} ({selected.strength}%)
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Weekly Volume</p>
-                  <p style={{ color: '#F5F1EA', fontWeight: 500, fontSize: '0.875rem' }}>{selected.volume}</p>
-                </div>
-                <div>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Last Trained</p>
-                  <p style={{ color: '#F5F1EA', fontWeight: 500, fontSize: '0.875rem' }}>{selected.lastTrained}</p>
-                </div>
-                <div>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Trend</p>
-                  <p style={{
-                    color: selected.trend === 'up' ? '#4ADE80' : selected.trend === 'down' ? '#F87171' : '#C9A75A',
-                    fontWeight: 500,
-                    fontSize: '0.875rem',
-                  }}>
-                    {selected.trend === 'up' ? '↑ Improving' : selected.trend === 'down' ? '↓ Declining' : '→ Stable'}
-                  </p>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-2">
-              <h4 style={{ color: '#C9A75A', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'capitalize' }}>
-                {selectedMuscle.replace('_', ' ')}
-              </h4>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.8125rem' }}>
-                No workout data yet
-              </p>
-              <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                Do a {selectedMuscle.replace('_', ' ')} workout to start tracking!
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Tap instruction */}
+      <p className="text-center mt-2" style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>
+        Tap a muscle group for detailed stats
+      </p>
     </div>
   );
 }
