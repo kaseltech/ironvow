@@ -623,18 +623,17 @@ ${locationContext}${equipmentContext}${injuryContext}
 
 Interpret the user's request and create an appropriate workout. Consider their experience level, available equipment, and any limitations.
 
-TIME BUDGET (CRITICAL - you must respect this):
-- Total workout time: ${duration} minutes = ${duration * 60} seconds
-- Each set takes ~40 seconds to perform
-- Rest time adds up quickly
-- Formula: (total_sets × 40) + (total_rest_periods × avg_rest) must be ≤ ${duration * 60} seconds
-- For a ${duration}-min workout: aim for ${Math.max(2, Math.floor(duration / 7))} exercises max
+TIME BUDGET (CRITICAL - HARD LIMIT):
+- Total workout time: ${duration} minutes
+- Each exercise takes ~5 minutes (3 sets × 40s + 2 rest periods × 60-90s)
+- MAXIMUM EXERCISES: ${Math.max(2, Math.floor(duration / 6))} exercises - DO NOT EXCEED THIS
+- For ${duration} min: ${duration <= 15 ? 'exactly 2' : duration <= 20 ? '2-3' : duration <= 30 ? '3-4' : duration <= 45 ? '4-5' : '5-6'} exercises
 
 RULES:
 1. Use standard exercise names (e.g., "Barbell Bench Press", "Dumbbell Curl", "Pull-ups", "Sprint Intervals")
 2. Honor the user's request - if they want something specific, give it to them
 3. Respect equipment and injury constraints
-4. CRITICAL: Keep total workout time within ${duration} minutes. Fewer exercises with proper rest is better than too many.
+4. HARD LIMIT: Do NOT generate more than ${Math.max(2, Math.floor(duration / 6))} exercises. Quality over quantity.
 5. If they mention military/bootcamp style, include exercises like: 8-count bodybuilders, flutter kicks, scissor kicks, burpees, push-ups, sit-ups
 6. If they mention running/cardio, include: sprint intervals, tempo runs, fartlek, run/walk intervals
 
@@ -664,12 +663,11 @@ ${goalContext}
 
 TARGET MUSCLES: ${muscleEmphasis}${locationContext}${equipmentContext}${injuryContext}
 
-TIME BUDGET (CRITICAL - you must respect this):
-- Total workout time: ${duration} minutes = ${duration * 60} seconds
-- Each set takes ~40 seconds to perform
-- Rest time adds up quickly
-- Formula: (total_sets × 40) + (total_rest_periods × avg_rest) must be ≤ ${duration * 60} seconds
-- For a ${duration}-min workout: aim for ${Math.max(2, Math.floor(duration / 7))} exercises max with ${workoutStyle === 'hiit' || workoutStyle === 'circuit' ? '30-45s' : '60-90s'} rest
+TIME BUDGET (CRITICAL - HARD LIMIT):
+- Total workout time: ${duration} minutes
+- Each exercise takes ~5 minutes (3 sets × 40s + 2 rest periods × 60-90s)
+- MAXIMUM EXERCISES: ${Math.max(2, Math.floor(duration / 6))} exercises - DO NOT EXCEED THIS
+- For ${duration} min: ${duration <= 15 ? 'exactly 2' : duration <= 20 ? '2-3' : duration <= 30 ? '3-4' : duration <= 45 ? '4-5' : '5-6'} exercises
 
 Generate a complete workout using your knowledge of fitness exercises. Use common, well-known exercise names.
 The exercises will be matched to our database automatically.
@@ -679,7 +677,7 @@ RULES:
 2. Follow the WORKOUT STYLE and FITNESS GOAL guidelines above
 3. Every exercise should target the specified muscles: ${targetMuscles.join(', ')}
 4. For outdoor: ONLY bodyweight exercises
-5. CRITICAL: Respect the time budget. Calculate total time before finalizing.
+5. HARD LIMIT: Do NOT generate more than ${Math.max(2, Math.floor(duration / 6))} exercises
 6. For cardio style: include running intervals, sprints, or cardio machine work
 7. For mobility style: include stretches, foam rolling, and movement prep
 
