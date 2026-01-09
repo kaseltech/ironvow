@@ -67,28 +67,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Close the in-app browser
             await Browser.close();
 
-            // Parse the URL to extract tokens or code
-            const urlObj = new URL(url);
-            const code = urlObj.searchParams.get('code');
-            const accessToken = urlObj.searchParams.get('access_token') ||
-                               urlObj.hash?.match(/access_token=([^&]+)/)?.[1];
-            const refreshToken = urlObj.searchParams.get('refresh_token') ||
-                                urlObj.hash?.match(/refresh_token=([^&]+)/)?.[1];
+            // Parse the URL to extract tokens
+            // For implicit flow, tokens come in the URL fragment (after #)
+            // URL format: com.ironvow.app://auth/callback#access_token=xxx&refresh_token=xxx&...
+            const hashIndex = url.indexOf('#');
+            const queryIndex = url.indexOf('?');
 
-            console.log('Auth callback - code:', !!code, 'accessToken:', !!accessToken);
+            let params: Record<string, string> = {};
 
-            if (code) {
-              // PKCE flow - exchange code for session
-              console.log('Exchanging code for session...');
-              const { error } = await supabase.auth.exchangeCodeForSession(code);
-              if (error) {
-                console.error('Code exchange error:', error);
-              } else {
-                console.log('Code exchange successful!');
-              }
-            } else if (accessToken && refreshToken) {
-              // Implicit flow - set session directly
-              console.log('Setting session with tokens...');
+            // Parse hash fragment (implicit flow)
+            if (hashIndex !== -1) {
+              const hashString = url.substring(hashIndex + 1);
+              const hashParams = new URLSearchParams(hashString);
+              hashParams.forEach((value, key) => {
+                params[key] = value;
+              });
+            }
+
+            // Also parse query params (PKCE flow fallback)
+            if (queryIndex !== -1) {
+              const queryEnd = hashIndex !== -1 ? hashIndex : url.length;
+              const queryString = url.substring(queryIndex + 1, queryEnd);
+              const queryParams = new URLSearchParams(queryString);
+              queryParams.forEach((value, key) => {
+                if (!params[key]) params[key] = value;
+              });
+            }
+
+            const accessToken = params['access_token'];
+            const refreshToken = params['refresh_token'];
+            const code = params['code'];
+
+            console.log('Auth callback - code:', !!code, 'accessToken:', !!accessToken, 'refreshToken:', !!refreshToken);
+
+            if (accessToken && refreshToken) {
+              // Implicit flow - set session directly with tokens
+              console.log('Setting session with tokens (implicit flow)...');
               const { error } = await supabase.auth.setSession({
                 access_token: accessToken,
                 refresh_token: refreshToken,
@@ -98,8 +112,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               } else {
                 console.log('Session set successfully!');
               }
+            } else if (code) {
+              // PKCE flow fallback - exchange code for session
+              // Note: This typically fails on native due to storage isolation
+              console.log('Exchanging code for session (PKCE flow)...');
+              const { error } = await supabase.auth.exchangeCodeForSession(code);
+              if (error) {
+                console.error('Code exchange error:', error);
+              } else {
+                console.log('Code exchange successful!');
+              }
             } else {
-              console.log('No code or tokens found in callback URL');
+              console.log('No tokens or code found in callback URL');
+              console.log('URL params:', params);
             }
           } catch (err) {
             console.error('Deep link handling error:', err);
@@ -148,11 +173,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('Redirect URL:', getRedirectUrl());
 
         // Get the OAuth URL from Supabase
+        // Use implicit flow for native apps to avoid PKCE code verifier issues
+        // (Safari web view storage is separate from native app storage)
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: getRedirectUrl(),
             skipBrowserRedirect: true,
+            queryParams: {
+              // Force implicit flow - returns tokens in URL fragment instead of code
+              response_type: 'token',
+            },
           },
         });
 
