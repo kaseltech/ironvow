@@ -34,6 +34,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
   const [customInput, setCustomInput] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [equipmentSearch, setEquipmentSearch] = useState('');
 
   const { profiles, createProfile, updateProfile, deleteProfile, loading: profilesLoading, refetch: refetchProfiles } = useGymProfiles();
   const { presets, loading: presetsLoading } = useEquipmentPresets();
@@ -54,6 +55,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
       setCustomEquipment([]);
       setCustomInput('');
       setIsDefault(false);
+      setEquipmentSearch('');
     }
   }, [isOpen]);
 
@@ -196,13 +198,21 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
 
   const loading = profilesLoading || presetsLoading || equipmentLoading;
 
+  // Filter equipment by search term
+  const filteredEquipment = equipmentSearch.trim()
+    ? allEquipment.filter(eq =>
+        eq.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+        (eq.category || '').toLowerCase().includes(equipmentSearch.toLowerCase())
+      )
+    : allEquipment;
+
   // Group equipment by category
-  const equipmentByCategory = allEquipment.reduce((acc, eq) => {
+  const equipmentByCategory = filteredEquipment.reduce((acc, eq) => {
     const category = eq.category || 'Other';
     if (!acc[category]) acc[category] = [];
     acc[category].push(eq);
     return acc;
-  }, {} as Record<string, typeof allEquipment>);
+  }, {} as Record<string, typeof filteredEquipment>);
 
   // Get count of equipment from selected presets
   const getSelectedPresetsEquipmentCount = () => {
@@ -579,6 +589,31 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                     </button>
                   </div>
                 </div>
+
+                {/* Equipment Search */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Search equipment..."
+                    value={equipmentSearch}
+                    onChange={(e) => setEquipmentSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      background: 'rgba(15, 34, 51, 0.5)',
+                      border: `1px solid ${BRAND.goldMuted}40`,
+                      borderRadius: '0.5rem',
+                      color: BRAND.cream,
+                      fontSize: '0.875rem',
+                    }}
+                  />
+                </div>
+
+                {Object.keys(equipmentByCategory).length === 0 && equipmentSearch && (
+                  <div style={{ color: BRAND.goldMuted, fontSize: '0.75rem', textAlign: 'center', padding: '1rem' }}>
+                    No equipment found matching "{equipmentSearch}"
+                  </div>
+                )}
 
                 {Object.entries(equipmentByCategory).map(([category, items]) => (
                   <div key={category} style={{ marginBottom: '1rem' }}>
