@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Logo } from '@/components/Logo';
 import { BodyMap } from '@/components/BodyMap';
-import { useProfile } from '@/hooks/useSupabase';
+import { GymManager } from '@/components/GymManager';
+import { useProfile, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
 import { getSupabase } from '@/lib/supabase/client';
 
 type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
@@ -52,11 +53,26 @@ const recentWorkouts = [
 
 export default function ProfilePage() {
   const { profile, refetch: refetchProfile } = useProfile();
+  const { profiles: gymProfiles } = useGymProfiles();
+  const { userEquipment, allEquipment } = useEquipment();
   const [activeTab, setActiveTab] = useState<'body' | 'saved' | 'history' | 'settings'>('body');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [savingGoal, setSavingGoal] = useState(false);
+  const [gymManagerOpen, setGymManagerOpen] = useState(false);
 
   const currentGoal = (profile?.fitness_goal as FitnessGoal) || 'general';
+
+  // Get equipment names for home gym
+  const homeEquipmentIds = userEquipment.filter(ue => ue.location === 'home').map(ue => ue.equipment_id);
+  const homeEquipmentNames = allEquipment
+    .filter(eq => homeEquipmentIds.includes(eq.id))
+    .map(eq => eq.name);
+
+  // Get equipment names for gym location
+  const gymEquipmentIds = userEquipment.filter(ue => ue.location === 'gym').map(ue => ue.equipment_id);
+  const gymEquipmentNames = allEquipment
+    .filter(eq => gymEquipmentIds.includes(eq.id))
+    .map(eq => eq.name);
 
   const handleGoalChange = async (goalId: FitnessGoal) => {
     if (!profile?.id) return;
@@ -510,41 +526,123 @@ export default function ProfilePage() {
 
             {/* Equipment */}
             <div className="card">
-              <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Equipment
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Equipment
+                </h2>
+                <button
+                  onClick={() => setGymManagerOpen(true)}
+                  style={{
+                    background: 'rgba(201, 167, 90, 0.2)',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    borderRadius: '0.5rem',
+                    padding: '0.375rem 0.75rem',
+                    color: '#C9A75A',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Manage Gyms
+                </button>
+              </div>
               <div className="space-y-3">
+                {/* Home Equipment */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span style={{ color: '#F5F1EA', fontSize: '0.875rem' }}>🏠 Home Gym</span>
-                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>8 items</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {['Dumbbells', 'Barbell', 'Bench', 'Pull-up Bar', 'Bands'].map(item => (
-                      <span
-                        key={item}
-                        style={{
-                          background: 'rgba(201, 167, 90, 0.1)',
-                          borderRadius: '0.375rem',
-                          padding: '0.25rem 0.5rem',
-                          color: 'rgba(245, 241, 234, 0.7)',
-                          fontSize: '0.6875rem',
-                        }}
-                      >
-                        {item}
-                      </span>
-                    ))}
-                    <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem', padding: '0.25rem' }}>
-                      +3 more
+                    <span style={{ color: '#F5F1EA', fontSize: '0.875rem' }}>🏠 Home</span>
+                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
+                      {homeEquipmentNames.length} items
                     </span>
                   </div>
+                  {homeEquipmentNames.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {homeEquipmentNames.slice(0, 6).map(item => (
+                        <span
+                          key={item}
+                          style={{
+                            background: 'rgba(201, 167, 90, 0.1)',
+                            borderRadius: '0.375rem',
+                            padding: '0.25rem 0.5rem',
+                            color: 'rgba(245, 241, 234, 0.7)',
+                            fontSize: '0.6875rem',
+                          }}
+                        >
+                          {item}
+                        </span>
+                      ))}
+                      {homeEquipmentNames.length > 6 && (
+                        <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem', padding: '0.25rem' }}>
+                          +{homeEquipmentNames.length - 6} more
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
+                      No home equipment set up
+                    </p>
+                  )}
                 </div>
+
+                {/* Gym Equipment */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span style={{ color: '#F5F1EA', fontSize: '0.875rem' }}>🏋️ Gym</span>
-                    <span style={{ color: '#4ADE80', fontSize: '0.75rem' }}>Full access</span>
+                    <span style={{ color: gymEquipmentNames.length > 0 ? '#4ADE80' : 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
+                      {gymEquipmentNames.length > 20 ? 'Full access' : `${gymEquipmentNames.length} items`}
+                    </span>
                   </div>
+                  {gymEquipmentNames.length > 0 && gymEquipmentNames.length <= 20 && (
+                    <div className="flex flex-wrap gap-1">
+                      {gymEquipmentNames.slice(0, 6).map(item => (
+                        <span
+                          key={item}
+                          style={{
+                            background: 'rgba(201, 167, 90, 0.1)',
+                            borderRadius: '0.375rem',
+                            padding: '0.25rem 0.5rem',
+                            color: 'rgba(245, 241, 234, 0.7)',
+                            fontSize: '0.6875rem',
+                          }}
+                        >
+                          {item}
+                        </span>
+                      ))}
+                      {gymEquipmentNames.length > 6 && (
+                        <span style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.6875rem', padding: '0.25rem' }}>
+                          +{gymEquipmentNames.length - 6} more
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
+
+                {/* Gym Profiles */}
+                {gymProfiles.length > 0 && (
+                  <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(201, 167, 90, 0.1)' }}>
+                    <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.6875rem', marginBottom: '0.5rem' }}>
+                      Saved Gyms
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {gymProfiles.map(gym => (
+                        <span
+                          key={gym.id}
+                          style={{
+                            background: gym.is_default ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                            border: gym.is_default ? '1px solid rgba(201, 167, 90, 0.4)' : '1px solid rgba(201, 167, 90, 0.1)',
+                            borderRadius: '0.375rem',
+                            padding: '0.25rem 0.5rem',
+                            color: gym.is_default ? '#C9A75A' : 'rgba(245, 241, 234, 0.7)',
+                            fontSize: '0.6875rem',
+                          }}
+                        >
+                          {gym.name}
+                          {gym.is_default && ' ★'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -615,6 +713,9 @@ export default function ProfilePage() {
           ))}
         </div>
       </nav>
+
+      {/* Gym Manager Modal */}
+      <GymManager isOpen={gymManagerOpen} onClose={() => setGymManagerOpen(false)} />
     </div>
   );
 }
