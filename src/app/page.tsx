@@ -395,8 +395,8 @@ export default function Home() {
                 onClick={() => router.push('/run')}
                 style={{
                   flex: 1,
-                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  background: colors.cardBg,
+                  border: `1px solid ${colors.borderSubtle}`,
                   borderRadius: '0.75rem',
                   padding: '0.875rem',
                   display: 'flex',
@@ -406,13 +406,13 @@ export default function Home() {
                 }}
               >
                 <span style={{ fontSize: '1.25rem' }}>🏃</span>
-                <span style={{ color: '#22C55E', fontWeight: 600, fontSize: '0.875rem' }}>Go for a Run</span>
+                <span style={{ color: colors.text, fontWeight: 600, fontSize: '0.875rem' }}>Go for a Run</span>
               </button>
             </div>
 
             {/* Location Selector */}
-            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-              <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.1s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
+              <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Where are you?
               </h2>
               <div className="grid grid-cols-3 gap-3">
@@ -429,15 +429,15 @@ export default function Home() {
                       }
                     }}
                     style={{
-                      background: selectedLocation === loc.id ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
-                      border: selectedLocation === loc.id ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.1)',
+                      background: selectedLocation === loc.id ? colors.accentMuted : colors.inputBg,
+                      border: selectedLocation === loc.id ? `2px solid ${colors.accent}` : `2px solid ${colors.borderSubtle}`,
                       borderRadius: '0.75rem',
                       padding: '1rem',
                       transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>{loc.icon}</div>
-                    <div style={{ color: '#F5F1EA', fontSize: '0.875rem' }}>{loc.name}</div>
+                    <div style={{ color: colors.text, fontSize: '0.875rem' }}>{loc.name}</div>
                   </button>
                 ))}
               </div>
@@ -445,9 +445,9 @@ export default function Home() {
 
             {/* Gym Selector - Only show when gym location selected */}
             {selectedLocation === 'gym' && (
-              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.15s' }}>
+              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.15s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Which gym?
                   </h2>
                   <button
@@ -455,7 +455,7 @@ export default function Home() {
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: '#C9A75A',
+                      color: colors.accent,
                       fontSize: '0.75rem',
                       cursor: 'pointer',
                       textDecoration: 'underline',
@@ -472,8 +472,8 @@ export default function Home() {
                         key={gym.id}
                         onClick={() => setSelectedGym(gym)}
                         style={{
-                          background: selectedGym?.id === gym.id ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
-                          border: selectedGym?.id === gym.id ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.1)',
+                          background: selectedGym?.id === gym.id ? colors.accentMuted : colors.inputBg,
+                          border: selectedGym?.id === gym.id ? `2px solid ${colors.accent}` : `2px solid ${colors.borderSubtle}`,
                           borderRadius: '0.75rem',
                           padding: '0.75rem 1rem',
                           display: 'flex',
@@ -484,14 +484,14 @@ export default function Home() {
                         }}
                       >
                         <div style={{ textAlign: 'left' }}>
-                          <div style={{ color: '#F5F1EA', fontSize: '0.9rem', fontWeight: 500 }}>
+                          <div style={{ color: colors.text, fontSize: '0.9rem', fontWeight: 500 }}>
                             {gym.name}
                             {gym.is_default && (
                               <span style={{
                                 marginLeft: '0.5rem',
                                 fontSize: '0.625rem',
-                                background: '#C9A75A',
-                                color: '#0F2233',
+                                background: colors.accent,
+                                color: colors.bg,
                                 padding: '0.125rem 0.375rem',
                                 borderRadius: '0.25rem',
                                 fontWeight: 600,
@@ -500,12 +500,12 @@ export default function Home() {
                               </span>
                             )}
                           </div>
-                          <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.7rem' }}>
+                          <div style={{ color: colors.textMuted, fontSize: '0.7rem' }}>
                             {(gym.equipment_ids?.length || 0) + (gym.custom_equipment?.length || 0)} equipment items
                           </div>
                         </div>
                         {selectedGym?.id === gym.id && (
-                          <span style={{ color: '#C9A75A', fontSize: '1.25rem' }}>✓</span>
+                          <span style={{ color: colors.accent, fontSize: '1.25rem' }}>✓</span>
                         )}
                       </button>
                     ))}
@@ -516,10 +516,10 @@ export default function Home() {
                     style={{
                       width: '100%',
                       padding: '1.5rem',
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      border: '2px dashed rgba(201, 167, 90, 0.3)',
+                      background: colors.inputBg,
+                      border: `2px dashed ${colors.border}`,
                       borderRadius: '0.75rem',
-                      color: '#C9A75A',
+                      color: colors.accent,
                       fontSize: '0.875rem',
                       cursor: 'pointer',
                     }}
@@ -531,7 +531,7 @@ export default function Home() {
             )}
 
             {/* Freeform Mode Toggle */}
-            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: freeformMode ? '0.75rem' : 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ fontSize: '1rem' }}>✨</span>
@@ -599,7 +599,7 @@ export default function Home() {
             </div>
 
             {/* Duration Selector */}
-            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.25s' }}>
+            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.25s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
               <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 How long do you have?
               </h2>
@@ -629,7 +629,7 @@ export default function Home() {
 
             {/* Muscle Group Selector - Only show in structured mode */}
             {!freeformMode && (
-              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.3s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
                 <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   What do you want to hit?
                 </h2>
@@ -776,7 +776,7 @@ export default function Home() {
 
             {/* Workout Style Selector - Only show in structured mode */}
             {!freeformMode && (
-              <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.35s' }}>
+              <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.35s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
                 <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Workout Style
                 </h2>
@@ -853,7 +853,7 @@ export default function Home() {
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: '#C9A75A',
+                  color: colors.accent,
                   fontSize: '0.875rem',
                   cursor: 'pointer',
                   display: 'flex',
@@ -868,8 +868,8 @@ export default function Home() {
                   onClick={() => setShowDebug(true)}
                   style={{
                     background: 'transparent',
-                    border: '1px solid rgba(100, 100, 100, 0.3)',
-                    color: 'rgba(245, 241, 234, 0.4)',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    color: colors.textMuted,
                     fontSize: '0.75rem',
                     padding: '0.5rem',
                     borderRadius: '0.5rem',
@@ -884,8 +884,8 @@ export default function Home() {
                   disabled={generating}
                   style={{
                     background: 'transparent',
-                    border: '1px solid rgba(201, 167, 90, 0.3)',
-                    color: '#C9A75A',
+                    border: `1px solid ${colors.border}`,
+                    color: colors.accent,
                     fontSize: '0.75rem',
                     padding: '0.5rem 1rem',
                     borderRadius: '0.5rem',
@@ -899,8 +899,8 @@ export default function Home() {
                 <button
                   style={{
                     background: 'transparent',
-                    border: '1px solid rgba(201, 167, 90, 0.3)',
-                    color: '#C9A75A',
+                    border: `1px solid ${colors.border}`,
+                    color: colors.accent,
                     fontSize: '0.75rem',
                     padding: '0.5rem 1rem',
                     borderRadius: '0.5rem',
@@ -912,22 +912,22 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="card mb-4">
+            <div className="card mb-4" style={{ background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
               <div className="flex items-center justify-between mb-2">
                 <h2
                   style={{
                     fontFamily: 'var(--font-libre-baskerville)',
                     fontSize: '1.5rem',
-                    color: '#F5F1EA',
+                    color: colors.text,
                   }}
                 >
                   {generatedWorkout.name}
                 </h2>
-                <span style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.875rem' }}>
+                <span style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
                   ~{generatedWorkout.duration} min
                 </span>
               </div>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+              <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                 {generatedWorkout.exercises.length} exercises
               </p>
               {/* Target Muscles Tags */}
@@ -936,12 +936,12 @@ export default function Home() {
                   <span
                     key={muscle}
                     style={{
-                      background: 'rgba(201, 167, 90, 0.15)',
-                      border: '1px solid rgba(201, 167, 90, 0.3)',
+                      background: colors.accentMuted,
+                      border: `1px solid ${colors.border}`,
                       borderRadius: '999px',
                       padding: '0.125rem 0.5rem',
                       fontSize: '0.625rem',
-                      color: '#C9A75A',
+                      color: colors.accent,
                       textTransform: 'capitalize',
                     }}
                   >
@@ -949,7 +949,7 @@ export default function Home() {
                   </span>
                 ))}
                 {generatedWorkout.targetMuscles.length > 6 && (
-                  <span style={{ fontSize: '0.625rem', color: 'rgba(245, 241, 234, 0.4)' }}>
+                  <span style={{ fontSize: '0.625rem', color: colors.textMuted }}>
                     +{generatedWorkout.targetMuscles.length - 6} more
                   </span>
                 )}
@@ -966,6 +966,8 @@ export default function Home() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '1rem',
+                    background: colors.cardBg,
+                    border: `1px solid ${colors.borderSubtle}`,
                   }}
                 >
                   <div
@@ -973,22 +975,22 @@ export default function Home() {
                       width: '48px',
                       height: '48px',
                       borderRadius: '0.75rem',
-                      background: 'rgba(201, 167, 90, 0.1)',
+                      background: colors.accentMuted,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '1.25rem',
-                      color: '#C9A75A',
+                      color: colors.accent,
                       fontWeight: 600,
                     }}
                   >
                     {i + 1}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ color: '#F5F1EA', fontSize: '1rem', fontWeight: 500 }}>
+                    <h3 style={{ color: colors.text, fontSize: '1rem', fontWeight: 500 }}>
                       {exercise.name}
                     </h3>
-                    <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.75rem' }}>
+                    <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
                       {exercise.sets} sets x {exercise.reps} reps
                     </p>
                     {/* Muscle & Movement Pattern Tags */}
@@ -998,11 +1000,11 @@ export default function Home() {
                           <span
                             key={muscle}
                             style={{
-                              background: 'rgba(201, 167, 90, 0.2)',
+                              background: colors.accentMuted,
                               borderRadius: '999px',
                               padding: '0.0625rem 0.375rem',
                               fontSize: '0.5rem',
-                              color: '#C9A75A',
+                              color: colors.accent,
                               textTransform: 'capitalize',
                             }}
                           >
@@ -1013,11 +1015,11 @@ export default function Home() {
                           <span
                             key={muscle}
                             style={{
-                              background: 'rgba(245, 241, 234, 0.1)',
+                              background: colors.inputBg,
                               borderRadius: '999px',
                               padding: '0.0625rem 0.375rem',
                               fontSize: '0.5rem',
-                              color: 'rgba(245, 241, 234, 0.5)',
+                              color: colors.textMuted,
                               textTransform: 'capitalize',
                             }}
                           >
@@ -1029,11 +1031,11 @@ export default function Home() {
                           <span
                             key={pattern}
                             style={{
-                              background: 'rgba(99, 102, 241, 0.15)',
+                              background: colors.inputBg,
                               borderRadius: '999px',
                               padding: '0.0625rem 0.375rem',
                               fontSize: '0.5rem',
-                              color: '#818CF8',
+                              color: colors.textMuted,
                               textTransform: 'capitalize',
                             }}
                           >
@@ -1044,11 +1046,11 @@ export default function Home() {
                         {exercise.rehabFor && exercise.rehabFor.length > 0 && (
                           <span
                             style={{
-                              background: 'rgba(34, 197, 94, 0.15)',
+                              background: colors.inputBg,
                               borderRadius: '999px',
                               padding: '0.0625rem 0.375rem',
                               fontSize: '0.5rem',
-                              color: '#22C55E',
+                              color: colors.success,
                             }}
                           >
                             rehab
@@ -1057,21 +1059,21 @@ export default function Home() {
                       </div>
                     )}
                     {exercise.notes && (
-                      <p style={{ color: 'rgba(201, 167, 90, 0.6)', fontSize: '0.625rem', marginTop: '0.25rem' }}>
+                      <p style={{ color: colors.textMuted, fontSize: '0.625rem', marginTop: '0.25rem' }}>
                         {exercise.notes}
                       </p>
                     )}
                   </div>
                   <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
-                    <div style={{ color: '#C9A75A', fontSize: '0.75rem' }}>
+                    <div style={{ color: colors.accent, fontSize: '0.75rem' }}>
                       {exercise.restSeconds}s rest
                     </div>
                     <button
                       onClick={() => handleOpenSwap(i)}
                       style={{
                         background: 'transparent',
-                        border: '1px solid rgba(201, 167, 90, 0.2)',
-                        color: 'rgba(201, 167, 90, 0.7)',
+                        border: `1px solid ${colors.borderSubtle}`,
+                        color: colors.textMuted,
                         fontSize: '0.625rem',
                         padding: '0.25rem 0.5rem',
                         borderRadius: '0.25rem',
@@ -1100,27 +1102,28 @@ export default function Home() {
       <nav
         className="fixed bottom-0 left-0 right-0 safe-area-bottom"
         style={{
-          background: 'linear-gradient(180deg, transparent 0%, #0F2233 20%)',
+          background: `linear-gradient(180deg, transparent 0%, ${colors.bg} 20%)`,
           paddingTop: '1.5rem',
         }}
       >
         <div
           style={{
-            background: '#1A3550',
-            borderTop: '1px solid rgba(201, 167, 90, 0.1)',
+            background: colors.cardBg,
+            borderTop: `1px solid ${colors.borderSubtle}`,
             display: 'flex',
             justifyContent: 'space-around',
             padding: '0.75rem 0',
           }}
         >
           {[
-            { icon: '🏋️', label: 'Workout', active: true },
-            { icon: '📊', label: 'Progress', active: false },
-            { icon: '📚', label: 'Library', active: false },
-            { icon: '👤', label: 'Profile', active: false },
+            { icon: '🏋️', label: 'Workout', href: '/', active: true },
+            { icon: '📊', label: 'Progress', href: '/progress', active: false },
+            { icon: '📚', label: 'Library', href: '/library', active: false },
+            { icon: '👤', label: 'Profile', href: '/profile', active: false },
           ].map(item => (
             <button
               key={item.label}
+              onClick={() => router.push(item.href)}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -1137,7 +1140,7 @@ export default function Home() {
               <span
                 style={{
                   fontSize: '0.625rem',
-                  color: item.active ? '#C9A75A' : 'rgba(245, 241, 234, 0.5)',
+                  color: item.active ? colors.accent : colors.textMuted,
                   fontWeight: item.active ? 600 : 400,
                 }}
               >
@@ -1178,7 +1181,7 @@ export default function Home() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              backgroundColor: '#1A3550',
+              backgroundColor: colors.cardBg,
               borderRadius: '1rem',
               width: '100%',
               maxWidth: '500px',
@@ -1190,20 +1193,20 @@ export default function Home() {
           >
             <div style={{
               padding: '1rem',
-              borderBottom: '1px solid rgba(201, 167, 90, 0.2)',
+              borderBottom: `1px solid ${colors.borderSubtle}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}>
-              <h3 style={{ color: '#F5F1EA', margin: 0, fontSize: '1rem' }}>
-                🔍 AI Request Debug
+              <h3 style={{ color: colors.text, margin: 0, fontSize: '1rem' }}>
+                AI Request Debug
               </h3>
               <button
                 onClick={() => setShowDebug(false)}
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: '#F5F1EA',
+                  color: colors.text,
                   fontSize: '1.25rem',
                   cursor: 'pointer',
                 }}
@@ -1223,18 +1226,18 @@ export default function Home() {
                   borderRadius: '0.25rem',
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  backgroundColor: (debugInfo as any).usedAI ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                  color: (debugInfo as any).usedAI ? '#10b981' : '#f59e0b',
+                  backgroundColor: (debugInfo as any).usedAI ? colors.accentMuted : colors.inputBg,
+                  color: (debugInfo as any).usedAI ? colors.success : colors.textMuted,
                 }}>
-                  {(debugInfo as any).usedAI ? '✓ Used AI (Edge Function)' : '⚡ Used Local Generation'}
+                  {(debugInfo as any).usedAI ? 'Used AI (Edge Function)' : 'Used Local Generation'}
                 </span>
               </div>
               <pre style={{
-                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                backgroundColor: colors.inputBg,
                 padding: '1rem',
                 borderRadius: '0.5rem',
                 fontSize: '0.7rem',
-                color: '#F5F1EA',
+                color: colors.text,
                 overflow: 'auto',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
@@ -1268,7 +1271,7 @@ export default function Home() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              backgroundColor: '#1A3550',
+              backgroundColor: colors.cardBg,
               borderRadius: '1.5rem 1.5rem 0 0',
               width: '100%',
               maxWidth: '500px',
@@ -1280,16 +1283,16 @@ export default function Home() {
           >
             <div style={{
               padding: '1rem 1.25rem',
-              borderBottom: '1px solid rgba(201, 167, 90, 0.2)',
+              borderBottom: `1px solid ${colors.borderSubtle}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}>
               <div>
-                <h3 style={{ color: '#F5F1EA', margin: 0, fontSize: '1rem' }}>
+                <h3 style={{ color: colors.text, margin: 0, fontSize: '1rem' }}>
                   Swap Exercise
                 </h3>
-                <p style={{ color: 'rgba(245, 241, 234, 0.5)', margin: 0, fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                <p style={{ color: colors.textMuted, margin: 0, fontSize: '0.75rem', marginTop: '0.25rem' }}>
                   Replacing: {generatedWorkout?.exercises[swappingExerciseIndex]?.name}
                 </p>
               </div>
@@ -1301,7 +1304,7 @@ export default function Home() {
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: '#F5F1EA',
+                  color: colors.text,
                   fontSize: '1.5rem',
                   cursor: 'pointer',
                   padding: '0.25rem',
@@ -1316,11 +1319,11 @@ export default function Home() {
               flex: 1,
             }}>
               {loadingAlternatives ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(245, 241, 234, 0.6)' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
                   <div className="animate-pulse">Finding alternatives...</div>
                 </div>
               ) : swapAlternatives.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
                   No alternatives found for this exercise.
                 </div>
               ) : (
@@ -1330,8 +1333,8 @@ export default function Home() {
                       key={alt.id}
                       onClick={() => handleSwapExercise(alt)}
                       style={{
-                        background: 'rgba(15, 34, 51, 0.5)',
-                        border: '1px solid rgba(201, 167, 90, 0.2)',
+                        background: colors.inputBg,
+                        border: `1px solid ${colors.borderSubtle}`,
                         borderRadius: '0.75rem',
                         padding: '0.875rem 1rem',
                         textAlign: 'left',
@@ -1339,7 +1342,7 @@ export default function Home() {
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      <div style={{ color: '#F5F1EA', fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.25rem' }}>
+                      <div style={{ color: colors.text, fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.25rem' }}>
                         {alt.name}
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -1348,8 +1351,8 @@ export default function Home() {
                             key={muscle}
                             style={{
                               fontSize: '0.625rem',
-                              backgroundColor: 'rgba(201, 167, 90, 0.2)',
-                              color: '#C9A75A',
+                              backgroundColor: colors.accentMuted,
+                              color: colors.accent,
                               padding: '0.125rem 0.375rem',
                               borderRadius: '0.25rem',
                             }}
@@ -1360,8 +1363,8 @@ export default function Home() {
                         {alt.isCompound && (
                           <span style={{
                             fontSize: '0.625rem',
-                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                            color: '#3b82f6',
+                            backgroundColor: colors.inputBg,
+                            color: colors.textMuted,
                             padding: '0.125rem 0.375rem',
                             borderRadius: '0.25rem',
                           }}>
