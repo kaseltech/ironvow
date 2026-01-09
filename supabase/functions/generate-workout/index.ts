@@ -1022,12 +1022,12 @@ function generateWorkoutName(type: string, level: string, style: string = 'tradi
 
 // Map workout styles to exercise categories/tags that match
 const styleExercisePatterns: Record<WorkoutStyle, string[]> = {
-  wod: ['crossfit', 'olympic', 'plyometric', 'burpee', 'box jump', 'wall ball', 'thruster', 'snatch', 'clean', 'muscle-up', 'kipping', 'double under', 'kettlebell'],
-  hiit: ['plyometric', 'burpee', 'jump', 'sprint', 'explosive', 'battle rope', 'slam', 'mountain climber'],
-  circuit: ['compound', 'plyometric', 'bodyweight'],
-  strength: ['barbell', 'powerlifting', 'squat', 'deadlift', 'bench', 'press', 'row'],
-  cardio: ['run', 'sprint', 'interval', 'bike', 'row', 'ski', 'jump rope'],
-  mobility: ['stretch', 'foam', 'mobility', 'yoga', 'flexibility'],
+  wod: ['crossfit', 'olympic', 'plyometric', 'burpee', 'box jump', 'wall ball', 'thruster', 'snatch', 'clean', 'muscle-up', 'kipping', 'double under', 'kettlebell', 'swing', 'jerk', 'push press', 'sumo', 'high pull', 'devil press', 'man maker', 'dumbbell snatch', 'hang'],
+  hiit: ['plyometric', 'burpee', 'jump', 'sprint', 'explosive', 'battle rope', 'slam', 'mountain climber', 'swing', 'thruster', 'squat jump', 'lunge jump', 'high knees', 'box'],
+  circuit: ['compound', 'plyometric', 'bodyweight', 'kettlebell', 'dumbbell'],
+  strength: ['barbell', 'powerlifting', 'squat', 'deadlift', 'bench', 'press', 'row', 'rack pull', 'pause', 'deficit'],
+  cardio: ['run', 'sprint', 'interval', 'bike', 'row', 'ski', 'jump rope', 'assault', 'echo'],
+  mobility: ['stretch', 'foam', 'mobility', 'yoga', 'flexibility', 'pigeon', 'hip opener'],
   traditional: [], // No specific filter for traditional
 };
 
@@ -1063,6 +1063,18 @@ async function handleSwapRequest(
     }
   }
 
+  // Helper to check if exercise matches workout style (defined here for use in filter)
+  const checkStyleMatch = (ex: any, style: WorkoutStyle): boolean => {
+    const patterns = styleExercisePatterns[style] || [];
+    if (patterns.length === 0) return false;
+    const exName = ex.name.toLowerCase();
+    const exSlug = (ex.slug || '').toLowerCase();
+    return patterns.some(pattern => exName.includes(pattern) || exSlug.includes(pattern));
+  };
+
+  // Common CrossFit/WOD equipment that should always be allowed for WOD style
+  const wodEquipment = ['kettlebell', 'barbell', 'dumbbell', 'pull-up bar', 'box', 'medicine ball', 'jump rope', 'rings', 'wall ball'];
+
   // Filter to exercises that target the same muscles
   const alternatives = exercises.filter((ex: any) => {
     // Don't include the exercise we're swapping
@@ -1076,6 +1088,10 @@ async function handleSwapRequest(
       if (!targetsMuscle) return false;
     }
 
+    // For WOD/HIIT, if exercise matches style, be lenient on equipment
+    const isStyleMatch = checkStyleMatch(ex, workoutStyle);
+    const isExplosiveStyle = workoutStyle === 'wod' || workoutStyle === 'hiit' || workoutStyle === 'circuit';
+
     // Check equipment based on location
     let hasEquipment = false;
     if (location === 'outdoor') {
@@ -1084,10 +1100,18 @@ async function handleSwapRequest(
     } else if (location === 'gym') {
       if (allEquipment && allEquipment.length > 0) {
         const equipReq = ex.equipment_required || [];
-        hasEquipment = equipReq.length === 0 ||
-          equipReq.every((eq: string) =>
-            allEquipment.includes(eq) || eq === 'none' || eq === 'bodyweight'
-          );
+        // For WOD-style matches in gym, allow common CrossFit equipment
+        if (isExplosiveStyle && isStyleMatch) {
+          hasEquipment = equipReq.length === 0 ||
+            equipReq.every((eq: string) =>
+              allEquipment.includes(eq) || wodEquipment.includes(eq.toLowerCase()) || eq === 'none' || eq === 'bodyweight'
+            );
+        } else {
+          hasEquipment = equipReq.length === 0 ||
+            equipReq.every((eq: string) =>
+              allEquipment.includes(eq) || eq === 'none' || eq === 'bodyweight'
+            );
+        }
       } else {
         hasEquipment = true;
       }
@@ -1119,20 +1143,11 @@ async function handleSwapRequest(
     return true;
   });
 
-  // Helper to check if exercise matches workout style
-  const matchesStyle = (ex: any, style: WorkoutStyle): boolean => {
-    const patterns = styleExercisePatterns[style] || [];
-    if (patterns.length === 0) return true; // Traditional matches everything
-    const exName = ex.name.toLowerCase();
-    const exSlug = (ex.slug || '').toLowerCase();
-    return patterns.some(pattern => exName.includes(pattern) || exSlug.includes(pattern));
-  };
-
   // Sort by: 1) style match, 2) primary muscle match
   alternatives.sort((a: any, b: any) => {
-    // Style match is highest priority
-    const aStyleMatch = matchesStyle(a, workoutStyle) ? 2 : 0;
-    const bStyleMatch = matchesStyle(b, workoutStyle) ? 2 : 0;
+    // Style match is highest priority (use checkStyleMatch defined earlier)
+    const aStyleMatch = checkStyleMatch(a, workoutStyle) ? 2 : 0;
+    const bStyleMatch = checkStyleMatch(b, workoutStyle) ? 2 : 0;
     if (aStyleMatch !== bStyleMatch) return bStyleMatch - aStyleMatch;
 
     // Then primary muscle match
