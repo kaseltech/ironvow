@@ -300,7 +300,7 @@ export default function Home() {
         }}
       >
         <div className="flex items-center justify-between">
-          <Logo size="lg" />
+          <Logo size="lg" href="/" />
           <button
             onClick={() => setShowSettings(true)}
             style={{

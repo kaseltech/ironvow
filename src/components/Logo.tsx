@@ -1,7 +1,10 @@
 'use client';
 
+import Link from 'next/link';
+
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  href?: string;
 }
 
 const sizes = {
@@ -11,10 +14,10 @@ const sizes = {
   xl: { fontSize: '3rem', subscriptSize: '1rem' },
 };
 
-export function Logo({ size = 'md' }: LogoProps) {
-  const { fontSize, subscriptSize } = sizes[size];
+export function Logo({ size = 'md', href }: LogoProps) {
+  const { fontSize } = sizes[size];
 
-  return (
+  const content = (
     <div style={{ display: 'inline-flex', alignItems: 'baseline' }}>
       <span
         style={{
@@ -40,4 +43,14 @@ export function Logo({ size = 'md' }: LogoProps) {
       </span>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} style={{ textDecoration: 'none' }}>
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
