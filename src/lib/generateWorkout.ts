@@ -34,6 +34,7 @@ export interface SwapRequest {
   customEquipment?: string[];
   swapExerciseId: string;
   swapTargetMuscles: string[];
+  workoutStyle?: WorkoutStyle;
 }
 
 export interface ExerciseAlternative {

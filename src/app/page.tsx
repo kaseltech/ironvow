@@ -243,6 +243,7 @@ export default function Home() {
         customEquipment: (lastWorkoutRequest as any).customEquipment,
         swapExerciseId: exercise.exerciseId || '', // Handle empty ID for unmatched exercises
         swapTargetMuscles: targetMuscles,
+        workoutStyle: generatedWorkout.workoutStyle, // Pass workout style for style-appropriate alternatives
       });
 
       setSwapAlternatives(alternatives || []);

@@ -1020,6 +1020,17 @@ function generateWorkoutName(type: string, level: string, style: string = 'tradi
   return parts.join(' ').trim();
 }
 
+// Map workout styles to exercise categories/tags that match
+const styleExercisePatterns: Record<WorkoutStyle, string[]> = {
+  wod: ['crossfit', 'olympic', 'plyometric', 'burpee', 'box jump', 'wall ball', 'thruster', 'snatch', 'clean', 'muscle-up', 'kipping', 'double under', 'kettlebell'],
+  hiit: ['plyometric', 'burpee', 'jump', 'sprint', 'explosive', 'battle rope', 'slam', 'mountain climber'],
+  circuit: ['compound', 'plyometric', 'bodyweight'],
+  strength: ['barbell', 'powerlifting', 'squat', 'deadlift', 'bench', 'press', 'row'],
+  cardio: ['run', 'sprint', 'interval', 'bike', 'row', 'ski', 'jump rope'],
+  mobility: ['stretch', 'foam', 'mobility', 'yoga', 'flexibility'],
+  traditional: [], // No specific filter for traditional
+};
+
 // Handle swap request - find alternative exercises for a given exercise
 async function handleSwapRequest(
   body: WorkoutRequest,
@@ -1027,7 +1038,7 @@ async function handleSwapRequest(
   allEquipment: string[],
   expandedSwapMuscles: string[]
 ): Promise<Response> {
-  const { location, swapExerciseId, injuries, experienceLevel } = body;
+  const { location, swapExerciseId, injuries, experienceLevel, workoutStyle = 'traditional' } = body;
   let swapTargetMuscles = expandedSwapMuscles;
 
   // Fetch all exercises
@@ -1108,12 +1119,29 @@ async function handleSwapRequest(
     return true;
   });
 
-  // Sort by how well they match the target muscles (primary muscle match first)
+  // Helper to check if exercise matches workout style
+  const matchesStyle = (ex: any, style: WorkoutStyle): boolean => {
+    const patterns = styleExercisePatterns[style] || [];
+    if (patterns.length === 0) return true; // Traditional matches everything
+    const exName = ex.name.toLowerCase();
+    const exSlug = (ex.slug || '').toLowerCase();
+    return patterns.some(pattern => exName.includes(pattern) || exSlug.includes(pattern));
+  };
+
+  // Sort by: 1) style match, 2) primary muscle match
   alternatives.sort((a: any, b: any) => {
+    // Style match is highest priority
+    const aStyleMatch = matchesStyle(a, workoutStyle) ? 2 : 0;
+    const bStyleMatch = matchesStyle(b, workoutStyle) ? 2 : 0;
+    if (aStyleMatch !== bStyleMatch) return bStyleMatch - aStyleMatch;
+
+    // Then primary muscle match
     const aPrimaryMatch = swapTargetMuscles?.some((m: string) => a.primary_muscles?.includes(m)) ? 1 : 0;
     const bPrimaryMatch = swapTargetMuscles?.some((m: string) => b.primary_muscles?.includes(m)) ? 1 : 0;
     return bPrimaryMatch - aPrimaryMatch;
   });
+
+  console.log(`Swap: Found ${alternatives.length} alternatives for style=${workoutStyle}`);
 
   // Return top 10 alternatives
   const topAlternatives = alternatives.slice(0, 10).map((ex: any) => ({
