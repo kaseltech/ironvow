@@ -654,6 +654,12 @@ Return ONLY valid JSON:
   ]
 }`;
   } else {
+    // Calculate time per exercise based on style
+    const restPerSet = workoutStyle === 'strength' ? 180 : workoutStyle === 'hiit' || workoutStyle === 'circuit' ? 30 : 90;
+    const setsPerExercise = workoutStyle === 'strength' ? 5 : 3;
+    const timePerExercise = Math.ceil((setsPerExercise * 40 + (setsPerExercise - 1) * restPerSet) / 60); // in minutes
+    const maxExercises = Math.max(1, Math.floor(duration / timePerExercise));
+
     // STRUCTURED PROMPT - Standard workout generation
     prompt = `You are a certified personal trainer. Create a ${duration}-minute ${experienceLevel}-level workout.
 
@@ -661,13 +667,18 @@ ${styleContext}
 
 ${goalContext}
 
-TARGET MUSCLES: ${muscleEmphasis}${locationContext}${equipmentContext}${injuryContext}
+CRITICAL - TARGET MUSCLES ONLY: ${muscleEmphasis}
+YOU MUST ONLY USE EXERCISES THAT TARGET THESE MUSCLES: ${targetMuscles.join(', ')}
+- If target is chest/shoulders/triceps (push): NO squats, NO deadlifts, NO leg exercises
+- If target is back/biceps (pull): NO chest press, NO push-ups, NO tricep exercises
+- If target is quads/hamstrings/glutes (legs): NO upper body exercises
+${locationContext}${equipmentContext}${injuryContext}
 
-TIME BUDGET (CRITICAL - HARD LIMIT):
+TIME BUDGET (${workoutStyle === 'strength' ? '5x5 STRENGTH' : 'STANDARD'}):
 - Total workout time: ${duration} minutes
-- Each exercise takes ~5 minutes (3 sets × 40s + 2 rest periods × 60-90s)
-- MAXIMUM EXERCISES: ${Math.max(2, Math.floor(duration / 6))} exercises - DO NOT EXCEED THIS
-- For ${duration} min: ${duration <= 15 ? 'exactly 2' : duration <= 20 ? '2-3' : duration <= 30 ? '3-4' : duration <= 45 ? '4-5' : '5-6'} exercises
+- Rest per set: ${restPerSet}s (${workoutStyle === 'strength' ? 'heavy strength work needs longer rest' : 'standard rest'})
+- Each exercise takes ~${timePerExercise} minutes
+- MAXIMUM EXERCISES: ${maxExercises} - DO NOT EXCEED
 
 Generate a complete workout using your knowledge of fitness exercises. Use common, well-known exercise names.
 The exercises will be matched to our database automatically.
@@ -675,9 +686,9 @@ The exercises will be matched to our database automatically.
 RULES:
 1. Use standard exercise names (e.g., "Barbell Bench Press", "Dumbbell Curl", "Pull-ups")
 2. Follow the WORKOUT STYLE and FITNESS GOAL guidelines above
-3. Every exercise should target the specified muscles: ${targetMuscles.join(', ')}
+3. STRICT: ONLY exercises targeting ${targetMuscles.join(', ')} - NO OTHER MUSCLE GROUPS
 4. For outdoor: ONLY bodyweight exercises
-5. HARD LIMIT: Do NOT generate more than ${Math.max(2, Math.floor(duration / 6))} exercises
+5. HARD LIMIT: Maximum ${maxExercises} exercises for ${duration} minutes
 6. For cardio style: include running intervals, sprints, or cardio machine work
 7. For mobility style: include stretches, foam rolling, and movement prep
 
@@ -1075,6 +1086,8 @@ async function handleSwapRequest(
   // Common CrossFit/WOD equipment that should always be allowed for WOD style
   const wodEquipment = ['kettlebell', 'barbell', 'dumbbell', 'pull-up bar', 'box', 'medicine ball', 'jump rope', 'rings', 'wall ball'];
 
+  console.log(`Swap request: style=${workoutStyle}, targetMuscles=${swapTargetMuscles?.join(',')}, exerciseId=${swapExerciseId}`);
+
   // Filter to exercises that target the same muscles
   const alternatives = exercises.filter((ex: any) => {
     // Don't include the exercise we're swapping
@@ -1156,7 +1169,14 @@ async function handleSwapRequest(
     return bPrimaryMatch - aPrimaryMatch;
   });
 
-  console.log(`Swap: Found ${alternatives.length} alternatives for style=${workoutStyle}`);
+  // Debug: Log what's happening
+  const styleMatches = alternatives.filter((ex: any) => checkStyleMatch(ex, workoutStyle));
+  console.log(`Swap: Found ${alternatives.length} alternatives, ${styleMatches.length} match style=${workoutStyle}`);
+  console.log(`Swap: Top 5 alternatives:`, alternatives.slice(0, 5).map((ex: any) => ({
+    name: ex.name,
+    styleMatch: checkStyleMatch(ex, workoutStyle),
+    muscles: ex.primary_muscles,
+  })));
 
   // Return top 10 alternatives
   const topAlternatives = alternatives.slice(0, 10).map((ex: any) => ({
