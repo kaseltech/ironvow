@@ -4,6 +4,8 @@ import { Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 
 function LoginContent() {
   const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
@@ -69,6 +71,15 @@ function LoginContent() {
     <div className="min-h-screen bg-[#0F2233] flex flex-col items-center justify-center px-6">
       {/* Logo */}
       <div className="mb-12 text-center">
+        <div className="flex justify-center mb-4">
+          <Image
+            src="/logo.png"
+            alt="IronVow"
+            width={80}
+            height={80}
+            className="rounded-2xl"
+          />
+        </div>
         <h1 className="text-4xl font-light tracking-wide text-[#F5F1EA]">
           <span className="text-[#8A9BAE]">Iron</span>
           <span className="font-semibold text-[#C9A75A]">Vow</span>
@@ -168,7 +179,10 @@ function LoginContent() {
 
       {/* Footer */}
       <p className="mt-8 text-[#4A5568] text-xs">
-        Part of the Vow Suite
+        Part of the{' '}
+        <Link href="/vow-suite" className="text-[#8A9BAE] hover:text-[#C9A75A] underline transition-colors">
+          Vow Suite
+        </Link>
       </p>
     </div>
   );
