@@ -10,7 +10,7 @@
 
 ## Core Concept
 
-> "Your AI training partner that actually knows you."
+> "Personalized workouts that adapt to your equipment, goals, and schedule."
 
 ### The Problem with Existing Apps
 - **Preset libraries** - No personalization, one-size-fits-all
@@ -243,8 +243,9 @@ Format as JSON.
 - **Typography:** Serif for brand, sans-serif for UI
 
 ### IronVow Specific
-- Potentially more "energetic" accent color options
-- Workout mode could have higher contrast for gym visibility
+- 8 color themes: Navy, Charcoal, Midnight, Forest, Slate, Plum, Coffee, Ocean
+- All themes use gold accent for brand consistency
+- Theme persistence across sessions (iOS + web)
 - Dark theme default (easier to see in gym lighting)
 
 ### App Icon Ideas
@@ -326,6 +327,9 @@ No borders, no shadows, no decorative elements. Navy background extends complete
 - [x] Workout templates
 - [x] Settings & preferences
 - [x] Onboarding tutorial
+- [x] Color themes (8 themes with persistence)
+- [x] Gym profiles (named gyms with equipment)
+- [x] Exercise regenerate & swap
 
 ### Phase 5: Expansion
 - [ ] Apple Watch companion
@@ -335,13 +339,13 @@ No borders, no shadows, no decorative elements. Navy background extends complete
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-1. **AI Provider:** OpenAI vs Claude vs fine-tuned model?
-2. **Exercise demos:** Source videos/gifs? Create our own? License?
-3. **Offline mode:** How much functionality without internet?
-4. **Social:** Sharing workouts, friends, leaderboards - or keep it personal?
-5. **Wearables:** Apple Watch priority? Integrate Apple Health?
+1. **AI Provider:** Claude 3 Haiku via Anthropic API (fast, cost-effective)
+2. **Exercise demos:** Text descriptions + form cues for now
+3. **Offline mode:** Workout logging queues locally, syncs when online
+4. **Social:** Keeping it personal for now
+5. **Wearables:** Apple HealthKit integration planned
 
 ---
 
@@ -354,3 +358,4 @@ No borders, no shadows, no decorative elements. Navy background extends complete
 ---
 
 *Created: January 8, 2026*
+*Updated: January 9, 2026*

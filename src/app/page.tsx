@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Onboarding } from '@/components/Onboarding';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
 import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle } from '@/lib/generateWorkout';
 import { Settings } from '@/components/Settings';
@@ -50,11 +51,12 @@ const workoutStyles: { id: WorkoutStyle; name: string; description: string }[] =
 
 export default function Home() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const { colors } = useTheme();
   const { profile, loading: profileLoading, isProfileComplete, refetch: refetchProfile } = useProfile();
   const { injuries } = useInjuries();
   const { userEquipment, allEquipment } = useEquipment();
-  const { profiles: gymProfiles, getDefaultProfile } = useGymProfiles();
+  const { profiles: gymProfiles, getDefaultProfile, refetch: refetchGymProfiles } = useGymProfiles();
 
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedGym, setSelectedGym] = useState<GymProfile | null>(null);
@@ -284,6 +286,13 @@ export default function Home() {
     setSwapAlternatives([]);
   };
 
+  // Auto-select gym when profiles update and user is on gym location
+  useEffect(() => {
+    if (selectedLocation === 'gym' && !selectedGym && gymProfiles.length > 0) {
+      setSelectedGym(getDefaultProfile() || gymProfiles[0]);
+    }
+  }, [selectedLocation, selectedGym, gymProfiles, getDefaultProfile]);
+
   // Can generate if:
   // - Location selected
   // - Either freeform mode with text, or structured mode with muscles selected
@@ -305,34 +314,65 @@ export default function Home() {
     {needsOnboarding || showOnboarding ? (
       <Onboarding onComplete={handleOnboardingComplete} />
     ) : (
-    <div className="min-h-screen" style={{ backgroundColor: '#0F2233' }}>
+    <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
       {/* Header */}
       <header
         className="safe-area-top"
         style={{
-          background: 'linear-gradient(180deg, #1A3550 0%, #0F2233 100%)',
+          background: `linear-gradient(180deg, ${colors.cardBg} 0%, ${colors.bg} 100%)`,
           padding: '1rem 1.5rem',
-          borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
+          borderBottom: `1px solid ${colors.borderSubtle}`,
         }}
       >
         <div className="flex items-center justify-between">
           <Logo size="lg" href="/" />
-          <button
-            onClick={() => setShowSettings(true)}
-            style={{
-              background: 'rgba(201, 167, 90, 0.1)',
-              border: '1px solid rgba(201, 167, 90, 0.2)',
-              borderRadius: '50%',
-              width: '40px',
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.25rem',
-            }}
-          >
-            ⚙️
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Logout Button */}
+            <button
+              onClick={async () => {
+                await signOut();
+                router.push('/login');
+              }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                borderRadius: '0.5rem',
+                padding: '0.5rem 0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.375rem',
+                color: '#EF4444',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+            {/* Settings Button */}
+            <button
+              onClick={() => setShowSettings(true)}
+              style={{
+                background: `${colors.accentMuted}`,
+                border: `1px solid ${colors.border}`,
+                borderRadius: '0.5rem',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -345,14 +385,14 @@ export default function Home() {
                 style={{
                   fontFamily: 'var(--font-libre-baskerville)',
                   fontSize: '1.75rem',
-                  color: '#F5F1EA',
+                  color: colors.text,
                   marginBottom: '0.5rem',
                 }}
               >
                 Ready to train?
               </h1>
-              <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.9rem' }}>
-                Your AI training partner is ready to build your workout
+              <p style={{ color: colors.textMuted, fontSize: '0.9rem' }}>
+                Let's build your personalized workout
               </p>
             </div>
 
@@ -497,225 +537,16 @@ export default function Home() {
               </div>
             )}
 
-            {/* Muscle Group Selector - Only show in structured mode */}
-            {!freeformMode && (
-              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  What do you want to hit?
-                </h2>
-
-                {/* Upper Body */}
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
-                    Upper Body
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {muscleGroups.filter(m => m.category === 'upper').map(muscle => (
-                      <button
-                        key={muscle.id}
-                        onClick={() => toggleMuscle(muscle.id)}
-                        style={{
-                          background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
-                          border: selectedMuscles.includes(muscle.id) ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                          borderRadius: '999px',
-                          padding: '0.375rem 0.75rem',
-                          transition: 'all 0.2s ease',
-                          color: selectedMuscles.includes(muscle.id) ? '#C9A75A' : '#F5F1EA',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {muscle.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Lower Body */}
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
-                    Lower Body
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {muscleGroups.filter(m => m.category === 'lower').map(muscle => (
-                      <button
-                        key={muscle.id}
-                        onClick={() => toggleMuscle(muscle.id)}
-                        style={{
-                          background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
-                          border: selectedMuscles.includes(muscle.id) ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                          borderRadius: '999px',
-                          padding: '0.375rem 0.75rem',
-                          transition: 'all 0.2s ease',
-                          color: selectedMuscles.includes(muscle.id) ? '#C9A75A' : '#F5F1EA',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {muscle.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Core */}
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
-                    Core
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {muscleGroups.filter(m => m.category === 'core').map(muscle => (
-                      <button
-                        key={muscle.id}
-                        onClick={() => toggleMuscle(muscle.id)}
-                        style={{
-                          background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
-                          border: selectedMuscles.includes(muscle.id) ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                          borderRadius: '999px',
-                          padding: '0.375rem 0.75rem',
-                          transition: 'all 0.2s ease',
-                          color: selectedMuscles.includes(muscle.id) ? '#C9A75A' : '#F5F1EA',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {muscle.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Quick Select Buttons */}
-                <div className="flex flex-wrap gap-2" style={{ marginTop: '0.75rem' }}>
-                  <button
-                    onClick={() => setSelectedMuscles(['chest', 'shoulders', 'triceps'])}
-                    style={{
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      border: '1px solid rgba(201, 167, 90, 0.3)',
-                      borderRadius: '0.5rem',
-                      padding: '0.375rem 0.75rem',
-                      color: '#C9A75A',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Push
-                  </button>
-                  <button
-                    onClick={() => setSelectedMuscles(['back', 'biceps', 'traps'])}
-                    style={{
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      border: '1px solid rgba(201, 167, 90, 0.3)',
-                      borderRadius: '0.5rem',
-                      padding: '0.375rem 0.75rem',
-                      color: '#C9A75A',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Pull
-                  </button>
-                  <button
-                    onClick={() => setSelectedMuscles(['quads', 'hamstrings', 'glutes', 'calves'])}
-                    style={{
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      border: '1px solid rgba(201, 167, 90, 0.3)',
-                      borderRadius: '0.5rem',
-                      padding: '0.375rem 0.75rem',
-                      color: '#C9A75A',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Legs
-                  </button>
-                  <button
-                    onClick={() => setSelectedMuscles(muscleGroups.map(m => m.id))}
-                    style={{
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      border: '1px solid rgba(201, 167, 90, 0.3)',
-                      borderRadius: '0.5rem',
-                      padding: '0.375rem 0.75rem',
-                      color: '#C9A75A',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Full Body
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Duration Selector */}
-            <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-              <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                How long do you have?
-              </h2>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="15"
-                  max="90"
-                  step="15"
-                  value={duration}
-                  onChange={e => setDuration(Number(e.target.value))}
-                  style={{
-                    flex: 1,
-                    accentColor: '#C9A75A',
-                    height: '4px',
-                  }}
-                />
-                <span style={{ color: '#F5F1EA', fontSize: '1.25rem', fontWeight: 600, minWidth: '80px', textAlign: 'right' }}>
-                  {duration} min
-                </span>
-              </div>
-              <div className="flex justify-between mt-2" style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
-                <span>Quick</span>
-                <span>Full session</span>
-              </div>
-            </div>
-
-            {/* Workout Style Selector - Only show in structured mode */}
-            {!freeformMode && (
-              <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.35s' }}>
-                <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Workout Style
-                </h2>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {workoutStyles.map(style => (
-                    <button
-                      key={style.id}
-                      onClick={() => setSelectedWorkoutStyle(style.id)}
-                      className="p-2 rounded-lg transition-all duration-200 text-left"
-                      style={{
-                        background: selectedWorkoutStyle === style.id
-                          ? 'rgba(201, 167, 90, 0.2)'
-                          : 'rgba(245, 241, 234, 0.05)',
-                        border: selectedWorkoutStyle === style.id
-                          ? '1px solid #C9A75A'
-                          : '1px solid rgba(245, 241, 234, 0.1)',
-                      }}
-                    >
-                      <div style={{ color: selectedWorkoutStyle === style.id ? '#C9A75A' : '#F5F1EA', fontSize: '0.875rem', fontWeight: 500 }}>
-                        {style.name}
-                      </div>
-                      <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.7rem', marginTop: '2px' }}>
-                        {style.description}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* AI Freeform Input Toggle */}
-            <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+            {/* Freeform Mode Toggle */}
+            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: freeformMode ? '0.75rem' : 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ fontSize: '1rem' }}>✨</span>
                   <div>
-                    <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                      AI-Powered
+                    <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                      Freeform Mode
                     </h2>
-                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.7rem', margin: 0 }}>
+                    <p style={{ color: colors.textMuted, fontSize: '0.7rem', margin: 0 }}>
                       Describe your ideal workout
                     </p>
                   </div>
@@ -726,7 +557,7 @@ export default function Home() {
                     width: '48px',
                     height: '28px',
                     borderRadius: '14px',
-                    background: freeformMode ? '#C9A75A' : 'rgba(245, 241, 234, 0.2)',
+                    background: freeformMode ? colors.accent : 'rgba(245, 241, 234, 0.2)',
                     border: 'none',
                     position: 'relative',
                     cursor: 'pointer',
@@ -741,7 +572,7 @@ export default function Home() {
                       width: '24px',
                       height: '24px',
                       borderRadius: '12px',
-                      background: '#F5F1EA',
+                      background: colors.text,
                       transition: 'left 0.2s ease',
                     }}
                   />
@@ -759,20 +590,229 @@ export default function Home() {
                       minHeight: '80px',
                       padding: '0.75rem',
                       borderRadius: '0.75rem',
-                      background: 'rgba(15, 34, 51, 0.5)',
-                      border: '1px solid rgba(201, 167, 90, 0.2)',
-                      color: '#F5F1EA',
+                      background: colors.inputBg,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.text,
                       fontSize: '0.875rem',
                       resize: 'vertical',
                       fontFamily: 'inherit',
                     }}
                   />
-                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.7rem', marginTop: '0.5rem' }}>
-                    AI will interpret your request while respecting your equipment and any injuries.
+                  <p style={{ color: colors.textMuted, fontSize: '0.7rem', marginTop: '0.5rem' }}>
+                    Your request will be tailored to your equipment and any injuries.
                   </p>
                 </div>
               )}
             </div>
+
+            {/* Duration Selector */}
+            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.25s' }}>
+              <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                How long do you have?
+              </h2>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="15"
+                  max="90"
+                  step="15"
+                  value={duration}
+                  onChange={e => setDuration(Number(e.target.value))}
+                  style={{
+                    flex: 1,
+                    accentColor: colors.accent,
+                    height: '4px',
+                  }}
+                />
+                <span style={{ color: colors.text, fontSize: '1.25rem', fontWeight: 600, minWidth: '80px', textAlign: 'right' }}>
+                  {duration} min
+                </span>
+              </div>
+              <div className="flex justify-between mt-2" style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                <span>Quick</span>
+                <span>Full session</span>
+              </div>
+            </div>
+
+            {/* Muscle Group Selector - Only show in structured mode */}
+            {!freeformMode && (
+              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+                <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  What do you want to hit?
+                </h2>
+
+                {/* Upper Body */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ color: colors.textMuted, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
+                    Upper Body
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {muscleGroups.filter(m => m.category === 'upper').map(muscle => (
+                      <button
+                        key={muscle.id}
+                        onClick={() => toggleMuscle(muscle.id)}
+                        style={{
+                          background: selectedMuscles.includes(muscle.id) ? colors.accentMuted : colors.inputBg,
+                          border: selectedMuscles.includes(muscle.id) ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                          borderRadius: '999px',
+                          padding: '0.375rem 0.75rem',
+                          transition: 'all 0.2s ease',
+                          color: selectedMuscles.includes(muscle.id) ? colors.accent : colors.text,
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {muscle.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Lower Body */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ color: colors.textMuted, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
+                    Lower Body
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {muscleGroups.filter(m => m.category === 'lower').map(muscle => (
+                      <button
+                        key={muscle.id}
+                        onClick={() => toggleMuscle(muscle.id)}
+                        style={{
+                          background: selectedMuscles.includes(muscle.id) ? colors.accentMuted : colors.inputBg,
+                          border: selectedMuscles.includes(muscle.id) ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                          borderRadius: '999px',
+                          padding: '0.375rem 0.75rem',
+                          transition: 'all 0.2s ease',
+                          color: selectedMuscles.includes(muscle.id) ? colors.accent : colors.text,
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {muscle.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Core */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ color: colors.textMuted, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
+                    Core
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {muscleGroups.filter(m => m.category === 'core').map(muscle => (
+                      <button
+                        key={muscle.id}
+                        onClick={() => toggleMuscle(muscle.id)}
+                        style={{
+                          background: selectedMuscles.includes(muscle.id) ? colors.accentMuted : colors.inputBg,
+                          border: selectedMuscles.includes(muscle.id) ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                          borderRadius: '999px',
+                          padding: '0.375rem 0.75rem',
+                          transition: 'all 0.2s ease',
+                          color: selectedMuscles.includes(muscle.id) ? colors.accent : colors.text,
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {muscle.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick Select Buttons */}
+                <div className="flex flex-wrap gap-2" style={{ marginTop: '0.75rem' }}>
+                  <button
+                    onClick={() => setSelectedMuscles(['chest', 'shoulders', 'triceps'])}
+                    style={{
+                      background: colors.inputBg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '0.5rem',
+                      padding: '0.375rem 0.75rem',
+                      color: colors.accent,
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Push
+                  </button>
+                  <button
+                    onClick={() => setSelectedMuscles(['back', 'biceps', 'traps'])}
+                    style={{
+                      background: colors.inputBg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '0.5rem',
+                      padding: '0.375rem 0.75rem',
+                      color: colors.accent,
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Pull
+                  </button>
+                  <button
+                    onClick={() => setSelectedMuscles(['quads', 'hamstrings', 'glutes', 'calves'])}
+                    style={{
+                      background: colors.inputBg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '0.5rem',
+                      padding: '0.375rem 0.75rem',
+                      color: colors.accent,
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Legs
+                  </button>
+                  <button
+                    onClick={() => setSelectedMuscles(muscleGroups.map(m => m.id))}
+                    style={{
+                      background: colors.inputBg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '0.5rem',
+                      padding: '0.375rem 0.75rem',
+                      color: colors.accent,
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Full Body
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Workout Style Selector - Only show in structured mode */}
+            {!freeformMode && (
+              <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.35s' }}>
+                <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Workout Style
+                </h2>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {workoutStyles.map(style => (
+                    <button
+                      key={style.id}
+                      onClick={() => setSelectedWorkoutStyle(style.id)}
+                      className="p-2 rounded-lg transition-all duration-200 text-left"
+                      style={{
+                        background: selectedWorkoutStyle === style.id
+                          ? colors.accentMuted
+                          : colors.inputBg,
+                        border: selectedWorkoutStyle === style.id
+                          ? `1px solid ${colors.accent}`
+                          : `1px solid ${colors.borderSubtle}`,
+                      }}
+                    >
+                      <div style={{ color: selectedWorkoutStyle === style.id ? colors.accent : colors.text, fontSize: '0.875rem', fontWeight: 500 }}>
+                        {style.name}
+                      </div>
+                      <div style={{ color: colors.textMuted, fontSize: '0.7rem', marginTop: '2px' }}>
+                        {style.description}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (
@@ -1008,7 +1048,7 @@ export default function Home() {
                           </span>
                         ))}
                         {/* Rehab indicator */}
-                        {exercise.rehabFor?.length > 0 && (
+                        {exercise.rehabFor && exercise.rehabFor.length > 0 && (
                           <span
                             style={{
                               background: 'rgba(34, 197, 94, 0.15)',
@@ -1121,7 +1161,10 @@ export default function Home() {
         onClose={() => setShowSettings(false)}
         onRestartOnboarding={() => setShowOnboarding(true)}
       />
-      <GymManager isOpen={showGymManager} onClose={() => setShowGymManager(false)} />
+      <GymManager isOpen={showGymManager} onClose={() => {
+        setShowGymManager(false);
+        refetchGymProfiles();
+      }} />
 
       {/* Debug Modal */}
       {showDebug && debugInfo && (

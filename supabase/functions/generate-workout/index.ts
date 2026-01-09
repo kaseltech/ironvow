@@ -125,6 +125,213 @@ type WorkoutStyle = 'traditional' | 'strength' | 'hiit' | 'circuit' | 'wod' | 'c
 // Fitness goal affects programming (from user profile)
 type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
 
+// =============================================================================
+// RX WEIGHT SUGGESTION SYSTEM
+// =============================================================================
+
+// User context for weight calculations
+interface UserWeightContext {
+  gender: 'male' | 'female' | 'other' | null;
+  bodyWeightLbs: number | null;
+  experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+}
+
+// RX weights by exercise category - values in lbs for intermediate male
+// These get adjusted based on gender and experience level
+const RX_WEIGHTS: Record<string, { male: number; female: number; isBodyweightPercent?: boolean }> = {
+  // Major barbell compounds - body weight percentages
+  'barbell-squat': { male: 0.75, female: 0.5, isBodyweightPercent: true },
+  'barbell-back-squat': { male: 0.75, female: 0.5, isBodyweightPercent: true },
+  'barbell-front-squat': { male: 0.6, female: 0.4, isBodyweightPercent: true },
+  'barbell-deadlift': { male: 0.85, female: 0.55, isBodyweightPercent: true },
+  'conventional-deadlift': { male: 0.85, female: 0.55, isBodyweightPercent: true },
+  'sumo-deadlift': { male: 0.85, female: 0.55, isBodyweightPercent: true },
+  'barbell-bench-press': { male: 0.65, female: 0.35, isBodyweightPercent: true },
+  'barbell-overhead-press': { male: 0.45, female: 0.25, isBodyweightPercent: true },
+  'barbell-row': { male: 0.55, female: 0.35, isBodyweightPercent: true },
+  'bent-over-row': { male: 0.55, female: 0.35, isBodyweightPercent: true },
+  'pendlay-row': { male: 0.55, female: 0.35, isBodyweightPercent: true },
+
+  // Barbell compounds - fixed weights
+  'barbell-curl': { male: 65, female: 35 },
+  'barbell-shrug': { male: 135, female: 75 },
+  'romanian-deadlift': { male: 135, female: 75 },
+  'barbell-hip-thrust': { male: 135, female: 95 },
+  'barbell-lunge': { male: 95, female: 55 },
+
+  // Dumbbell exercises - per dumbbell
+  'dumbbell-bench-press': { male: 50, female: 25 },
+  'dumbbell-shoulder-press': { male: 40, female: 20 },
+  'dumbbell-row': { male: 50, female: 25 },
+  'dumbbell-curl': { male: 25, female: 12 },
+  'hammer-curl': { male: 25, female: 12 },
+  'dumbbell-lateral-raise': { male: 15, female: 8 },
+  'dumbbell-front-raise': { male: 15, female: 8 },
+  'dumbbell-fly': { male: 30, female: 15 },
+  'dumbbell-tricep-extension': { male: 25, female: 12 },
+  'dumbbell-goblet-squat': { male: 45, female: 25 },
+  'dumbbell-lunge': { male: 30, female: 15 },
+  'dumbbell-romanian-deadlift': { male: 45, female: 25 },
+  'dumbbell-shrug': { male: 60, female: 30 },
+
+  // Kettlebell exercises
+  'kettlebell-swing': { male: 53, female: 35 },
+  'kettlebell-goblet-squat': { male: 44, female: 26 },
+  'kettlebell-clean': { male: 44, female: 26 },
+  'kettlebell-snatch': { male: 44, female: 26 },
+  'kettlebell-turkish-getup': { male: 35, female: 18 },
+
+  // Cable exercises
+  'cable-fly': { male: 30, female: 15 },
+  'cable-crossover': { male: 30, female: 15 },
+  'tricep-pushdown': { male: 50, female: 25 },
+  'cable-curl': { male: 40, female: 20 },
+  'face-pull': { male: 40, female: 20 },
+  'lat-pulldown': { male: 100, female: 55 },
+  'cable-row': { male: 80, female: 45 },
+  'seated-cable-row': { male: 80, female: 45 },
+
+  // Machine exercises
+  'leg-press': { male: 270, female: 160 },
+  'leg-extension': { male: 90, female: 50 },
+  'leg-curl': { male: 70, female: 40 },
+  'chest-press-machine': { male: 100, female: 50 },
+  'shoulder-press-machine': { male: 70, female: 35 },
+  'pec-deck': { male: 80, female: 40 },
+  'hack-squat': { male: 180, female: 100 },
+
+  // Smith machine
+  'smith-machine-squat': { male: 135, female: 75 },
+  'smith-machine-bench': { male: 115, female: 55 },
+
+  // EZ bar
+  'ez-bar-curl': { male: 55, female: 30 },
+  'ez-bar-skull-crusher': { male: 45, female: 25 },
+  'ez-bar-preacher-curl': { male: 45, female: 25 },
+
+  // Bodyweight exercises - use 0 to indicate bodyweight
+  'pull-up': { male: 0, female: 0 },
+  'chin-up': { male: 0, female: 0 },
+  'push-up': { male: 0, female: 0 },
+  'dip': { male: 0, female: 0 },
+  'bodyweight-squat': { male: 0, female: 0 },
+  'lunge': { male: 0, female: 0 },
+  'plank': { male: 0, female: 0 },
+  'burpee': { male: 0, female: 0 },
+};
+
+// Experience level multipliers
+const EXPERIENCE_MULTIPLIERS = {
+  beginner: 0.6,
+  intermediate: 1.0,
+  advanced: 1.3,
+};
+
+// Calculate suggested weight for an exercise
+function calculateSuggestedWeight(
+  exercise: any,
+  userContext: UserWeightContext
+): number | null {
+  const slug = exercise.slug?.toLowerCase() || '';
+  const name = exercise.name?.toLowerCase() || '';
+
+  // Try to find RX weight by slug first, then by partial name match
+  let rxWeight = RX_WEIGHTS[slug];
+
+  if (!rxWeight) {
+    // Try matching by keywords in name
+    for (const [key, value] of Object.entries(RX_WEIGHTS)) {
+      const keyWords = key.split('-');
+      if (keyWords.every(word => name.includes(word) || slug.includes(word))) {
+        rxWeight = value;
+        break;
+      }
+    }
+  }
+
+  // If still no match, estimate based on exercise characteristics
+  if (!rxWeight) {
+    return estimateWeightByCategory(exercise, userContext);
+  }
+
+  // Determine base weight
+  const isMale = userContext.gender === 'male' || userContext.gender === null;
+  let baseWeight: number;
+
+  if (rxWeight.isBodyweightPercent && userContext.bodyWeightLbs) {
+    // Calculate as percentage of body weight
+    const percent = isMale ? rxWeight.male : rxWeight.female;
+    baseWeight = Math.round(userContext.bodyWeightLbs * percent);
+  } else {
+    // Use fixed weight
+    baseWeight = isMale ? rxWeight.male : rxWeight.female;
+  }
+
+  // If bodyweight exercise (0), return null to indicate no weight needed
+  if (baseWeight === 0) {
+    return null;
+  }
+
+  // Apply experience multiplier
+  const multiplier = EXPERIENCE_MULTIPLIERS[userContext.experienceLevel] || 1.0;
+  let suggestedWeight = Math.round(baseWeight * multiplier);
+
+  // Round to nearest 5 lbs for convenience
+  suggestedWeight = Math.round(suggestedWeight / 5) * 5;
+
+  // Ensure minimum weight
+  return Math.max(suggestedWeight, 5);
+}
+
+// Estimate weight based on exercise category when no specific RX exists
+function estimateWeightByCategory(
+  exercise: any,
+  userContext: UserWeightContext
+): number | null {
+  const name = exercise.name?.toLowerCase() || '';
+  const equipment = exercise.equipment_required || [];
+  const isCompound = exercise.is_compound;
+  const isMale = userContext.gender === 'male' || userContext.gender === null;
+
+  // Bodyweight exercises
+  if (equipment.length === 0 || equipment.includes('bodyweight') || equipment.includes('none')) {
+    if (name.includes('pull-up') || name.includes('push-up') || name.includes('dip') ||
+        name.includes('plank') || name.includes('crunch') || name.includes('squat') ||
+        name.includes('lunge') || name.includes('burpee')) {
+      return null; // Bodyweight
+    }
+  }
+
+  // Estimate based on equipment type
+  let baseWeight: number;
+
+  if (equipment.includes('barbell')) {
+    baseWeight = isCompound ? (isMale ? 95 : 55) : (isMale ? 55 : 35);
+  } else if (equipment.includes('dumbbell') || equipment.includes('dumbbells')) {
+    baseWeight = isCompound ? (isMale ? 35 : 15) : (isMale ? 20 : 10);
+  } else if (equipment.includes('kettlebell')) {
+    baseWeight = isMale ? 35 : 18;
+  } else if (equipment.includes('cable')) {
+    baseWeight = isMale ? 40 : 20;
+  } else if (equipment.includes('machine')) {
+    baseWeight = isCompound ? (isMale ? 100 : 50) : (isMale ? 60 : 30);
+  } else if (equipment.includes('ez-bar') || equipment.includes('ez bar')) {
+    baseWeight = isMale ? 45 : 25;
+  } else {
+    // Default for unknown equipment
+    return null;
+  }
+
+  // Apply experience multiplier
+  const multiplier = EXPERIENCE_MULTIPLIERS[userContext.experienceLevel] || 1.0;
+  let suggestedWeight = Math.round(baseWeight * multiplier);
+
+  // Round to nearest 5
+  suggestedWeight = Math.round(suggestedWeight / 5) * 5;
+
+  return Math.max(suggestedWeight, 5);
+}
+
 interface WorkoutRequest {
   userId: string;
   location: 'gym' | 'home' | 'outdoor';
@@ -193,18 +400,48 @@ serve(async (req) => {
 
     const startTime = Date.now();
 
-    // Fetch user profile to get fitness_goal
+    // Fetch user profile to get fitness_goal, gender, and body weight
     let fitnessGoal: FitnessGoal = 'general';
+    let userWeightContext: UserWeightContext = {
+      gender: null,
+      bodyWeightLbs: null,
+      experienceLevel: experienceLevel as 'beginner' | 'intermediate' | 'advanced',
+    };
+
     if (userId) {
+      // Fetch profile for gender and fitness goal
       const { data: profile } = await supabase
         .from('profiles')
-        .select('fitness_goal')
+        .select('fitness_goal, gender')
         .eq('user_id', userId)
         .single();
+
       if (profile?.fitness_goal) {
         fitnessGoal = profile.fitness_goal as FitnessGoal;
       }
+      if (profile?.gender) {
+        userWeightContext.gender = profile.gender as 'male' | 'female' | 'other';
+      }
+
+      // Fetch most recent body weight from weight_logs
+      const { data: weightLog } = await supabase
+        .from('weight_logs')
+        .select('weight')
+        .eq('user_id', userId)
+        .order('logged_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (weightLog?.weight) {
+        userWeightContext.bodyWeightLbs = weightLog.weight;
+      }
     }
+
+    console.log('User weight context:', {
+      gender: userWeightContext.gender,
+      bodyWeight: userWeightContext.bodyWeightLbs,
+      experience: userWeightContext.experienceLevel,
+    });
 
     // Map broad muscle groups to specific muscles in database
     const muscleMapping: Record<string, string[]> = {
@@ -337,7 +574,8 @@ serve(async (req) => {
         location,
         injuries,
         allEquipment,
-        freeformPrompt   // NEW: Pass freeform prompt if provided
+        freeformPrompt,  // NEW: Pass freeform prompt if provided
+        userWeightContext // NEW: Pass user context for weight suggestions
       );
       workout = result.workout;
       aiResponse = result.aiResponse;
@@ -347,7 +585,8 @@ serve(async (req) => {
         targetMuscles,
         duration,
         experienceLevel,
-        workoutStyle
+        workoutStyle,
+        userWeightContext // NEW: Pass user context for weight suggestions
       );
     }
 
@@ -466,7 +705,8 @@ async function generateWithAI(
   location: string,
   injuries?: { bodyPart: string; movementsToAvoid: string[] }[],
   equipment?: string[],
-  freeformPrompt?: string
+  freeformPrompt?: string,
+  userWeightContext?: UserWeightContext
 ): Promise<AIGenerationResult> {
   // Build workout style context
   const workoutStyleContexts: Record<WorkoutStyle, string> = {
@@ -787,11 +1027,18 @@ Return ONLY valid JSON:
     if (match) {
       // Found a match - use the database exercise ID and muscle data
       console.log(`✓ Matched "${aiExercise.name}" → "${match.exercise.name}" (score: ${match.score.toFixed(2)})`);
+
+      // Calculate suggested weight using RX system
+      const suggestedWeight = userWeightContext
+        ? calculateSuggestedWeight(match.exercise, userWeightContext)
+        : null;
+
       matchedExercises.push({
         exerciseId: match.exercise.id,
         name: match.exercise.name, // Use DB name for consistency
         sets: aiExercise.sets,
         reps: String(aiExercise.reps),
+        weight: suggestedWeight ? String(suggestedWeight) : undefined,
         restSeconds: aiExercise.restSeconds,
         notes: aiExercise.notes,
         primaryMuscles: match.exercise.primary_muscles || [],
@@ -875,7 +1122,8 @@ function generateRuleBased(
   targetMuscles: string[],
   duration: number,
   experienceLevel: string,
-  workoutStyle: WorkoutStyle = 'traditional'
+  workoutStyle: WorkoutStyle = 'traditional',
+  userWeightContext?: UserWeightContext
 ): GeneratedWorkout {
   // Determine number of exercises based on duration and style
   let exerciseCount = Math.min(Math.floor(duration / 8), 8);
@@ -983,11 +1231,18 @@ function generateRuleBased(
     targetMuscles,
     exercises: selectedExercises.map(ex => {
       const { sets, reps, rest } = getSetsReps(ex.is_compound, ex.movement_pattern);
+
+      // Calculate suggested weight using RX system
+      const suggestedWeight = userWeightContext
+        ? calculateSuggestedWeight(ex, userWeightContext)
+        : null;
+
       return {
         exerciseId: ex.id,
         name: ex.name,
         sets,
         reps,
+        weight: suggestedWeight ? String(suggestedWeight) : undefined,
         restSeconds: rest,
         primaryMuscles: ex.primary_muscles || [],
         secondaryMuscles: ex.secondary_muscles || [],

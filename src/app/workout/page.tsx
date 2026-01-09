@@ -28,12 +28,15 @@ function convertGeneratedWorkout(generated: GeneratedWorkout): WorkoutData {
       const repsStr = ex.reps.split('-')[0].replace(/[^0-9]/g, '');
       const targetReps = parseInt(repsStr) || 10;
 
+      // Parse suggested weight from RX system (could be "135" or undefined)
+      const suggestedWeight = ex.weight ? parseInt(ex.weight) || 0 : 0;
+
       // Create sets array
       const sets: { target_reps: number; target_weight: number; type: 'warmup' | 'working' }[] = [];
       for (let i = 0; i < ex.sets; i++) {
         sets.push({
           target_reps: targetReps,
-          target_weight: 0, // User will adjust
+          target_weight: suggestedWeight, // Use RX suggested weight
           type: 'working',
         });
       }

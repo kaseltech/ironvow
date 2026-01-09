@@ -156,6 +156,41 @@
 
 ## Recent Development (January 2026)
 
+### Session 8 - Themes, UI Refresh & RX Weights (v1.4.0 → v1.4.1)
+
+**RX Weight System (v1.4.1):**
+- Smart starting weights based on experience level, gender, and body weight
+- Compound lifts (squat, deadlift, bench) use body weight percentages
+- Equipment-specific weights: barbell, dumbbell, kettlebell, cable, machine
+- Experience multipliers: beginner (0.6x), intermediate (1.0x), advanced (1.3x)
+- Gender-aware: different baselines for male/female users
+- Bodyweight exercises correctly show 0 (no weight needed)
+
+**Color Themes (v1.4.0):**
+- 8 color themes added: Navy, Charcoal, Midnight, Forest, Slate, Plum, Coffee, Ocean
+- Theme persistence via Capacitor Preferences (iOS) and localStorage (web)
+- Theme context system (`ThemeContext.tsx`) provides colors throughout app
+- All themes use gold accent color for brand consistency
+
+**UI Changes:**
+- Settings icon changed to traditional SVG gear (matches YearVow)
+- Added logout button next to settings in header
+- Equipment editor now opens as full-screen modal (was cramped inside Settings)
+- Reordered workout builder: Freeform Mode → Duration → Muscle Groups → Workout Style
+- Removed AI slogans ("AI training partner", etc.) for neutral language
+- Hero text now: "Let's build your personalized workout"
+- "AI-Powered" renamed to "Freeform Mode"
+
+**Bug Fixes:**
+- Gym profile selection now properly refreshes when switching gyms
+- Fixed equipment modal `toggleEquipment` missing location parameter
+- Fixed OAuth redirect URL for native iOS apps (custom URL scheme)
+
+**iOS OAuth:**
+- Added custom URL scheme `com.ironvow.app` to Info.plist
+- Deep link handler in AuthContext catches OAuth callbacks
+- User must add `com.ironvow.app://auth/callback` to Supabase dashboard
+
 ### Session 7 - Movement Patterns & Rehab
 
 **Movement Pattern System:**
@@ -189,4 +224,4 @@
 
 ---
 
-*Last updated: January 8, 2026*
+*Last updated: January 9, 2026*

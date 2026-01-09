@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme, COLOR_THEMES, ColorTheme } from '@/context/ThemeContext';
 import { useProfile, useEquipment } from '@/hooks/useSupabase';
 import { Changelog } from './Changelog';
 
@@ -15,6 +17,7 @@ interface SettingsProps {
 export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps) {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { colorTheme, setColorTheme, colors } = useTheme();
   const { profile, updateProfile } = useProfile();
   const { allEquipment, userEquipment, toggleEquipment, hasEquipment } = useEquipment();
 
@@ -229,290 +232,9 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
 
         {/* Content */}
         <div style={{ padding: '1.5rem' }}>
-          {showEquipmentEditor ? (
-            /* Equipment Editor View */
-            <>
-              <button
-                onClick={() => {
-                  setShowEquipmentEditor(false);
-                  setEquipmentSearch('');
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#C9A75A',
-                  fontSize: '0.875rem',
-                  marginBottom: '1rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                }}
-              >
-                ← Back to Settings
-              </button>
-
-              {/* Location toggle */}
-              <div className="flex gap-2 mb-4">
-                {(['home', 'gym'] as const).map(loc => (
-                  <button
-                    key={loc}
-                    onClick={() => setEquipmentLocation(loc)}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      borderRadius: '0.5rem',
-                      background: equipmentLocation === loc ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
-                      border: equipmentLocation === loc ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                      color: equipmentLocation === loc ? '#C9A75A' : 'rgba(245, 241, 234, 0.5)',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {loc === 'gym' ? '🏋️ Gym' : '🏠 Home'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Search */}
-              <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
-                <input
-                  type="text"
-                  placeholder="Search equipment (e.g., bench, cable)..."
-                  value={equipmentSearch}
-                  onChange={(e) => setEquipmentSearch(e.target.value)}
-                  autoComplete="off"
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem 2rem 0.5rem 0.75rem',
-                    background: 'rgba(15, 34, 51, 0.8)',
-                    border: `1px solid ${equipmentSearch ? '#C9A75A' : 'rgba(201, 167, 90, 0.2)'}`,
-                    borderRadius: '0.5rem',
-                    color: '#F5F1EA',
-                    fontSize: '0.875rem',
-                  }}
-                />
-                {equipmentSearch && (
-                  <button
-                    onClick={() => setEquipmentSearch('')}
-                    style={{
-                      position: 'absolute',
-                      right: '0.5rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'rgba(201, 167, 90, 0.3)',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '18px',
-                      height: '18px',
-                      color: '#F5F1EA',
-                      cursor: 'pointer',
-                      fontSize: '0.7rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-
-              {/* Equipment list */}
-              <div style={{ maxHeight: '250px', overflowY: 'auto', marginBottom: '1rem' }}>
-                {/* Search results (flat list) */}
-                {isSearching && (
-                  filteredEquipment.length === 0 ? (
-                    <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', textAlign: 'center', padding: '1rem' }}>
-                      No equipment found
-                    </div>
-                  ) : (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.65rem', color: 'rgba(245, 241, 234, 0.4)', marginBottom: '0.5rem' }}>
-                        {filteredEquipment.length} results
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {filteredEquipment.map(eq => {
-                          const selected = hasEquipment(eq.id, equipmentLocation);
-                          const matchIdx = eq.name.toLowerCase().indexOf(searchTerm);
-                          return (
-                            <button
-                              key={eq.id}
-                              onClick={() => toggleEquipment(eq.id, equipmentLocation)}
-                              style={{
-                                padding: '0.375rem 0.625rem',
-                                borderRadius: '2rem',
-                                background: selected ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
-                                border: selected ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                                color: selected ? '#C9A75A' : 'rgba(245, 241, 234, 0.5)',
-                                fontSize: '0.75rem',
-                              }}
-                            >
-                              {matchIdx >= 0 ? (
-                                <>
-                                  {eq.name.slice(0, matchIdx)}
-                                  <span style={{ fontWeight: 700, textDecoration: 'underline' }}>
-                                    {eq.name.slice(matchIdx, matchIdx + searchTerm.length)}
-                                  </span>
-                                  {eq.name.slice(matchIdx + searchTerm.length)}
-                                </>
-                              ) : eq.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )
-                )}
-
-                {/* Common Equipment (when not searching) */}
-                {!isSearching && (
-                  <div style={{ marginBottom: '1rem' }}>
-                    <h4 style={{ color: '#C9A75A', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                      Common Equipment
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {commonEquipment.map(eq => {
-                        const selected = hasEquipment(eq.id, equipmentLocation);
-                        return (
-                          <button
-                            key={eq.id}
-                            onClick={() => toggleEquipment(eq.id, equipmentLocation)}
-                            style={{
-                              padding: '0.375rem 0.625rem',
-                              borderRadius: '2rem',
-                              background: selected ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
-                              border: selected ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.3)',
-                              color: selected ? '#C9A75A' : 'rgba(245, 241, 234, 0.6)',
-                              fontSize: '0.75rem',
-                            }}
-                          >
-                            {eq.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Categorized list (when not searching) */}
-                {!isSearching && (
-                  <div style={{ borderTop: '1px solid rgba(201, 167, 90, 0.1)', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
-                    <div style={{ fontSize: '0.6rem', color: 'rgba(245, 241, 234, 0.4)', marginBottom: '0.75rem' }}>
-                      All Equipment
-                    </div>
-                    {sortedCategories.map(category => (
-                      <div key={category} style={{ marginBottom: '1rem' }}>
-                        <h4 style={{ color: '#C9A75A', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>
-                          {category.replace('_', ' ')}
-                        </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {groupedEquipment[category].map(eq => {
-                            const selected = hasEquipment(eq.id, equipmentLocation);
-                            return (
-                              <button
-                                key={eq.id}
-                                onClick={() => toggleEquipment(eq.id, equipmentLocation)}
-                                style={{
-                                  padding: '0.25rem 0.5rem',
-                                  borderRadius: '2rem',
-                                  background: selected ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
-                                  border: selected ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.15)',
-                                  color: selected ? '#C9A75A' : 'rgba(245, 241, 234, 0.4)',
-                                  fontSize: '0.7rem',
-                                }}
-                              >
-                                {eq.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Custom Equipment */}
-              <div style={{ marginBottom: '1rem' }}>
-                <h4 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                  Custom Equipment
-                </h4>
-                {customEquipment.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {customEquipment.map(item => (
-                      <span
-                        key={item}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '2rem',
-                          background: 'rgba(74, 222, 128, 0.15)',
-                          border: '1px solid rgba(74, 222, 128, 0.3)',
-                          color: '#4ADE80',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {item}
-                        <button
-                          onClick={() => removeCustomEquipment(item)}
-                          style={{ background: 'none', border: 'none', color: 'rgba(74, 222, 128, 0.7)', fontSize: '0.875rem', lineHeight: 1, cursor: 'pointer', padding: 0 }}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={customInput}
-                    onChange={e => setCustomInput(e.target.value)}
-                    onKeyDown={handleCustomKeyDown}
-                    placeholder="Add custom equipment..."
-                    style={{
-                      flex: 1,
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '0.5rem',
-                      background: 'rgba(15, 34, 51, 0.8)',
-                      border: '1px solid rgba(201, 167, 90, 0.2)',
-                      color: '#F5F1EA',
-                      fontSize: '0.875rem',
-                    }}
-                  />
-                  <button
-                    onClick={addCustomEquipment}
-                    disabled={!customInput.trim()}
-                    style={{
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '0.5rem',
-                      background: customInput.trim() ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
-                      border: '1px solid rgba(201, 167, 90, 0.3)',
-                      color: customInput.trim() ? '#C9A75A' : 'rgba(201, 167, 90, 0.4)',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Add
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={saveEquipment}
-                disabled={saving}
-                className="btn-primary w-full"
-              >
-                {saving ? 'Saving...' : 'Save Equipment'}
-              </button>
-            </>
-          ) : (
-            /* Main Settings View */
-            <>
-              {/* Profile Section */}
+          {/* Main Settings View */}
+          <>
+            {/* Profile Section */}
               <div style={{ marginBottom: '2rem' }}>
                 <h3 style={{
                   fontSize: '0.75rem',
@@ -611,6 +333,58 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                 </div>
               </div>
 
+              {/* Theme Section */}
+              <div style={{ marginBottom: '2rem' }}>
+                <h3 style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'rgba(245, 241, 234, 0.5)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  margin: '0 0 1rem',
+                }}>
+                  Theme
+                </h3>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(4, 1fr)',
+                  gap: '0.5rem',
+                }}>
+                  {(Object.keys(COLOR_THEMES) as ColorTheme[]).map(theme => (
+                    <button
+                      key={theme}
+                      onClick={() => setColorTheme(theme)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        padding: '0.625rem 0.375rem',
+                        borderRadius: '0.5rem',
+                        border: colorTheme === theme ? '2px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                        backgroundColor: colorTheme === theme ? 'rgba(201, 167, 90, 0.15)' : 'rgba(15, 34, 51, 0.5)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        backgroundColor: COLOR_THEMES[theme].preview,
+                        border: '2px solid rgba(255, 255, 255, 0.2)',
+                      }} />
+                      <span style={{
+                        fontSize: '0.625rem',
+                        color: colorTheme === theme ? '#C9A75A' : 'rgba(245, 241, 234, 0.7)',
+                        fontWeight: colorTheme === theme ? 600 : 400,
+                      }}>
+                        {COLOR_THEMES[theme].name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* About Section */}
               <div style={{ marginBottom: '2rem' }}>
                 <h3 style={{
@@ -636,7 +410,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                       IronVow
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
-                      Version 1.3.0
+                      Version 1.4.1
                     </div>
                   </div>
                   <button
@@ -696,11 +470,358 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                 </button>
               </div>
             </>
-          )}
         </div>
 
         {/* Changelog Modal */}
         <Changelog isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
+
+        {/* Equipment Editor Modal - Full Screen Portal */}
+        {showEquipmentEditor && typeof document !== 'undefined' && createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: '#0F2233',
+              zIndex: 100,
+              display: 'flex',
+              flexDirection: 'column',
+              paddingTop: 'env(safe-area-inset-top)',
+              paddingBottom: 'env(safe-area-inset-bottom)',
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '1rem 1.5rem',
+              borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
+              backgroundColor: '#1A3550',
+            }}>
+              <button
+                onClick={() => setShowEquipmentEditor(false)}
+                style={{
+                  padding: '0.5rem',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#C9A75A',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+              <h2 style={{
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: '#F5F1EA',
+                margin: 0,
+              }}>
+                My Equipment
+              </h2>
+              <div style={{ width: '60px' }} />
+            </div>
+
+            {/* Search */}
+            <div style={{ padding: '1rem 1.5rem', backgroundColor: '#1A3550' }}>
+              <input
+                type="text"
+                placeholder="Search equipment..."
+                value={equipmentSearch}
+                onChange={(e) => setEquipmentSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid rgba(201, 167, 90, 0.2)',
+                  backgroundColor: 'rgba(15, 34, 51, 0.5)',
+                  color: '#F5F1EA',
+                  fontSize: '1rem',
+                }}
+              />
+            </div>
+
+            {/* Equipment List */}
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              padding: '1rem 1.5rem',
+            }}>
+              {/* Selected count */}
+              <div style={{
+                marginBottom: '1rem',
+                padding: '0.75rem',
+                backgroundColor: 'rgba(201, 167, 90, 0.1)',
+                borderRadius: '0.5rem',
+                textAlign: 'center',
+              }}>
+                <span style={{ color: '#C9A75A', fontWeight: 600 }}>{userEquipment.length}</span>
+                <span style={{ color: 'rgba(245, 241, 234, 0.7)' }}> items selected</span>
+              </div>
+
+              {isSearching ? (
+                /* Search Results */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {filteredEquipment.map(eq => (
+                    <button
+                      key={eq.id}
+                      onClick={() => toggleEquipment(eq.id, 'home')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.875rem 1rem',
+                        borderRadius: '0.5rem',
+                        border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                        backgroundColor: hasEquipment(eq.id) ? 'rgba(201, 167, 90, 0.1)' : 'rgba(15, 34, 51, 0.5)',
+                        cursor: 'pointer',
+                        width: '100%',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <div style={{
+                        width: '1.5rem',
+                        height: '1.5rem',
+                        borderRadius: '0.25rem',
+                        border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.3)',
+                        backgroundColor: hasEquipment(eq.id) ? '#C9A75A' : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        {hasEquipment(eq.id) && (
+                          <svg style={{ width: '1rem', height: '1rem', color: '#0F2233' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: '#F5F1EA', fontWeight: 500 }}>{eq.name}</div>
+                        {eq.category && (
+                          <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>{eq.category}</div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                  {filteredEquipment.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                      No equipment found
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Grouped by Category */
+                <>
+                  {/* Common Equipment Section */}
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: '#C9A75A',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      margin: '0 0 0.75rem',
+                    }}>
+                      Common Equipment
+                    </h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {commonEquipment.map(eq => (
+                        <button
+                          key={eq.id}
+                          onClick={() => toggleEquipment(eq.id, 'home')}
+                          style={{
+                            padding: '0.5rem 0.875rem',
+                            borderRadius: '999px',
+                            border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                            backgroundColor: hasEquipment(eq.id) ? 'rgba(201, 167, 90, 0.15)' : 'rgba(15, 34, 51, 0.5)',
+                            color: hasEquipment(eq.id) ? '#C9A75A' : '#F5F1EA',
+                            fontSize: '0.875rem',
+                            cursor: 'pointer',
+                            fontWeight: hasEquipment(eq.id) ? 600 : 400,
+                          }}
+                        >
+                          {hasEquipment(eq.id) && '✓ '}{eq.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* All Equipment by Category */}
+                  {sortedCategories.map(category => (
+                    <div key={category} style={{ marginBottom: '1.5rem' }}>
+                      <h3 style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: 'rgba(245, 241, 234, 0.5)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        margin: '0 0 0.75rem',
+                      }}>
+                        {category}
+                      </h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {groupedEquipment[category].map(eq => (
+                          <button
+                            key={eq.id}
+                            onClick={() => toggleEquipment(eq.id, 'home')}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              padding: '0.75rem 1rem',
+                              borderRadius: '0.5rem',
+                              border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                              backgroundColor: hasEquipment(eq.id) ? 'rgba(201, 167, 90, 0.1)' : 'rgba(15, 34, 51, 0.5)',
+                              cursor: 'pointer',
+                              width: '100%',
+                              textAlign: 'left',
+                            }}
+                          >
+                            <div style={{
+                              width: '1.25rem',
+                              height: '1.25rem',
+                              borderRadius: '0.25rem',
+                              border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.3)',
+                              backgroundColor: hasEquipment(eq.id) ? '#C9A75A' : 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}>
+                              {hasEquipment(eq.id) && (
+                                <svg style={{ width: '0.875rem', height: '0.875rem', color: '#0F2233' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <span style={{ color: '#F5F1EA' }}>{eq.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Custom Equipment Section */}
+              <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(201, 167, 90, 0.1)' }}>
+                <h3 style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'rgba(245, 241, 234, 0.5)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  margin: '0 0 0.75rem',
+                }}>
+                  Custom Equipment
+                </h3>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Add custom equipment..."
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    onKeyDown={handleCustomKeyDown}
+                    style={{
+                      flex: 1,
+                      padding: '0.625rem 0.875rem',
+                      borderRadius: '0.5rem',
+                      border: '1px solid rgba(201, 167, 90, 0.2)',
+                      backgroundColor: 'rgba(15, 34, 51, 0.5)',
+                      color: '#F5F1EA',
+                      fontSize: '0.875rem',
+                    }}
+                  />
+                  <button
+                    onClick={addCustomEquipment}
+                    disabled={!customInput.trim()}
+                    style={{
+                      padding: '0.625rem 1rem',
+                      borderRadius: '0.5rem',
+                      border: 'none',
+                      backgroundColor: customInput.trim() ? '#C9A75A' : 'rgba(201, 167, 90, 0.2)',
+                      color: customInput.trim() ? '#0F2233' : 'rgba(245, 241, 234, 0.3)',
+                      fontWeight: 600,
+                      cursor: customInput.trim() ? 'pointer' : 'default',
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+                {customEquipment.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {customEquipment.map(item => (
+                      <span
+                        key={item}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.375rem 0.75rem',
+                          borderRadius: '999px',
+                          backgroundColor: 'rgba(201, 167, 90, 0.15)',
+                          border: '1px solid rgba(201, 167, 90, 0.3)',
+                          color: '#C9A75A',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        {item}
+                        <button
+                          onClick={() => removeCustomEquipment(item)}
+                          style={{
+                            padding: 0,
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'rgba(201, 167, 90, 0.6)',
+                            display: 'flex',
+                          }}
+                        >
+                          <svg style={{ width: '0.875rem', height: '0.875rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div style={{
+              padding: '1rem 1.5rem',
+              backgroundColor: '#1A3550',
+              borderTop: '1px solid rgba(201, 167, 90, 0.1)',
+            }}>
+              <button
+                onClick={saveEquipment}
+                disabled={saving}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  borderRadius: '0.75rem',
+                  border: 'none',
+                  backgroundColor: '#C9A75A',
+                  color: '#0F2233',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: saving ? 'default' : 'pointer',
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
         <style jsx>{`
           @keyframes slideUp {

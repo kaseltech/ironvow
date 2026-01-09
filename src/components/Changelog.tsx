@@ -25,6 +25,32 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.4.1',
+    date: 'January 9, 2026',
+    title: 'Smart Starting Weights',
+    changes: [
+      { type: 'added', description: 'RX weight system - exercises now start with intelligent default weights' },
+      { type: 'added', description: 'Weights based on your experience level, gender, and body weight' },
+      { type: 'added', description: 'Compound lifts use body weight percentages (squats, deadlifts, bench)' },
+      { type: 'improved', description: 'No more starting at 0 lbs - workouts have realistic starting weights' },
+    ],
+  },
+  {
+    version: '1.4.0',
+    date: 'January 9, 2026',
+    title: 'Themes & UI Refresh',
+    changes: [
+      { type: 'added', description: '8 color themes - Navy, Charcoal, Midnight, Forest, Slate, Plum, Coffee, Ocean' },
+      { type: 'added', description: 'Themes persist across sessions on both web and iOS' },
+      { type: 'added', description: 'Logout button in header for quick sign out' },
+      { type: 'changed', description: 'Settings icon now uses traditional gear design' },
+      { type: 'changed', description: 'Reordered workout builder: Freeform toggle and Duration now appear before muscle selection' },
+      { type: 'improved', description: 'UI now uses theme colors throughout the app' },
+      { type: 'improved', description: 'Equipment editor is now a full-screen modal' },
+      { type: 'improved', description: 'Gym profile selection bug fixes - profiles refresh properly' },
+    ],
+  },
+  {
     version: '1.3.0',
     date: 'January 8, 2026',
     title: 'Regenerate & Swap',
