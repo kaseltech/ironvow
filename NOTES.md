@@ -156,6 +156,46 @@
 
 ## Recent Development (January 2026)
 
+### Session 9 - Profile Page, BodyMap & Rehab Fixes (v1.5.0)
+
+**Profile Page - BodyMap Improvements:**
+- Increased BodyMap size from 200px to 450px for better visibility
+- Recalibrated all muscle region click zones based on actual PNG images
+- Fixed hover state bug - now uses React state instead of inline style manipulation
+- Fixed strongest/weakest muscle display to not show same muscle twice
+- Added "No data" message when clicking muscle with no workout history
+  - Shows selected muscle name + prompt to do a workout for that muscle group
+- Front view: 14 clickable regions (traps, shoulders, chest, biceps, forearms, core, obliques, quads, adductors, calves)
+- Back view: 11 clickable regions (traps, shoulders, lats, upper back, lower back, triceps, forearms, glutes, hamstrings, calves)
+
+**Rehab Workout Generation Fix:**
+- Fixed rehab workouts suggesting regular exercises (e.g., Arnold Press) instead of actual rehab exercises
+- Added `rehab_for` filter in Edge Function - only uses exercises with `rehab_for` populated
+- Added same filter in local fallback generation
+- Rehab exercises now properly include: Band Pull-Aparts, Face Pulls, External Rotation, Cat-Cow, Bird Dog, Dead Bug, etc.
+- Deployed updated Edge Function to Supabase
+
+**Logo & Branding:**
+- Created reusable `Logo` component with icon support
+- Logo sizes: sm, md, lg, xl
+- Shows V+dumbbell icon alongside IronVow text
+- Updated login page with logo and "Part of the Vow Suite" link
+
+**Vow Suite Page:**
+- Created `/vow-suite` page showcasing the app family
+- IronVow: AI-powered workout generation (gold accent)
+- YearVow: Resolution tracking (purple accent)
+- Links to respective apps with feature badges
+
+**Files Changed:**
+- `src/components/BodyMap.tsx` - Size, click regions, hover state, no-data display
+- `src/components/Logo.tsx` - Reusable logo component
+- `src/app/profile/page.tsx` - Strongest/weakest muscle logic
+- `src/app/login/page.tsx` - Logo integration, Vow Suite link
+- `src/app/vow-suite/page.tsx` - New page
+- `src/lib/generateWorkout.ts` - Rehab exercise filtering
+- `supabase/functions/generate-workout/index.ts` - Rehab exercise filtering
+
 ### Session 8 - Themes, UI Refresh & RX Weights (v1.4.0 → v1.4.1)
 
 **RX Weight System (v1.4.1):**

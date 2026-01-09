@@ -259,47 +259,63 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
       </div>
 
       {/* Selected Muscle Info */}
-      {selected && (
+      {selectedMuscle && (
         <div
           className="mt-4 p-3"
           style={{
             background: 'rgba(15, 34, 51, 0.5)',
             borderRadius: '0.75rem',
-            border: `2px solid ${getColor(selected.strength)}`,
+            border: selected ? `2px solid ${getColor(selected.strength)}` : '2px solid rgba(201, 167, 90, 0.3)',
           }}
         >
-          <div className="flex items-center justify-between mb-2">
-            <h4 style={{ color: '#F5F1EA', fontWeight: 600 }}>{selected.name}</h4>
-            <span
-              style={{
-                color: getColor(selected.strength),
-                fontSize: '0.75rem',
-                fontWeight: 600,
-              }}
-            >
-              {getLabel(selected.strength)} ({selected.strength}%)
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Weekly Volume</p>
-              <p style={{ color: '#F5F1EA', fontWeight: 500, fontSize: '0.875rem' }}>{selected.volume}</p>
-            </div>
-            <div>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Last Trained</p>
-              <p style={{ color: '#F5F1EA', fontWeight: 500, fontSize: '0.875rem' }}>{selected.lastTrained}</p>
-            </div>
-            <div>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Trend</p>
-              <p style={{
-                color: selected.trend === 'up' ? '#4ADE80' : selected.trend === 'down' ? '#F87171' : '#C9A75A',
-                fontWeight: 500,
-                fontSize: '0.875rem',
-              }}>
-                {selected.trend === 'up' ? '↑ Improving' : selected.trend === 'down' ? '↓ Declining' : '→ Stable'}
+          {selected ? (
+            <>
+              <div className="flex items-center justify-between mb-2">
+                <h4 style={{ color: '#F5F1EA', fontWeight: 600 }}>{selected.name}</h4>
+                <span
+                  style={{
+                    color: getColor(selected.strength),
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {getLabel(selected.strength)} ({selected.strength}%)
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Weekly Volume</p>
+                  <p style={{ color: '#F5F1EA', fontWeight: 500, fontSize: '0.875rem' }}>{selected.volume}</p>
+                </div>
+                <div>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Last Trained</p>
+                  <p style={{ color: '#F5F1EA', fontWeight: 500, fontSize: '0.875rem' }}>{selected.lastTrained}</p>
+                </div>
+                <div>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem' }}>Trend</p>
+                  <p style={{
+                    color: selected.trend === 'up' ? '#4ADE80' : selected.trend === 'down' ? '#F87171' : '#C9A75A',
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                  }}>
+                    {selected.trend === 'up' ? '↑ Improving' : selected.trend === 'down' ? '↓ Declining' : '→ Stable'}
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-2">
+              <h4 style={{ color: '#C9A75A', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+                {selectedMuscle.replace('_', ' ')}
+              </h4>
+              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.8125rem' }}>
+                No workout data yet
+              </p>
+              <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                Do a {selectedMuscle.replace('_', ' ')} workout to start tracking!
               </p>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -198,12 +198,34 @@ export async function generateWorkoutLocal(request: WorkoutRequest): Promise<Gen
     return targetsMuscle && hasEquipment && appropriateDifficulty && !avoidDueToInjury;
   });
 
+  // For rehab/mobility workouts, filter to only include exercises with rehab_for populated
+  let rehabFilteredExercises = filteredExercises;
+  if (workoutStyle === 'rehab' || workoutStyle === 'mobility') {
+    rehabFilteredExercises = filteredExercises.filter(ex =>
+      ex.rehab_for && ex.rehab_for.length > 0
+    );
+    console.log(`[Workout] Rehab/mobility mode: filtered to ${rehabFilteredExercises.length} rehab exercises`);
+
+    // If no rehab exercises found for target muscles, try to get any rehab exercises
+    if (rehabFilteredExercises.length === 0) {
+      rehabFilteredExercises = exercises.filter(ex =>
+        ex.rehab_for && ex.rehab_for.length > 0
+      );
+      console.log(`[Workout] No muscle-specific rehab exercises, using ${rehabFilteredExercises.length} general rehab exercises`);
+    }
+  }
+
+  // Use rehab-filtered exercises for rehab/mobility, otherwise use standard filtered
+  const exercisesToUse = (workoutStyle === 'rehab' || workoutStyle === 'mobility')
+    ? rehabFilteredExercises
+    : filteredExercises;
+
   // Determine exercise count based on duration
   const exerciseCount = Math.min(Math.floor(duration / 8), 8);
 
   // Separate compound and isolation
-  const compounds = filteredExercises.filter(ex => ex.is_compound);
-  const isolations = filteredExercises.filter(ex => !ex.is_compound);
+  const compounds = exercisesToUse.filter(ex => ex.is_compound);
+  const isolations = exercisesToUse.filter(ex => !ex.is_compound);
 
   // Sort by relevance to target muscles
   const sortByRelevance = (list: typeof exercises) => {

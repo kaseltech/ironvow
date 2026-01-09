@@ -552,6 +552,20 @@ serve(async (req) => {
 
     console.log(`Filtered ${exercises.length} exercises to ${availableExercises.length} for location=${location}, muscles=${targetMuscles.join(',')}`);
 
+    // For rehab/mobility workouts, filter to only include exercises with rehab_for populated
+    let exercisePoolForMatching = exercises;
+    if (workoutStyle === 'rehab' || workoutStyle === 'mobility') {
+      exercisePoolForMatching = exercises.filter((ex: any) =>
+        ex.rehab_for && ex.rehab_for.length > 0
+      );
+      console.log(`Rehab/mobility mode: filtered to ${exercisePoolForMatching.length} rehab exercises`);
+
+      // Also filter available exercises for rule-based generation
+      availableExercises = availableExercises.filter((ex: any) =>
+        ex.rehab_for && ex.rehab_for.length > 0
+      );
+    }
+
     // Determine request type for logging
     const requestType = freeformPrompt ? 'freeform' : 'structured';
 
@@ -561,11 +575,11 @@ serve(async (req) => {
     let aiResponse: any = null;
 
     if (anthropicKey) {
-      // Hybrid AI: Pass ALL exercises for fuzzy matching (AI generates freely)
+      // Hybrid AI: Pass exercises for fuzzy matching (filtered for rehab if applicable)
       const result = await generateWithAI(
         anthropicKey,
         supabase,        // For logging unmatched exercises
-        exercises,       // ALL exercises for fuzzy matching
+        exercisePoolForMatching,  // Exercises for fuzzy matching (filtered for rehab/mobility)
         targetMuscles,
         duration,
         experienceLevel,
