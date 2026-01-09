@@ -318,7 +318,7 @@ export default function Home() {
     <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
       <Header onSettingsClick={() => setShowSettings(true)} />
 
-      <main className="p-4 pb-24">
+      <main className="p-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         {!showWorkout ? (
           <>
             {/* Hero Section */}
@@ -1049,10 +1049,11 @@ export default function Home() {
 
       {/* Bottom Nav Mock */}
       <nav
-        className="fixed bottom-0 left-0 right-0 safe-area-bottom"
+        className="fixed bottom-0 left-0 right-0"
         style={{
           background: `linear-gradient(180deg, transparent 0%, ${colors.bg} 20%)`,
           paddingTop: '1.5rem',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         <div

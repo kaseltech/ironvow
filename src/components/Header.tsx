@@ -17,10 +17,12 @@ export function Header({ onSettingsClick, showSettings = true }: HeaderProps) {
 
   return (
     <header
-      className="safe-area-top"
       style={{
         background: `linear-gradient(180deg, ${colors.cardBg} 0%, ${colors.bg} 100%)`,
-        padding: '1rem 1.5rem',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+        paddingLeft: '1.5rem',
+        paddingRight: '1.5rem',
+        paddingBottom: '1rem',
         borderBottom: `1px solid ${colors.borderSubtle}`,
       }}
     >

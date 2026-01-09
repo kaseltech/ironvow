@@ -178,7 +178,7 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      <main className="p-4 pb-24">
+      <main className="p-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         {activeTab === 'body' && (
           <div>
             {/* Imbalance Alert */}
@@ -710,10 +710,11 @@ export default function ProfilePage() {
 
       {/* Bottom Nav */}
       <nav
-        className="fixed bottom-0 left-0 right-0 safe-area-bottom"
+        className="fixed bottom-0 left-0 right-0"
         style={{
           background: colors.cardBg,
           borderTop: `1px solid ${colors.borderSubtle}`,
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         <div className="flex justify-around py-3">

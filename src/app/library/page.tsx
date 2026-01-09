@@ -293,10 +293,12 @@ export default function LibraryPage() {
       {/* Header - different for exercise detail vs list */}
       {selectedExerciseId ? (
         <header
-          className="safe-area-top"
           style={{
             background: colors.cardBg,
-            padding: '1rem 1.5rem',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+            paddingLeft: '1.5rem',
+            paddingRight: '1.5rem',
+            paddingBottom: '1rem',
             borderBottom: `1px solid ${colors.borderSubtle}`,
           }}
         >
@@ -317,7 +319,7 @@ export default function LibraryPage() {
         <Header onSettingsClick={() => setShowSettings(true)} />
       )}
 
-      <main className="p-4 pb-24">
+      <main className="p-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
@@ -485,10 +487,11 @@ export default function LibraryPage() {
 
       {/* Bottom Nav */}
       <nav
-        className="fixed bottom-0 left-0 right-0 safe-area-bottom"
+        className="fixed bottom-0 left-0 right-0"
         style={{
           background: colors.cardBg,
           borderTop: `1px solid ${colors.borderSubtle}`,
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
         <div className="flex justify-around py-3">

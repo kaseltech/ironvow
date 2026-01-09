@@ -394,7 +394,7 @@ export default function RunPage() {
     <AuthGuard>
       <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0F2233' }}>
         {/* Header */}
-        <header className="safe-area-top" style={{ padding: '1rem 1.5rem' }}>
+        <header style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)', paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingBottom: '1rem' }}>
           <div className="flex items-center justify-between">
             <button
               onClick={() => {
@@ -666,7 +666,7 @@ export default function RunPage() {
 
         {/* Bottom controls */}
         {runState !== 'finished' && (
-          <div className="safe-area-bottom p-6">
+          <div style={{ padding: '1.5rem', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}>
             {runState === 'ready' ? (
               <button
                 onClick={startRun}
