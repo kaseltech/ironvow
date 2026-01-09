@@ -284,9 +284,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 <div className="flex items-center gap-3 mt-3">
                   <div className="flex items-center gap-2">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={heightFeet}
-                      onChange={e => setHeightFeet(e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setHeightFeet(val);
+                      }}
                       style={{
                         width: '60px',
                         padding: '0.75rem',
@@ -302,9 +307,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={heightInches}
-                      onChange={e => setHeightInches(e.target.value)}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setHeightInches(val);
+                      }}
                       style={{
                         width: '60px',
                         padding: '0.75rem',
@@ -328,10 +338,15 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 </label>
                 <div className="flex items-center gap-2 mt-3">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*\.?[0-9]*"
                     value={weight}
-                    onChange={e => setWeight(e.target.value)}
-                    placeholder="180"
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setWeight(val);
+                    }}
+                    placeholder=""
                     style={{
                       width: '100px',
                       padding: '0.75rem',
@@ -414,10 +429,15 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 </label>
                 <div className="flex items-center gap-2 mt-3">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*\.?[0-9]*"
                     value={targetWeight}
-                    onChange={e => setTargetWeight(e.target.value)}
-                    placeholder={goalType === 'cut' ? '170' : '190'}
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setTargetWeight(val);
+                    }}
+                    placeholder=""
                     style={{
                       width: '100px',
                       padding: '0.75rem',
