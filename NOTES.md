@@ -187,10 +187,28 @@
 - YearVow: Resolution tracking (purple accent)
 - Links to respective apps with feature badges
 
+**Muscle Statistics Modal (v1.5.1):**
+- Created `MuscleStatsModal` component for detailed muscle stats
+- Shows when tapping any muscle on BodyMap
+- Summary section: 30-day volume, last trained, trend indicator
+- Expandable exercise list showing all exercises targeting that muscle
+- Each exercise shows: name, estimated 1RM, PR weight × reps, date achieved
+- Handles "no data" state with helpful empty state message
+- Uses Changelog modal pattern (blur backdrop, scale animation, ESC to close)
+
+**Precise Muscle Boundaries (v1.5.1):**
+- Completely recalibrated muscle region coordinates
+- Shoulders now separate from chest (previously overlapping)
+- Tighter, non-overlapping click zones for all muscle groups
+- Narrower arm regions (biceps, triceps, forearms)
+- Better defined torso regions (chest vs shoulders vs obliques)
+- Removed inline info panel from BodyMap (replaced by modal)
+
 **Files Changed:**
-- `src/components/BodyMap.tsx` - Size, click regions, hover state, no-data display
+- `src/components/BodyMap.tsx` - Size, click regions, hover state, modal trigger
+- `src/components/MuscleStatsModal.tsx` - New statistics modal component
 - `src/components/Logo.tsx` - Reusable logo component
-- `src/app/profile/page.tsx` - Strongest/weakest muscle logic
+- `src/app/profile/page.tsx` - Modal state, strongest/weakest logic
 - `src/app/login/page.tsx` - Logo integration, Vow Suite link
 - `src/app/vow-suite/page.tsx` - New page
 - `src/lib/generateWorkout.ts` - Rehab exercise filtering
