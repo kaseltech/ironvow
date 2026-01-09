@@ -35,107 +35,86 @@ const getLabel = (strength: number) => {
   return 'Undertrained';
 };
 
-// Expanded muscle region definitions (percentages of image)
-// More granular areas for better interaction
+// Muscle regions calibrated to the actual body images
+// The figure is centered and takes ~60% width, starts at y ~5%
+// Coordinates are percentages of the container
+
 const frontMuscleRegions = [
-  // Neck/Traps
-  { id: 'traps', name: 'Traps', x: 38, y: 12, w: 24, h: 6 },
+  // Traps (neck area)
+  { id: 'traps', name: 'Traps', x: 40, y: 10, w: 20, h: 5 },
 
-  // Shoulders (front delts)
-  { id: 'shoulders', name: 'Front Delts', x: 18, y: 16, w: 12, h: 8 },
-  { id: 'shoulders', name: 'Front Delts', x: 70, y: 16, w: 12, h: 8 },
+  // Shoulders (deltoids) - left and right
+  { id: 'shoulders', name: 'Left Shoulder', x: 26, y: 14, w: 12, h: 9 },
+  { id: 'shoulders', name: 'Right Shoulder', x: 62, y: 14, w: 12, h: 9 },
 
-  // Chest - upper and lower
-  { id: 'chest', name: 'Upper Chest', x: 32, y: 20, w: 36, h: 8 },
-  { id: 'chest', name: 'Lower Chest', x: 30, y: 28, w: 40, h: 8 },
+  // Chest - main pectoral area
+  { id: 'chest', name: 'Left Chest', x: 33, y: 18, w: 15, h: 12 },
+  { id: 'chest', name: 'Right Chest', x: 52, y: 18, w: 15, h: 12 },
 
-  // Biceps
-  { id: 'biceps', name: 'Biceps', x: 14, y: 26, w: 10, h: 12 },
-  { id: 'biceps', name: 'Biceps', x: 76, y: 26, w: 10, h: 12 },
+  // Biceps - left and right
+  { id: 'biceps', name: 'Left Bicep', x: 21, y: 23, w: 8, h: 14 },
+  { id: 'biceps', name: 'Right Bicep', x: 71, y: 23, w: 8, h: 14 },
 
-  // Forearms
-  { id: 'forearms', name: 'Forearms', x: 10, y: 40, w: 10, h: 14 },
-  { id: 'forearms', name: 'Forearms', x: 80, y: 40, w: 10, h: 14 },
+  // Forearms - left and right
+  { id: 'forearms', name: 'Left Forearm', x: 17, y: 38, w: 8, h: 14 },
+  { id: 'forearms', name: 'Right Forearm', x: 75, y: 38, w: 8, h: 14 },
 
-  // Core - abs and obliques
-  { id: 'abs', name: 'Upper Abs', x: 38, y: 36, w: 24, h: 8 },
-  { id: 'abs', name: 'Lower Abs', x: 38, y: 44, w: 24, h: 8 },
-  { id: 'obliques', name: 'Obliques', x: 28, y: 38, w: 10, h: 14 },
-  { id: 'obliques', name: 'Obliques', x: 62, y: 38, w: 10, h: 14 },
+  // Core / Abs - center
+  { id: 'core', name: 'Abs', x: 40, y: 31, w: 20, h: 18 },
 
-  // Hip flexors
-  { id: 'hip_flexors', name: 'Hip Flexors', x: 35, y: 52, w: 12, h: 6 },
-  { id: 'hip_flexors', name: 'Hip Flexors', x: 53, y: 52, w: 12, h: 6 },
+  // Obliques - sides of core
+  { id: 'obliques', name: 'Left Oblique', x: 32, y: 35, w: 8, h: 12 },
+  { id: 'obliques', name: 'Right Oblique', x: 60, y: 35, w: 8, h: 12 },
 
-  // Quads - outer, inner, front
-  { id: 'quads', name: 'Outer Quad', x: 26, y: 58, w: 10, h: 14 },
-  { id: 'quads', name: 'Front Quad', x: 36, y: 58, w: 10, h: 14 },
-  { id: 'quads', name: 'Front Quad', x: 54, y: 58, w: 10, h: 14 },
-  { id: 'quads', name: 'Outer Quad', x: 64, y: 58, w: 10, h: 14 },
+  // Quads - left and right thighs
+  { id: 'quads', name: 'Left Quad', x: 32, y: 52, w: 14, h: 24 },
+  { id: 'quads', name: 'Right Quad', x: 54, y: 52, w: 14, h: 24 },
 
-  // Adductors (inner thigh)
-  { id: 'adductors', name: 'Adductors', x: 44, y: 60, w: 12, h: 12 },
+  // Adductors - inner thigh
+  { id: 'adductors', name: 'Adductors', x: 45, y: 56, w: 10, h: 14 },
 
-  // Lower quads / knee area
-  { id: 'quads', name: 'Lower Quad', x: 30, y: 72, w: 14, h: 8 },
-  { id: 'quads', name: 'Lower Quad', x: 56, y: 72, w: 14, h: 8 },
-
-  // Tibialis (front of shin)
-  { id: 'tibialis', name: 'Tibialis', x: 32, y: 82, w: 10, h: 10 },
-  { id: 'tibialis', name: 'Tibialis', x: 58, y: 82, w: 10, h: 10 },
-
-  // Calves (front view - mostly tibialis visible)
-  { id: 'calves', name: 'Calves', x: 34, y: 80, w: 12, h: 14 },
-  { id: 'calves', name: 'Calves', x: 54, y: 80, w: 12, h: 14 },
+  // Calves - front view (tibialis)
+  { id: 'calves', name: 'Left Calf', x: 35, y: 78, w: 10, h: 14 },
+  { id: 'calves', name: 'Right Calf', x: 55, y: 78, w: 10, h: 14 },
 ];
 
 const backMuscleRegions = [
-  // Traps - upper, mid, lower
-  { id: 'traps', name: 'Upper Traps', x: 36, y: 12, w: 28, h: 6 },
-  { id: 'traps', name: 'Mid Traps', x: 38, y: 18, w: 24, h: 6 },
+  // Traps - upper back / neck
+  { id: 'traps', name: 'Traps', x: 38, y: 12, w: 24, h: 10 },
 
-  // Rear Delts
-  { id: 'rear_delts', name: 'Rear Delts', x: 18, y: 18, w: 12, h: 8 },
-  { id: 'rear_delts', name: 'Rear Delts', x: 70, y: 18, w: 12, h: 8 },
+  // Shoulders (rear delts) - left and right
+  { id: 'shoulders', name: 'Left Rear Delt', x: 26, y: 14, w: 12, h: 9 },
+  { id: 'shoulders', name: 'Right Rear Delt', x: 62, y: 14, w: 12, h: 9 },
 
-  // Rhomboids (mid back)
-  { id: 'rhomboids', name: 'Rhomboids', x: 36, y: 24, w: 28, h: 8 },
+  // Lats - left and right
+  { id: 'lats', name: 'Left Lat', x: 28, y: 22, w: 14, h: 18 },
+  { id: 'lats', name: 'Right Lat', x: 58, y: 22, w: 14, h: 18 },
 
-  // Lats - multiple zones
-  { id: 'lats', name: 'Upper Lats', x: 22, y: 26, w: 14, h: 10 },
-  { id: 'lats', name: 'Upper Lats', x: 64, y: 26, w: 14, h: 10 },
-  { id: 'lats', name: 'Lower Lats', x: 24, y: 36, w: 12, h: 10 },
-  { id: 'lats', name: 'Lower Lats', x: 64, y: 36, w: 12, h: 10 },
+  // Upper back (rhomboids area)
+  { id: 'upper_back', name: 'Upper Back', x: 40, y: 22, w: 20, h: 14 },
 
-  // Triceps
-  { id: 'triceps', name: 'Triceps', x: 14, y: 26, w: 8, h: 14 },
-  { id: 'triceps', name: 'Triceps', x: 78, y: 26, w: 8, h: 14 },
+  // Lower back (erector spinae)
+  { id: 'lower_back', name: 'Lower Back', x: 42, y: 38, w: 16, h: 10 },
 
-  // Forearms (back)
-  { id: 'forearms', name: 'Forearms', x: 10, y: 42, w: 8, h: 12 },
-  { id: 'forearms', name: 'Forearms', x: 82, y: 42, w: 8, h: 12 },
+  // Triceps - left and right
+  { id: 'triceps', name: 'Left Tricep', x: 19, y: 23, w: 8, h: 14 },
+  { id: 'triceps', name: 'Right Tricep', x: 73, y: 23, w: 8, h: 14 },
 
-  // Lower back / erector spinae
-  { id: 'lower_back', name: 'Erector Spinae', x: 36, y: 34, w: 12, h: 14 },
-  { id: 'lower_back', name: 'Erector Spinae', x: 52, y: 34, w: 12, h: 14 },
+  // Forearms - left and right
+  { id: 'forearms', name: 'Left Forearm', x: 16, y: 38, w: 8, h: 14 },
+  { id: 'forearms', name: 'Right Forearm', x: 76, y: 38, w: 8, h: 14 },
 
-  // Glutes - upper and lower
-  { id: 'glutes', name: 'Upper Glutes', x: 30, y: 50, w: 18, h: 8 },
-  { id: 'glutes', name: 'Upper Glutes', x: 52, y: 50, w: 18, h: 8 },
-  { id: 'glutes', name: 'Lower Glutes', x: 32, y: 58, w: 16, h: 6 },
-  { id: 'glutes', name: 'Lower Glutes', x: 52, y: 58, w: 16, h: 6 },
+  // Glutes
+  { id: 'glutes', name: 'Left Glute', x: 34, y: 46, w: 14, h: 10 },
+  { id: 'glutes', name: 'Right Glute', x: 52, y: 46, w: 14, h: 10 },
 
-  // Hamstrings - upper and lower
-  { id: 'hamstrings', name: 'Upper Hamstring', x: 30, y: 64, w: 14, h: 10 },
-  { id: 'hamstrings', name: 'Upper Hamstring', x: 56, y: 64, w: 14, h: 10 },
-  { id: 'hamstrings', name: 'Lower Hamstring', x: 32, y: 74, w: 12, h: 8 },
-  { id: 'hamstrings', name: 'Lower Hamstring', x: 56, y: 74, w: 12, h: 8 },
+  // Hamstrings - left and right
+  { id: 'hamstrings', name: 'Left Hamstring', x: 34, y: 56, w: 12, h: 18 },
+  { id: 'hamstrings', name: 'Right Hamstring', x: 54, y: 56, w: 12, h: 18 },
 
-  // Calves (back view)
-  { id: 'calves', name: 'Gastrocnemius', x: 32, y: 82, w: 14, h: 10 },
-  { id: 'calves', name: 'Gastrocnemius', x: 54, y: 82, w: 14, h: 10 },
-  { id: 'calves', name: 'Soleus', x: 34, y: 90, w: 10, h: 6 },
-  { id: 'calves', name: 'Soleus', x: 56, y: 90, w: 10, h: 6 },
+  // Calves - back view
+  { id: 'calves', name: 'Left Calf', x: 36, y: 76, w: 10, h: 14 },
+  { id: 'calves', name: 'Right Calf', x: 54, y: 76, w: 10, h: 14 },
 ];
 
 export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
@@ -169,6 +148,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
           onClick={() => {
             setView('front');
             setHoveredRegion(null);
+            setSelectedMuscle(null);
           }}
           style={{
             padding: '0.5rem 1rem',
@@ -185,6 +165,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
           onClick={() => {
             setView('back');
             setHoveredRegion(null);
+            setSelectedMuscle(null);
           }}
           style={{
             padding: '0.5rem 1rem',
@@ -199,14 +180,14 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
         </button>
       </div>
 
-      {/* Body Image with Clickable Regions - MUCH LARGER */}
+      {/* Body Image with Clickable Regions */}
       <div className="flex justify-center">
         <div
           style={{
             position: 'relative',
             width: '100%',
-            maxWidth: '450px',
-            aspectRatio: '1 / 1.8',
+            maxWidth: '400px',
+            aspectRatio: '1 / 1',
           }}
         >
           <Image
@@ -234,8 +215,6 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
                 onClick={() => handleMuscleClick(region.id)}
                 onMouseEnter={() => setHoveredRegion(idx)}
                 onMouseLeave={() => setHoveredRegion(null)}
-                onTouchStart={() => setHoveredRegion(idx)}
-                onTouchEnd={() => setHoveredRegion(null)}
                 style={{
                   position: 'absolute',
                   left: `${region.x}%`,
@@ -256,7 +235,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                 }}
-                title={region.name}
+                aria-label={region.name}
               />
             );
           })}
@@ -298,7 +277,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
                 fontWeight: 600,
               }}
             >
-              {getLabel(selected.strength)}
+              {getLabel(selected.strength)} ({selected.strength}%)
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -317,7 +296,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
                 fontWeight: 500,
                 fontSize: '0.875rem',
               }}>
-                {selected.trend === 'up' ? '↑' : selected.trend === 'down' ? '↓' : '→'}
+                {selected.trend === 'up' ? '↑ Improving' : selected.trend === 'down' ? '↓ Declining' : '→ Stable'}
               </p>
             </div>
           </div>

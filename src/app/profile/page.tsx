@@ -72,7 +72,8 @@ export default function ProfilePage() {
 
     const sorted = [...muscleStrengthData].sort((a, b) => b.strength - a.strength);
     const strongest = sorted[0];
-    const weakest = sorted[sorted.length - 1];
+    // Only show weakest if it's different from strongest (need at least 2 muscles)
+    const weakest = sorted.length > 1 ? sorted[sorted.length - 1] : null;
 
     // Find muscles that haven't been trained in over 7 days
     const imbalances = muscleStrengthData.filter(m => {
@@ -275,17 +276,19 @@ export default function ProfilePage() {
 
             {/* Quick Stats */}
             {muscleStrengthData.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className={`grid gap-3 mt-4 ${weakest ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 <div className="card text-center">
                   <p style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>Strongest</p>
                   <p style={{ color: colors.success, fontWeight: 600, fontSize: '1rem' }}>{strongest?.name || '—'}</p>
                   <p style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>{strongest?.strength || 0}% strength score</p>
                 </div>
-                <div className="card text-center">
-                  <p style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>Needs Work</p>
-                  <p style={{ color: colors.error, fontWeight: 600, fontSize: '1rem' }}>{weakest?.name || '—'}</p>
-                  <p style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>{weakest?.strength || 0}% strength score</p>
-                </div>
+                {weakest && (
+                  <div className="card text-center">
+                    <p style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>Needs Work</p>
+                    <p style={{ color: colors.error, fontWeight: 600, fontSize: '1rem' }}>{weakest.name}</p>
+                    <p style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>{weakest.strength}% strength score</p>
+                  </div>
+                )}
               </div>
             )}
 
