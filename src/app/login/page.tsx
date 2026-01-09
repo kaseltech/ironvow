@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 function LoginContent() {
   const { user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
@@ -27,16 +29,40 @@ function LoginContent() {
     const errorParam = searchParams.get('error');
     if (errorParam === 'auth_failed') {
       setError('Authentication failed. Please try again.');
+      setSigningIn(false);
     }
   }, [searchParams]);
+
+  // Reset signing state when app returns to foreground (user cancelled OAuth)
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const listener = App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive && signingIn) {
+        // Give a moment for auth to complete, then reset if still signing in
+        setTimeout(() => {
+          setSigningIn(false);
+        }, 1000);
+      }
+    });
+
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, [signingIn]);
 
   const handleGoogleSignIn = async () => {
     try {
       setSigningIn(true);
       setError(null);
+      console.log('Initiating Google sign-in...');
       await signInWithGoogle();
-    } catch (err) {
-      setError('Failed to sign in with Google');
+      console.log('signInWithGoogle completed');
+      // On native, browser is now open - state will reset when app returns
+      // On web, page will redirect
+    } catch (err: any) {
+      console.error('Google sign-in failed:', err);
+      setError(err?.message || 'Failed to sign in with Google');
       setSigningIn(false);
     }
   };
@@ -61,14 +87,14 @@ function LoginContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0F2233] flex items-center justify-center">
+      <div className="min-h-screen bg-[#282828] flex items-center justify-center">
         <div className="text-[#C9A75A]">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0F2233] flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-[#282828] flex flex-col items-center justify-center px-6">
       {/* Logo */}
       <div className="mb-12 text-center">
         <div className="flex justify-center mb-4">
@@ -89,7 +115,7 @@ function LoginContent() {
 
       {/* Login Card */}
       <div className="w-full max-w-sm">
-        <div className="bg-[#1A2B3C] rounded-2xl p-8 shadow-xl">
+        <div className="bg-[#1F1F1F] rounded-2xl p-8 shadow-xl">
           <h2 className="text-xl font-medium text-[#F5F1EA] text-center mb-6">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h2>
@@ -113,7 +139,7 @@ function LoginContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-3 bg-[#0F2233] border border-[#2A4A6A] rounded-xl text-[#F5F1EA] placeholder-[#8A9BAE] focus:outline-none focus:border-[#C9A75A] transition-colors"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-xl text-[#F5F1EA] placeholder-[#8A9BAE] focus:outline-none focus:border-[#C9A75A] transition-colors"
               />
             </div>
             <div>
@@ -124,13 +150,13 @@ function LoginContent() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-4 py-3 bg-[#0F2233] border border-[#2A4A6A] rounded-xl text-[#F5F1EA] placeholder-[#8A9BAE] focus:outline-none focus:border-[#C9A75A] transition-colors"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-xl text-[#F5F1EA] placeholder-[#8A9BAE] focus:outline-none focus:border-[#C9A75A] transition-colors"
               />
             </div>
             <button
               type="submit"
               disabled={signingIn}
-              className="w-full py-3 bg-[#C9A75A] hover:bg-[#B8964A] text-[#0F2233] font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-[#C9A75A] hover:bg-[#B8964A] text-[#1F1F1F] font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {signingIn ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
             </button>
@@ -145,10 +171,10 @@ function LoginContent() {
 
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#2A4A6A]"></div>
+              <div className="w-full border-t border-[#444444]"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#1A2B3C] text-[#8A9BAE]">or</span>
+              <span className="px-2 bg-[#1F1F1F] text-[#8A9BAE]">or</span>
             </div>
           </div>
 
@@ -192,7 +218,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0F2233] flex items-center justify-center">
+        <div className="min-h-screen bg-[#282828] flex items-center justify-center">
           <div className="text-[#C9A75A]">Loading...</div>
         </div>
       }

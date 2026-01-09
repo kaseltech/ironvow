@@ -93,7 +93,7 @@ export default function AuthCallback() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-[#0F2233] flex items-center justify-center">
+    <div className="min-h-screen bg-[#282828] flex items-center justify-center">
       <div className="flex flex-col items-center gap-4">
         <div className="text-3xl font-light text-[#F5F1EA]">
           <span className="text-[#8A9BAE]">Iron</span>

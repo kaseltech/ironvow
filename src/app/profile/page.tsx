@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import { BodyMap } from '@/components/BodyMap';
 import { MuscleStatsModal } from '@/components/MuscleStatsModal';
 import { GymManager } from '@/components/GymManager';
+import { Header } from '@/components/Header';
+import { Settings } from '@/components/Settings';
 import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions } from '@/hooks/useSupabase';
 import { useStrengthData, convertToMuscleStrength, formatVolume, formatDate, formatDaysAgo } from '@/hooks/useStrengthData';
 import { useTheme } from '@/context/ThemeContext';
@@ -58,6 +60,7 @@ export default function ProfilePage() {
   const [muscleStatsOpen, setMuscleStatsOpen] = useState(false);
   const [selectedMuscleId, setSelectedMuscleId] = useState<string | null>(null);
   const [selectedMuscleName, setSelectedMuscleName] = useState<string>('');
+  const [showSettings, setShowSettings] = useState(false);
 
   // Convert muscle volume to strength data for BodyMap
   const muscleStrengthData = useMemo(() => {
@@ -150,26 +153,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
-      {/* Header */}
-      <header
-        className="safe-area-top"
-        style={{
-          background: colors.cardBg,
-          padding: '1rem 1.5rem',
-          borderBottom: `1px solid ${colors.borderSubtle}`,
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => window.location.href = '/'}
-            style={{ color: colors.textMuted, background: 'none', border: 'none', fontSize: '1rem' }}
-          >
-            ← Back
-          </button>
-          <span style={{ color: colors.text, fontWeight: 600 }}>Profile</span>
-          <div style={{ width: '48px' }} />
-        </div>
-      </header>
+      <Header onSettingsClick={() => setShowSettings(true)} />
 
       {/* Tab Navigation */}
       <div className="flex border-b" style={{ borderColor: colors.borderSubtle }}>
@@ -772,6 +756,9 @@ export default function ProfilePage() {
         exercisePRs={exercisePRs}
         muscleVolume={muscleVolume}
       />
+
+      {/* Settings Modal */}
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

@@ -14,6 +14,8 @@ import {
   type ExperienceLevel,
 } from '@/lib/strengthStandards';
 import { AuthGuard } from '@/components/AuthGuard';
+import { Header } from '@/components/Header';
+import { Settings } from '@/components/Settings';
 
 export default function ProgressPage() {
   const { colors } = useTheme();
@@ -26,6 +28,7 @@ export default function ProgressPage() {
   const [activeView, setActiveView] = useState<'weight' | 'strength'>('weight');
   const [saving, setSaving] = useState(false);
   const [newWeight, setNewWeight] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
 
   // Format weight data for display
   const weightHistory = useMemo(() => {
@@ -137,26 +140,7 @@ export default function ProgressPage() {
         </div>
       )}
 
-      {/* Header */}
-      <header
-        className="safe-area-top"
-        style={{
-          background: colors.cardBg,
-          padding: '1rem 1.5rem',
-          borderBottom: `1px solid ${colors.borderSubtle}`,
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => window.location.href = '/'}
-            style={{ color: colors.textMuted, background: 'none', border: 'none', fontSize: '1rem' }}
-          >
-            ← Back
-          </button>
-          <span style={{ color: colors.text, fontWeight: 600 }}>Progress</span>
-          <div style={{ width: '48px' }} />
-        </div>
-      </header>
+      <Header onSettingsClick={() => setShowSettings(true)} />
 
       {/* View Toggle */}
       <div className="flex p-4 gap-2">
@@ -658,6 +642,9 @@ export default function ProgressPage() {
           ))}
         </div>
       </nav>
+
+      {/* Settings Modal */}
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
     </AuthGuard>
   );

@@ -272,6 +272,43 @@
 7. Mobility - Stretching, recovery
 8. Rehab - Injury prevention, prehab
 
+### Session 10 - SVG BodyMap, Consistent Header & Login Fixes (v1.6.0)
+
+**SVG Polygon BodyMap:**
+- Completely rewrote BodyMap to use SVG polygon paths instead of rectangular divs
+- Polygons trace the actual white lines in the anatomy images
+- Front view: 17 polygon regions (traps, shoulders L/R, chest L/R, biceps L/R, forearms L/R, abs, obliques L/R, quads L/R, adductors, calves L/R)
+- Back view: 17 polygon regions (traps, rear delts L/R, lats L/R, upper back, lower back, triceps L/R, forearms L/R, glutes L/R, hamstrings L/R, calves L/R)
+- Hover and selection states with color based on muscle strength score
+
+**Consistent Header Component:**
+- Created reusable `Header` component with Logo, logout button, and settings gear
+- Applied to all main pages: Home, Profile, Progress, Library
+- Library page: Header on main view, custom "← Back" header for exercise detail view
+- Removed duplicate header code from individual pages
+
+**Login Page Theme Update:**
+- Changed background from navy (#0F2233) to charcoal (#282828) to match app icon
+- Updated card, input, and button colors for the charcoal theme
+- Auth callback page also updated to match
+
+**Google OAuth Improvements (WIP):**
+- Added `@capacitor/browser` plugin for iOS OAuth flow
+- Added extensive logging for debugging OAuth issues
+- Added session recovery on app state change (fallback for deep link issues)
+- Added appStateChange listener to reset spinner when user returns to app
+
+**Files Changed:**
+- `src/components/BodyMap.tsx` - Complete rewrite with SVG polygons
+- `src/components/Header.tsx` - New reusable header component
+- `src/app/page.tsx` - Uses Header component
+- `src/app/profile/page.tsx` - Uses Header component + Settings modal
+- `src/app/progress/page.tsx` - Uses Header component + Settings modal
+- `src/app/library/page.tsx` - Uses Header component + Settings modal
+- `src/app/login/page.tsx` - Charcoal theme, improved OAuth error handling
+- `src/app/auth/callback/page.tsx` - Charcoal theme
+- `src/context/AuthContext.tsx` - Browser plugin, session recovery, debugging logs
+
 ### Resolved Questions
 
 1. **AI Provider:** Claude 3 Haiku via Anthropic API (fast, cost-effective)

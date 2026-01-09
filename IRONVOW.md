@@ -330,11 +330,14 @@ No borders, no shadows, no decorative elements. Navy background extends complete
 - [x] Color themes (8 themes with persistence)
 - [x] Gym profiles (named gyms with equipment)
 - [x] Exercise regenerate & swap
-- [x] BodyMap component (clickable muscle regions, front/back view)
+- [x] BodyMap component (SVG polygon regions tracing anatomy)
 - [x] Profile page muscle balance tracking
 - [x] Rehab/mobility workout generation
 - [x] Logo component with icon
 - [x] Vow Suite landing page
+- [x] Consistent header across all pages (Logo, logout, settings)
+- [x] MuscleStatsModal (1RM, volume, exercise history per muscle)
+- [ ] iOS OAuth login (Google sign-in - in progress)
 
 ### Phase 5: Expansion
 - [ ] Apple Watch companion

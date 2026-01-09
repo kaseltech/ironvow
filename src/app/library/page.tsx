@@ -5,6 +5,8 @@ import { useExercises } from '@/hooks/useSupabase';
 import { useStrengthData, formatDaysAgo, formatVolume, formatDate } from '@/hooks/useStrengthData';
 import { useExerciseHistory } from '@/hooks/useExerciseHistory';
 import { useTheme } from '@/context/ThemeContext';
+import { Header } from '@/components/Header';
+import { Settings } from '@/components/Settings';
 
 // Format muscle name for display (e.g., "upper_back" → "Upper Back")
 function formatMuscleName(muscle: string): string {
@@ -235,6 +237,7 @@ export default function LibraryPage() {
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Fetch all exercises from database
   const { exercises, loading: exercisesLoading } = useExercises();
@@ -287,28 +290,32 @@ export default function LibraryPage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
-      {/* Header */}
-      <header
-        className="safe-area-top"
-        style={{
-          background: colors.cardBg,
-          padding: '1rem 1.5rem',
-          borderBottom: `1px solid ${colors.borderSubtle}`,
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => selectedExerciseId ? setSelectedExerciseId(null) : window.location.href = '/'}
-            style={{ color: colors.textMuted, background: 'none', border: 'none', fontSize: '1rem' }}
-          >
-            ← {selectedExerciseId ? 'Back' : 'Home'}
-          </button>
-          <span style={{ color: colors.text, fontWeight: 600 }}>
-            {selectedExerciseId ? selectedExercise?.name : 'Exercise Library'}
-          </span>
-          <div style={{ width: '48px' }} />
-        </div>
-      </header>
+      {/* Header - different for exercise detail vs list */}
+      {selectedExerciseId ? (
+        <header
+          className="safe-area-top"
+          style={{
+            background: colors.cardBg,
+            padding: '1rem 1.5rem',
+            borderBottom: `1px solid ${colors.borderSubtle}`,
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSelectedExerciseId(null)}
+              style={{ color: colors.textMuted, background: 'none', border: 'none', fontSize: '1rem', cursor: 'pointer' }}
+            >
+              ← Back
+            </button>
+            <span style={{ color: colors.text, fontWeight: 600 }}>
+              {selectedExercise?.name}
+            </span>
+            <div style={{ width: '48px' }} />
+          </div>
+        </header>
+      ) : (
+        <Header onSettingsClick={() => setShowSettings(true)} />
+      )}
 
       <main className="p-4 pb-24">
         {loading ? (
@@ -511,6 +518,9 @@ export default function LibraryPage() {
           ))}
         </div>
       </nav>
+
+      {/* Settings Modal */}
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }
