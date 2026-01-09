@@ -198,21 +198,64 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
 
   const loading = profilesLoading || presetsLoading || equipmentLoading;
 
-  // Filter equipment by search term
-  const filteredEquipment = equipmentSearch.trim()
-    ? allEquipment.filter(eq =>
-        eq.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-        (eq.category || '').toLowerCase().includes(equipmentSearch.toLowerCase())
-      )
+  // Common equipment that should appear first (most used items)
+  const commonEquipmentNames = [
+    'Dumbbells', 'Barbell', 'Flat Bench', 'Adjustable Bench', 'Squat Rack', 'Power Rack',
+    'Pull-up Bar', 'Kettlebells', 'Resistance Bands', 'Cable Machine', 'Lat Pulldown',
+    'Leg Press', 'Smith Machine', 'EZ Curl Bar', 'Treadmill', 'Rowing Machine',
+    'Foam Roller', 'Jump Rope', 'Plyo Box', 'Medicine Ball', 'Battle Ropes',
+  ];
+
+  // Priority score for sorting (lower = higher priority)
+  const getEquipmentPriority = (name: string): number => {
+    const idx = commonEquipmentNames.findIndex(n =>
+      name.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(name.toLowerCase())
+    );
+    return idx === -1 ? 999 : idx;
+  };
+
+  // Filter and sort equipment
+  const searchTerm = equipmentSearch.trim().toLowerCase();
+  const isSearching = searchTerm.length > 0;
+
+  const filteredEquipment = isSearching
+    ? allEquipment
+        .filter(eq =>
+          eq.name.toLowerCase().includes(searchTerm) ||
+          (eq.category || '').toLowerCase().includes(searchTerm)
+        )
+        .sort((a, b) => {
+          // Prioritize exact/starts-with matches
+          const aStarts = a.name.toLowerCase().startsWith(searchTerm) ? 0 : 1;
+          const bStarts = b.name.toLowerCase().startsWith(searchTerm) ? 0 : 1;
+          if (aStarts !== bStarts) return aStarts - bStarts;
+          // Then by common equipment priority
+          return getEquipmentPriority(a.name) - getEquipmentPriority(b.name);
+        })
     : allEquipment;
 
-  // Group equipment by category
-  const equipmentByCategory = filteredEquipment.reduce((acc, eq) => {
-    const category = eq.category || 'Other';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(eq);
-    return acc;
-  }, {} as Record<string, typeof filteredEquipment>);
+  // Group equipment by category (only when not searching)
+  const equipmentByCategory = isSearching
+    ? {} // Don't group when searching
+    : filteredEquipment.reduce((acc, eq) => {
+        const category = eq.category || 'Other';
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(eq);
+        return acc;
+      }, {} as Record<string, typeof filteredEquipment>);
+
+  // Sort categories to put common ones first
+  const categoryOrder = ['Free Weights', 'Benches', 'Racks', 'Machines', 'Cable', 'Cardio', 'Accessories', 'Other'];
+  const sortedCategories = Object.keys(equipmentByCategory).sort((a, b) => {
+    const aIdx = categoryOrder.indexOf(a);
+    const bIdx = categoryOrder.indexOf(b);
+    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+  });
+
+  // Sort items within each category by priority
+  Object.keys(equipmentByCategory).forEach(cat => {
+    equipmentByCategory[cat].sort((a, b) => getEquipmentPriority(a.name) - getEquipmentPriority(b.name));
+  });
 
   // Get count of equipment from selected presets
   const getSelectedPresetsEquipmentCount = () => {
@@ -591,31 +634,157 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                 </div>
 
                 {/* Equipment Search */}
-                <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
                   <input
                     type="text"
-                    placeholder="Search equipment..."
+                    placeholder="Type to search (e.g., bench, cable, dumbbell)..."
                     value={equipmentSearch}
                     onChange={(e) => setEquipmentSearch(e.target.value)}
+                    autoComplete="off"
                     style={{
                       width: '100%',
-                      padding: '0.5rem 0.75rem',
+                      padding: '0.625rem 2.5rem 0.625rem 0.875rem',
                       background: 'rgba(15, 34, 51, 0.5)',
-                      border: `1px solid ${BRAND.goldMuted}40`,
+                      border: `1px solid ${equipmentSearch ? BRAND.gold : BRAND.goldMuted}40`,
                       borderRadius: '0.5rem',
                       color: BRAND.cream,
                       fontSize: '0.875rem',
                     }}
                   />
+                  {equipmentSearch && (
+                    <button
+                      onClick={() => setEquipmentSearch('')}
+                      style={{
+                        position: 'absolute',
+                        right: '0.5rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'rgba(201, 167, 90, 0.3)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '20px',
+                        height: '20px',
+                        color: BRAND.cream,
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
 
-                {Object.keys(equipmentByCategory).length === 0 && equipmentSearch && (
-                  <div style={{ color: BRAND.goldMuted, fontSize: '0.75rem', textAlign: 'center', padding: '1rem' }}>
-                    No equipment found matching "{equipmentSearch}"
+                {/* Common Equipment (quick access when not searching) */}
+                {!isSearching && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h4 style={{
+                      fontSize: '0.7rem',
+                      color: BRAND.gold,
+                      marginBottom: '0.5rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}>
+                      Common Equipment
+                    </h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                      {allEquipment
+                        .filter(eq => commonEquipmentNames.some(name =>
+                          eq.name.toLowerCase().includes(name.toLowerCase())
+                        ))
+                        .sort((a, b) => getEquipmentPriority(a.name) - getEquipmentPriority(b.name))
+                        .slice(0, 20)
+                        .map(eq => {
+                          const isSelected = selectedEquipmentIds.includes(eq.id);
+                          return (
+                            <button
+                              key={eq.id}
+                              onClick={() => toggleEquipment(eq.id)}
+                              style={{
+                                padding: '0.375rem 0.625rem',
+                                background: isSelected ? BRAND.gold : 'rgba(15, 34, 51, 0.5)',
+                                border: isSelected ? 'none' : '1px solid rgba(201, 167, 90, 0.3)',
+                                borderRadius: '0.375rem',
+                                color: isSelected ? BRAND.navyDark : BRAND.cream,
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {eq.name}
+                            </button>
+                          );
+                        })}
+                    </div>
                   </div>
                 )}
 
-                {Object.entries(equipmentByCategory).map(([category, items]) => (
+                {/* Divider */}
+                {!isSearching && (
+                  <div style={{
+                    borderTop: '1px solid rgba(201, 167, 90, 0.2)',
+                    margin: '0.75rem 0',
+                    paddingTop: '0.75rem',
+                  }}>
+                    <div style={{ fontSize: '0.65rem', color: BRAND.goldMuted, marginBottom: '0.5rem' }}>
+                      All Equipment by Category
+                    </div>
+                  </div>
+                )}
+
+                {/* Search results (flat list) */}
+                {isSearching && (
+                  filteredEquipment.length === 0 ? (
+                    <div style={{ color: BRAND.goldMuted, fontSize: '0.75rem', textAlign: 'center', padding: '1rem' }}>
+                      No equipment found matching "{equipmentSearch}"
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ fontSize: '0.7rem', color: BRAND.goldMuted, marginBottom: '0.5rem' }}>
+                        {filteredEquipment.length} result{filteredEquipment.length !== 1 ? 's' : ''}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                        {filteredEquipment.map(eq => {
+                          const isSelected = selectedEquipmentIds.includes(eq.id);
+                          // Highlight matching text
+                          const nameLower = eq.name.toLowerCase();
+                          const matchIdx = nameLower.indexOf(searchTerm);
+                          return (
+                            <button
+                              key={eq.id}
+                              onClick={() => toggleEquipment(eq.id)}
+                              style={{
+                                padding: '0.375rem 0.625rem',
+                                background: isSelected ? BRAND.gold : 'rgba(15, 34, 51, 0.5)',
+                                border: 'none',
+                                borderRadius: '0.375rem',
+                                color: isSelected ? BRAND.navyDark : BRAND.cream,
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              {matchIdx >= 0 ? (
+                                <>
+                                  {eq.name.slice(0, matchIdx)}
+                                  <span style={{ fontWeight: 700, textDecoration: 'underline' }}>
+                                    {eq.name.slice(matchIdx, matchIdx + searchTerm.length)}
+                                  </span>
+                                  {eq.name.slice(matchIdx + searchTerm.length)}
+                                </>
+                              ) : eq.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )
+                )}
+
+                {/* Categorized list (when not searching) */}
+                {!isSearching && sortedCategories.map(category => (
                   <div key={category} style={{ marginBottom: '1rem' }}>
                     <h4 style={{
                       fontSize: '0.7rem',
@@ -627,7 +796,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       {category.replace('_', ' ')}
                     </h4>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-                      {items.map(eq => {
+                      {equipmentByCategory[category].map(eq => {
                         const isSelected = selectedEquipmentIds.includes(eq.id);
                         return (
                           <button
