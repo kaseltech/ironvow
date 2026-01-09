@@ -5,7 +5,28 @@ import { User, Session } from '@supabase/supabase-js';
 import { Capacitor } from '@capacitor/core';
 import { App, URLOpenListenerEvent } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
+import { Preferences } from '@capacitor/preferences';
 import { getSupabase } from '@/lib/supabase/client';
+
+// Helper to generate PKCE code verifier and challenge
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
 
 // Get the correct redirect URL based on platform
 const getRedirectUrl = () => {
@@ -113,14 +134,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 console.log('Session set successfully!');
               }
             } else if (code) {
-              // PKCE flow fallback - exchange code for session
-              // Note: This typically fails on native due to storage isolation
+              // PKCE flow - exchange code for session using stored code verifier
               console.log('Exchanging code for session (PKCE flow)...');
-              const { error } = await supabase.auth.exchangeCodeForSession(code);
-              if (error) {
-                console.error('Code exchange error:', error);
+
+              // Retrieve our stored code verifier
+              const { value: codeVerifier } = await Preferences.get({ key: 'oauth_code_verifier' });
+              console.log('Retrieved code verifier:', !!codeVerifier);
+
+              if (codeVerifier) {
+                // Manually exchange code for tokens using the Supabase API
+                const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=authorization_code`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+                  },
+                  body: JSON.stringify({
+                    auth_code: code,
+                    code_verifier: codeVerifier,
+                  }),
+                });
+
+                const tokenData = await response.json();
+                console.log('Token exchange response:', response.status);
+
+                if (tokenData.access_token && tokenData.refresh_token) {
+                  const { error } = await supabase.auth.setSession({
+                    access_token: tokenData.access_token,
+                    refresh_token: tokenData.refresh_token,
+                  });
+                  if (error) {
+                    console.error('Session error:', error);
+                  } else {
+                    console.log('Session set successfully!');
+                  }
+                } else {
+                  console.error('Token exchange failed:', tokenData);
+                }
+
+                // Clean up stored verifier
+                await Preferences.remove({ key: 'oauth_code_verifier' });
               } else {
-                console.log('Code exchange successful!');
+                console.error('No code verifier found in storage');
               }
             } else {
               console.log('No tokens or code found in callback URL');
@@ -172,46 +227,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('Starting Google OAuth for native platform...');
         console.log('Redirect URL:', getRedirectUrl());
 
-        // Get the OAuth URL from Supabase
-        // Use implicit flow for native apps to avoid PKCE code verifier issues
+        // Generate our own PKCE code verifier and challenge
+        // We store it in Capacitor Preferences so it survives the browser redirect
         // (Safari web view storage is separate from native app storage)
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: getRedirectUrl(),
-            skipBrowserRedirect: true,
-            queryParams: {
-              // Force implicit flow - returns tokens in URL fragment instead of code
-              response_type: 'token',
-            },
-          },
-        });
+        const codeVerifier = generateCodeVerifier();
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-        console.log('Supabase response - data:', !!data, 'error:', error);
+        console.log('Generated PKCE - verifier length:', codeVerifier.length);
 
-        if (error) {
-          console.error('Supabase OAuth error:', error);
-          throw error;
-        }
+        // Store code verifier for later use when exchanging the code
+        await Preferences.set({ key: 'oauth_code_verifier', value: codeVerifier });
+        console.log('Stored code verifier in Preferences');
 
-        if (data?.url) {
-          console.log('Opening OAuth URL in browser...');
-          console.log('URL:', data.url.substring(0, 100) + '...');
+        // Build the OAuth URL manually with our PKCE challenge
+        const redirectUrl = getRedirectUrl();
+        const authUrl = new URL(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/authorize`);
+        authUrl.searchParams.set('provider', 'google');
+        authUrl.searchParams.set('redirect_to', redirectUrl);
+        authUrl.searchParams.set('code_challenge', codeChallenge);
+        authUrl.searchParams.set('code_challenge_method', 'S256');
 
-          // Try opening with Browser plugin
-          try {
-            await Browser.open({ url: data.url });
-            console.log('Browser.open() completed');
-          } catch (browserErr) {
-            console.error('Browser.open() failed:', browserErr);
-            // Fallback: try opening URL directly via App plugin
-            // This opens in external Safari
-            window.open(data.url, '_blank');
-          }
-        } else {
-          console.error('No OAuth URL returned from Supabase');
-          throw new Error('Failed to get OAuth URL');
-        }
+        const finalUrl = authUrl.toString();
+        console.log('Opening OAuth URL:', finalUrl.substring(0, 100) + '...');
+
+        await Browser.open({ url: finalUrl });
+        console.log('Browser.open() completed');
       } catch (err) {
         console.error('Google sign-in error:', err);
         throw err;
