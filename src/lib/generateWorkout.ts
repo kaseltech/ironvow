@@ -70,17 +70,31 @@ export interface GeneratedWorkout {
 export async function generateWorkout(request: WorkoutRequest): Promise<GeneratedWorkout> {
   const supabase = getSupabase();
 
+  console.log('[Workout] Calling Edge Function...', {
+    freeform: !!request.freeformPrompt,
+    location: request.location,
+    duration: request.duration,
+  });
+
   // Call Supabase Edge Function
   const { data, error } = await supabase.functions.invoke('generate-workout', {
     body: request,
   });
 
   if (error) {
-    console.error('Edge function error:', error);
+    console.error('[Workout] Edge function error:', error);
+    console.error('[Workout] Error details:', JSON.stringify(error, null, 2));
     throw new Error(error.message || 'Failed to generate workout');
   }
 
+  console.log('[Workout] Response:', {
+    success: data?.success,
+    workoutName: data?.workout?.name,
+    exerciseCount: data?.workout?.exercises?.length,
+  });
+
   if (!data.success) {
+    console.error('[Workout] Generation failed:', data.error);
     throw new Error(data.error || 'Workout generation failed');
   }
 
