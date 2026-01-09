@@ -324,7 +324,7 @@ export default function Home() {
         {!showWorkout ? (
           <>
             {/* Hero Section */}
-            <div className="text-center mb-8 animate-fade-in">
+            <div className="text-center mb-6 animate-fade-in">
               <h1
                 style={{
                   fontFamily: 'var(--font-libre-baskerville)',
@@ -338,6 +338,27 @@ export default function Home() {
               <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.9rem' }}>
                 Your AI training partner is ready to build your workout
               </p>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex gap-3 mb-6 animate-fade-in" style={{ animationDelay: '0.05s' }}>
+              <button
+                onClick={() => router.push('/run')}
+                style={{
+                  flex: 1,
+                  background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  borderRadius: '0.75rem',
+                  padding: '0.875rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <span style={{ fontSize: '1.25rem' }}>🏃</span>
+                <span style={{ color: '#22C55E', fontWeight: 600, fontSize: '0.875rem' }}>Go for a Run</span>
+              </button>
             </div>
 
             {/* Location Selector */}
