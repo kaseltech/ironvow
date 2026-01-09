@@ -64,12 +64,44 @@ export function useProfile() {
     if (!user) return;
 
     const supabase = getSupabase();
-    const { data, error } = await supabase
+
+    // First check if profile exists
+    const { data: existing } = await supabase
       .from('profiles')
-      .update(updates)
+      .select('id')
       .eq('id', user.id)
-      .select()
       .single();
+
+    let data;
+    let error;
+
+    if (existing) {
+      // Profile exists - update it
+      const result = await supabase
+        .from('profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
+      data = result.data;
+      error = result.error;
+    } else {
+      // Profile doesn't exist - insert it
+      const result = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) throw error;
     setProfile(data);

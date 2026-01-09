@@ -131,7 +131,7 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
 
     // Sign in to Supabase with the Google ID token
     // Note: "Skip nonce check" must be enabled in Supabase for iOS
-    const { error } = await supabase.auth.signInWithIdToken({
+    const { data, error } = await supabase.auth.signInWithIdToken({
       provider: 'google',
       token: googleResult.idToken,
     });
@@ -140,6 +140,13 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
       console.error('Supabase Google sign in error:', error);
       return { error: error.message };
     }
+
+    // Debug: Log the user info
+    console.log('Supabase auth success!');
+    console.log('User ID:', data.user?.id);
+    console.log('User email:', data.user?.email);
+    console.log('Created at:', data.user?.created_at);
+    console.log('Last sign in:', data.user?.last_sign_in_at);
 
     return {};
   } catch (error) {

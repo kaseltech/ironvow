@@ -28,6 +28,20 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const [customEquipment, setCustomEquipment] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedEquipment, setSelectedEquipment] = useState<Set<string>>(new Set());
+
+  // Local equipment toggle that works without database
+  const handleEquipmentToggle = (equipmentId: string) => {
+    setSelectedEquipment(prev => {
+      const next = new Set(prev);
+      if (next.has(equipmentId)) {
+        next.delete(equipmentId);
+      } else {
+        next.add(equipmentId);
+      }
+      return next;
+    });
+  };
 
   const nextStep = () => {
     const steps: Step[] = ['welcome', 'gender', 'experience', 'body', 'goal', 'equipment', 'complete'];
@@ -69,6 +83,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           parseFloat(weight),
           targetWeight ? parseFloat(targetWeight) : undefined
         );
+      }
+
+      // Save selected equipment
+      for (const equipmentId of selectedEquipment) {
+        await toggleEquipment(equipmentId, equipmentLocation);
       }
 
       nextStep();
@@ -487,12 +506,12 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               What equipment do you have?
             </h2>
             <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '1rem' }}>
-              Select what's available to you. You can update this anytime.
+              Select what's available to you. You can update this anytime in Settings.
             </p>
 
             {/* Location toggle */}
             <div className="flex gap-2 mb-4">
-              {(['gym', 'home'] as const).map(loc => (
+              {(['home', 'gym'] as const).map(loc => (
                 <button
                   key={loc}
                   onClick={() => setEquipmentLocation(loc)}
@@ -524,7 +543,39 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto space-y-4" style={{ maxHeight: '250px' }}>
+            {/* Common home gym equipment - quick select */}
+            {equipmentLocation === 'home' && (
+              <div className="mb-4">
+                <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                  Common Home Gym
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {allEquipment
+                    .filter(eq => ['Dumbbells', 'Barbell', 'Pull-up Bar', 'Bench', 'Resistance Bands', 'Kettlebells', 'Jump Rope', 'Yoga Mat'].includes(eq.name))
+                    .map(eq => {
+                      const selected = selectedEquipment.has(eq.id);
+                      return (
+                        <button
+                          key={eq.id}
+                          onClick={() => handleEquipmentToggle(eq.id)}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '2rem',
+                            background: selected ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
+                            border: selected ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                            color: selected ? '#C9A75A' : 'rgba(245, 241, 234, 0.6)',
+                            fontSize: '0.8125rem',
+                          }}
+                        >
+                          {eq.name}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-4" style={{ maxHeight: equipmentLocation === 'home' ? '180px' : '250px' }}>
               {Object.entries(groupedEquipment).map(([category, items]) => (
                 <div key={category}>
                   <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
@@ -532,11 +583,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {items.map(eq => {
-                      const selected = hasEquipment(eq.id, equipmentLocation);
+                      const selected = selectedEquipment.has(eq.id);
                       return (
                         <button
                           key={eq.id}
-                          onClick={() => toggleEquipment(eq.id, equipmentLocation)}
+                          onClick={() => handleEquipmentToggle(eq.id)}
                           style={{
                             padding: '0.5rem 0.75rem',
                             borderRadius: '2rem',
@@ -642,6 +693,19 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <div className="mt-4">
               <button onClick={saveAndContinue} disabled={saving} className="btn-primary w-full">
                 {saving ? 'Saving...' : 'Continue'}
+              </button>
+              <button
+                onClick={nextStep}
+                style={{
+                  width: '100%',
+                  marginTop: '0.75rem',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(245, 241, 234, 0.5)',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Skip for now
               </button>
             </div>
           </div>
