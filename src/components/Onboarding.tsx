@@ -292,6 +292,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                         const val = e.target.value.replace(/[^0-9]/g, '');
                         setHeightFeet(val);
                       }}
+                      onFocus={e => e.target.select()}
                       style={{
                         width: '60px',
                         padding: '0.75rem',
@@ -315,6 +316,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                         const val = e.target.value.replace(/[^0-9]/g, '');
                         setHeightInches(val);
                       }}
+                      onFocus={e => e.target.select()}
                       style={{
                         width: '60px',
                         padding: '0.75rem',
