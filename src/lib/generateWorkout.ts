@@ -8,7 +8,8 @@ export type WorkoutStyle =
   | 'circuit'      // Rotate through exercises with minimal rest
   | 'wod'          // CrossFit-style WOD (AMRAP, EMOM, For Time)
   | 'cardio'       // Running intervals, sprints, cardio conditioning
-  | 'mobility';    // Stretching, foam rolling, recovery
+  | 'mobility'     // Stretching, foam rolling, recovery
+  | 'rehab';       // Injury prevention, prehab, rehabilitation exercises
 
 export interface WorkoutRequest {
   userId: string;
@@ -57,6 +58,8 @@ export interface GeneratedExercise {
   notes?: string;
   primaryMuscles?: string[];
   secondaryMuscles?: string[];
+  movementPatterns?: string[];
+  rehabFor?: string[];
 }
 
 export interface GeneratedWorkout {
@@ -255,6 +258,10 @@ export async function generateWorkoutLocal(request: WorkoutRequest): Promise<Gen
         // Mobility exercises use holds
         return { sets: 2, reps: '30-60s hold', rest: 15 };
 
+      case 'rehab':
+        // Rehab/prehab - light, controlled movements
+        return { sets: 2, reps: '10-15', rest: 30 };
+
       case 'traditional':
       default:
         // Traditional hypertrophy - varies by experience
@@ -284,6 +291,7 @@ export async function generateWorkoutLocal(request: WorkoutRequest): Promise<Gen
     traditional: 'hypertrophy-focused',
     cardio: 'cardiovascular conditioning',
     mobility: 'mobility and recovery',
+    rehab: 'rehab and prehab',
   };
   const styleDesc = styleDescriptions[workoutStyle] || 'traditional';
 
@@ -304,6 +312,8 @@ export async function generateWorkoutLocal(request: WorkoutRequest): Promise<Gen
         restSeconds: rest,
         primaryMuscles: ex.primary_muscles || [],
         secondaryMuscles: ex.secondary_muscles || [],
+        movementPatterns: ex.movement_patterns || [],
+        rehabFor: ex.rehab_for || [],
       };
     }),
   };
@@ -336,6 +346,7 @@ function generateWorkoutName(type: string, level: string, style: string = 'tradi
     traditional: '',
     cardio: 'Cardio',
     mobility: 'Mobility',
+    rehab: 'Rehab',
   };
 
   const typeNames: Record<string, string> = {

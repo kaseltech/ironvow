@@ -120,7 +120,7 @@ function isBodyweightExercise(ex: any): boolean {
 }
 
 // Workout style determines programming approach
-type WorkoutStyle = 'traditional' | 'strength' | 'hiit' | 'circuit' | 'wod' | 'cardio' | 'mobility';
+type WorkoutStyle = 'traditional' | 'strength' | 'hiit' | 'circuit' | 'wod' | 'cardio' | 'mobility' | 'rehab';
 
 // Fitness goal affects programming (from user profile)
 type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
@@ -153,6 +153,8 @@ interface GeneratedExercise {
   notes?: string;
   primaryMuscles?: string[];
   secondaryMuscles?: string[];
+  movementPatterns?: string[];
+  rehabFor?: string[];
 }
 
 interface GeneratedWorkout {
@@ -526,6 +528,17 @@ async function generateWithAI(
 - Can include yoga-inspired movements
 - Low intensity, focus on breath and relaxation
 - Good exercises: world's greatest stretch, pigeon pose, cat-cow, foam rolling`,
+
+    rehab: `WORKOUT STYLE: Rehab / Prehab
+- Focus on injury prevention, rehabilitation, and corrective exercises
+- Sets: 2-3 per exercise
+- Reps: 10-15 (controlled, quality movement)
+- Rest: 30-45 seconds between sets
+- Include: band pull-aparts, face pulls, external rotations, scapular exercises
+- Include: glute activation (clamshells, bridges), core stability (dead bugs, bird dogs)
+- Low intensity, focus on proper form and activation
+- Good exercises: band pull-aparts, face pulls, external rotation, chin tucks, bird dog, dead bug, clamshells, pigeon pose
+- Note in each exercise which body part/injury it addresses`,
   };
 
   // Build fitness goal context
@@ -783,6 +796,8 @@ Return ONLY valid JSON:
         notes: aiExercise.notes,
         primaryMuscles: match.exercise.primary_muscles || [],
         secondaryMuscles: match.exercise.secondary_muscles || [],
+        movementPatterns: match.exercise.movement_patterns || [],
+        rehabFor: match.exercise.rehab_for || [],
       });
     } else {
       // No match found - log for later review and still include in workout
@@ -924,6 +939,9 @@ function generateRuleBased(
       case 'mobility':
         // Mobility exercises use holds or reps with longer durations
         return { sets: 2, reps: '30-60s hold', rest: 15 };
+      case 'rehab':
+        // Rehab/prehab - controlled movements
+        return { sets: 2, reps: '10-15', rest: 30 };
       case 'traditional':
       default:
         switch (experienceLevel) {
@@ -952,6 +970,7 @@ function generateRuleBased(
     traditional: 'hypertrophy-focused',
     cardio: 'cardiovascular conditioning',
     mobility: 'mobility and recovery',
+    rehab: 'rehab and prehab',
   };
   const styleDesc = styleDescriptions[workoutStyle] || 'traditional';
 
@@ -972,6 +991,8 @@ function generateRuleBased(
         restSeconds: rest,
         primaryMuscles: ex.primary_muscles || [],
         secondaryMuscles: ex.secondary_muscles || [],
+        movementPatterns: ex.movement_patterns || [],
+        rehabFor: ex.rehab_for || [],
       };
     }),
   };
@@ -1004,6 +1025,7 @@ function generateWorkoutName(type: string, level: string, style: string = 'tradi
     traditional: '',
     cardio: 'Cardio',
     mobility: 'Mobility',
+    rehab: 'Rehab',
   };
 
   const typeNames: Record<string, string> = {
@@ -1039,6 +1061,7 @@ const styleExercisePatterns: Record<WorkoutStyle, string[]> = {
   strength: ['barbell', 'powerlifting', 'squat', 'deadlift', 'bench', 'press', 'row', 'rack pull', 'pause', 'deficit'],
   cardio: ['run', 'sprint', 'interval', 'bike', 'row', 'ski', 'jump rope', 'assault', 'echo'],
   mobility: ['stretch', 'foam', 'mobility', 'yoga', 'flexibility', 'pigeon', 'hip opener'],
+  rehab: ['rehab', 'prehab', 'band pull', 'face pull', 'external rotation', 'internal rotation', 'scapular', 'clamshell', 'bird dog', 'dead bug', 'chin tuck', 'glute bridge', 'stretch'],
   traditional: [], // No specific filter for traditional
 };
 
@@ -1187,6 +1210,8 @@ async function handleSwapRequest(
     equipmentRequired: ex.equipment_required,
     isCompound: ex.is_compound,
     difficulty: ex.difficulty,
+    movementPatterns: ex.movement_patterns || [],
+    rehabFor: ex.rehab_for || [],
   }));
 
   return new Response(

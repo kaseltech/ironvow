@@ -45,6 +45,7 @@ const workoutStyles: { id: WorkoutStyle; name: string; description: string }[] =
   { id: 'wod', name: 'WOD', description: 'CrossFit-style AMRAP/EMOM' },
   { id: 'cardio', name: 'Cardio', description: 'Running, intervals, conditioning' },
   { id: 'mobility', name: 'Mobility', description: 'Stretching & recovery' },
+  { id: 'rehab', name: 'Rehab/Prehab', description: 'Injury prevention & recovery' },
 ];
 
 export default function Home() {
@@ -957,8 +958,8 @@ export default function Home() {
                     <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.75rem' }}>
                       {exercise.sets} sets x {exercise.reps} reps
                     </p>
-                    {/* Muscle Tags */}
-                    {(exercise.primaryMuscles?.length || exercise.secondaryMuscles?.length) && (
+                    {/* Muscle & Movement Pattern Tags */}
+                    {(exercise.primaryMuscles?.length || exercise.secondaryMuscles?.length || exercise.movementPatterns?.length || exercise.rehabFor?.length) && (
                       <div className="flex flex-wrap gap-1" style={{ marginTop: '0.25rem' }}>
                         {exercise.primaryMuscles?.map(muscle => (
                           <span
@@ -990,6 +991,36 @@ export default function Home() {
                             {muscle.replace('_', ' ')}
                           </span>
                         ))}
+                        {/* Movement Pattern Tags */}
+                        {exercise.movementPatterns?.map(pattern => (
+                          <span
+                            key={pattern}
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.15)',
+                              borderRadius: '999px',
+                              padding: '0.0625rem 0.375rem',
+                              fontSize: '0.5rem',
+                              color: '#818CF8',
+                              textTransform: 'capitalize',
+                            }}
+                          >
+                            {pattern.replace('_', ' ')}
+                          </span>
+                        ))}
+                        {/* Rehab indicator */}
+                        {exercise.rehabFor?.length > 0 && (
+                          <span
+                            style={{
+                              background: 'rgba(34, 197, 94, 0.15)',
+                              borderRadius: '999px',
+                              padding: '0.0625rem 0.375rem',
+                              fontSize: '0.5rem',
+                              color: '#22C55E',
+                            }}
+                          >
+                            rehab
+                          </span>
+                        )}
                       </div>
                     )}
                     {exercise.notes && (
