@@ -35,41 +35,112 @@ const getLabel = (strength: number) => {
   return 'Undertrained';
 };
 
-// Muscle region definitions for click areas (percentages of image)
+// Expanded muscle region definitions (percentages of image)
+// More granular areas for better interaction
 const frontMuscleRegions = [
-  { id: 'shoulders', name: 'Shoulders', x: 15, y: 18, w: 18, h: 8 },
-  { id: 'shoulders', name: 'Shoulders', x: 67, y: 18, w: 18, h: 8 },
-  { id: 'chest', name: 'Chest', x: 28, y: 22, w: 44, h: 14 },
-  { id: 'biceps', name: 'Biceps', x: 12, y: 26, w: 12, h: 14 },
-  { id: 'biceps', name: 'Biceps', x: 76, y: 26, w: 12, h: 14 },
-  { id: 'forearms', name: 'Forearms', x: 8, y: 40, w: 10, h: 14 },
-  { id: 'forearms', name: 'Forearms', x: 82, y: 40, w: 10, h: 14 },
-  { id: 'core', name: 'Core', x: 35, y: 36, w: 30, h: 18 },
-  { id: 'quads', name: 'Quads', x: 30, y: 55, w: 18, h: 22 },
-  { id: 'quads', name: 'Quads', x: 52, y: 55, w: 18, h: 22 },
-  { id: 'calves', name: 'Calves', x: 32, y: 80, w: 14, h: 16 },
-  { id: 'calves', name: 'Calves', x: 54, y: 80, w: 14, h: 16 },
+  // Neck/Traps
+  { id: 'traps', name: 'Traps', x: 38, y: 12, w: 24, h: 6 },
+
+  // Shoulders (front delts)
+  { id: 'shoulders', name: 'Front Delts', x: 18, y: 16, w: 12, h: 8 },
+  { id: 'shoulders', name: 'Front Delts', x: 70, y: 16, w: 12, h: 8 },
+
+  // Chest - upper and lower
+  { id: 'chest', name: 'Upper Chest', x: 32, y: 20, w: 36, h: 8 },
+  { id: 'chest', name: 'Lower Chest', x: 30, y: 28, w: 40, h: 8 },
+
+  // Biceps
+  { id: 'biceps', name: 'Biceps', x: 14, y: 26, w: 10, h: 12 },
+  { id: 'biceps', name: 'Biceps', x: 76, y: 26, w: 10, h: 12 },
+
+  // Forearms
+  { id: 'forearms', name: 'Forearms', x: 10, y: 40, w: 10, h: 14 },
+  { id: 'forearms', name: 'Forearms', x: 80, y: 40, w: 10, h: 14 },
+
+  // Core - abs and obliques
+  { id: 'abs', name: 'Upper Abs', x: 38, y: 36, w: 24, h: 8 },
+  { id: 'abs', name: 'Lower Abs', x: 38, y: 44, w: 24, h: 8 },
+  { id: 'obliques', name: 'Obliques', x: 28, y: 38, w: 10, h: 14 },
+  { id: 'obliques', name: 'Obliques', x: 62, y: 38, w: 10, h: 14 },
+
+  // Hip flexors
+  { id: 'hip_flexors', name: 'Hip Flexors', x: 35, y: 52, w: 12, h: 6 },
+  { id: 'hip_flexors', name: 'Hip Flexors', x: 53, y: 52, w: 12, h: 6 },
+
+  // Quads - outer, inner, front
+  { id: 'quads', name: 'Outer Quad', x: 26, y: 58, w: 10, h: 14 },
+  { id: 'quads', name: 'Front Quad', x: 36, y: 58, w: 10, h: 14 },
+  { id: 'quads', name: 'Front Quad', x: 54, y: 58, w: 10, h: 14 },
+  { id: 'quads', name: 'Outer Quad', x: 64, y: 58, w: 10, h: 14 },
+
+  // Adductors (inner thigh)
+  { id: 'adductors', name: 'Adductors', x: 44, y: 60, w: 12, h: 12 },
+
+  // Lower quads / knee area
+  { id: 'quads', name: 'Lower Quad', x: 30, y: 72, w: 14, h: 8 },
+  { id: 'quads', name: 'Lower Quad', x: 56, y: 72, w: 14, h: 8 },
+
+  // Tibialis (front of shin)
+  { id: 'tibialis', name: 'Tibialis', x: 32, y: 82, w: 10, h: 10 },
+  { id: 'tibialis', name: 'Tibialis', x: 58, y: 82, w: 10, h: 10 },
+
+  // Calves (front view - mostly tibialis visible)
+  { id: 'calves', name: 'Calves', x: 34, y: 80, w: 12, h: 14 },
+  { id: 'calves', name: 'Calves', x: 54, y: 80, w: 12, h: 14 },
 ];
 
 const backMuscleRegions = [
-  { id: 'traps', name: 'Traps', x: 35, y: 16, w: 30, h: 10 },
-  { id: 'rear_delts', name: 'Rear Delts', x: 18, y: 20, w: 14, h: 8 },
-  { id: 'rear_delts', name: 'Rear Delts', x: 68, y: 20, w: 14, h: 8 },
-  { id: 'upper_back', name: 'Upper Back', x: 32, y: 24, w: 36, h: 14 },
-  { id: 'lats', name: 'Lats', x: 24, y: 30, w: 12, h: 18 },
-  { id: 'lats', name: 'Lats', x: 64, y: 30, w: 12, h: 18 },
-  { id: 'triceps', name: 'Triceps', x: 12, y: 28, w: 10, h: 14 },
-  { id: 'triceps', name: 'Triceps', x: 78, y: 28, w: 10, h: 14 },
-  { id: 'lower_back', name: 'Lower Back', x: 38, y: 40, w: 24, h: 12 },
-  { id: 'glutes', name: 'Glutes', x: 32, y: 52, w: 36, h: 12 },
-  { id: 'hamstrings', name: 'Hamstrings', x: 30, y: 62, w: 18, h: 18 },
-  { id: 'hamstrings', name: 'Hamstrings', x: 52, y: 62, w: 18, h: 18 },
-  { id: 'calves', name: 'Calves', x: 32, y: 82, w: 14, h: 14 },
-  { id: 'calves', name: 'Calves', x: 54, y: 82, w: 14, h: 14 },
+  // Traps - upper, mid, lower
+  { id: 'traps', name: 'Upper Traps', x: 36, y: 12, w: 28, h: 6 },
+  { id: 'traps', name: 'Mid Traps', x: 38, y: 18, w: 24, h: 6 },
+
+  // Rear Delts
+  { id: 'rear_delts', name: 'Rear Delts', x: 18, y: 18, w: 12, h: 8 },
+  { id: 'rear_delts', name: 'Rear Delts', x: 70, y: 18, w: 12, h: 8 },
+
+  // Rhomboids (mid back)
+  { id: 'rhomboids', name: 'Rhomboids', x: 36, y: 24, w: 28, h: 8 },
+
+  // Lats - multiple zones
+  { id: 'lats', name: 'Upper Lats', x: 22, y: 26, w: 14, h: 10 },
+  { id: 'lats', name: 'Upper Lats', x: 64, y: 26, w: 14, h: 10 },
+  { id: 'lats', name: 'Lower Lats', x: 24, y: 36, w: 12, h: 10 },
+  { id: 'lats', name: 'Lower Lats', x: 64, y: 36, w: 12, h: 10 },
+
+  // Triceps
+  { id: 'triceps', name: 'Triceps', x: 14, y: 26, w: 8, h: 14 },
+  { id: 'triceps', name: 'Triceps', x: 78, y: 26, w: 8, h: 14 },
+
+  // Forearms (back)
+  { id: 'forearms', name: 'Forearms', x: 10, y: 42, w: 8, h: 12 },
+  { id: 'forearms', name: 'Forearms', x: 82, y: 42, w: 8, h: 12 },
+
+  // Lower back / erector spinae
+  { id: 'lower_back', name: 'Erector Spinae', x: 36, y: 34, w: 12, h: 14 },
+  { id: 'lower_back', name: 'Erector Spinae', x: 52, y: 34, w: 12, h: 14 },
+
+  // Glutes - upper and lower
+  { id: 'glutes', name: 'Upper Glutes', x: 30, y: 50, w: 18, h: 8 },
+  { id: 'glutes', name: 'Upper Glutes', x: 52, y: 50, w: 18, h: 8 },
+  { id: 'glutes', name: 'Lower Glutes', x: 32, y: 58, w: 16, h: 6 },
+  { id: 'glutes', name: 'Lower Glutes', x: 52, y: 58, w: 16, h: 6 },
+
+  // Hamstrings - upper and lower
+  { id: 'hamstrings', name: 'Upper Hamstring', x: 30, y: 64, w: 14, h: 10 },
+  { id: 'hamstrings', name: 'Upper Hamstring', x: 56, y: 64, w: 14, h: 10 },
+  { id: 'hamstrings', name: 'Lower Hamstring', x: 32, y: 74, w: 12, h: 8 },
+  { id: 'hamstrings', name: 'Lower Hamstring', x: 56, y: 74, w: 12, h: 8 },
+
+  // Calves (back view)
+  { id: 'calves', name: 'Gastrocnemius', x: 32, y: 82, w: 14, h: 10 },
+  { id: 'calves', name: 'Gastrocnemius', x: 54, y: 82, w: 14, h: 10 },
+  { id: 'calves', name: 'Soleus', x: 34, y: 90, w: 10, h: 6 },
+  { id: 'calves', name: 'Soleus', x: 56, y: 90, w: 10, h: 6 },
 ];
 
 export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
+  const [hoveredRegion, setHoveredRegion] = useState<number | null>(null);
   const [view, setView] = useState<'front' | 'back'>('front');
 
   // Always use male images for now
@@ -81,7 +152,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
   };
 
   const handleMuscleClick = (id: string) => {
-    setSelectedMuscle(id);
+    setSelectedMuscle(prev => prev === id ? null : id);
     const muscle = getMuscleData(id);
     if (muscle && onMuscleSelect) {
       onMuscleSelect(muscle);
@@ -95,7 +166,10 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
       {/* View Toggle */}
       <div className="flex justify-center gap-2 mb-4">
         <button
-          onClick={() => setView('front')}
+          onClick={() => {
+            setView('front');
+            setHoveredRegion(null);
+          }}
           style={{
             padding: '0.5rem 1rem',
             borderRadius: '0.5rem',
@@ -108,7 +182,10 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
           Front
         </button>
         <button
-          onClick={() => setView('back')}
+          onClick={() => {
+            setView('back');
+            setHoveredRegion(null);
+          }}
           style={{
             padding: '0.5rem 1rem',
             borderRadius: '0.5rem',
@@ -122,13 +199,14 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
         </button>
       </div>
 
-      {/* Body Image with Clickable Regions */}
+      {/* Body Image with Clickable Regions - MUCH LARGER */}
       <div className="flex justify-center">
         <div
           style={{
             position: 'relative',
-            width: '200px',
-            height: '360px',
+            width: '100%',
+            maxWidth: '450px',
+            aspectRatio: '1 / 1.8',
           }}
         >
           <Image
@@ -146,12 +224,18 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
           {regions.map((region, idx) => {
             const muscle = getMuscleData(region.id);
             const isSelected = selectedMuscle === region.id;
+            const isHovered = hoveredRegion === idx;
             const strength = muscle?.strength ?? 50;
+            const color = getColor(strength);
 
             return (
               <button
                 key={`${region.id}-${idx}`}
                 onClick={() => handleMuscleClick(region.id)}
+                onMouseEnter={() => setHoveredRegion(idx)}
+                onMouseLeave={() => setHoveredRegion(null)}
+                onTouchStart={() => setHoveredRegion(idx)}
+                onTouchEnd={() => setHoveredRegion(null)}
                 style={{
                   position: 'absolute',
                   left: `${region.x}%`,
@@ -159,27 +243,20 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
                   width: `${region.w}%`,
                   height: `${region.h}%`,
                   background: isSelected
-                    ? `${getColor(strength)}40`
+                    ? `${color}50`
+                    : isHovered
+                    ? `${color}30`
                     : 'transparent',
                   border: isSelected
-                    ? `2px solid ${getColor(strength)}`
+                    ? `2px solid ${color}`
+                    : isHovered
+                    ? `1px solid ${color}80`
                     : '1px solid transparent',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = `${getColor(strength)}20`;
-                    e.currentTarget.style.border = `1px solid ${getColor(strength)}60`;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.border = '1px solid transparent';
-                  }
-                }}
+                title={region.name}
               />
             );
           })}
