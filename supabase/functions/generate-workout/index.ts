@@ -151,6 +151,8 @@ interface GeneratedExercise {
   weight?: string;
   restSeconds: number;
   notes?: string;
+  primaryMuscles?: string[];
+  secondaryMuscles?: string[];
 }
 
 interface GeneratedWorkout {
@@ -761,7 +763,7 @@ Return ONLY valid JSON:
     const match = findBestMatch(aiExercise.name, allDbExercises);
 
     if (match) {
-      // Found a match - use the database exercise ID
+      // Found a match - use the database exercise ID and muscle data
       console.log(`✓ Matched "${aiExercise.name}" → "${match.exercise.name}" (score: ${match.score.toFixed(2)})`);
       matchedExercises.push({
         exerciseId: match.exercise.id,
@@ -770,6 +772,8 @@ Return ONLY valid JSON:
         reps: String(aiExercise.reps),
         restSeconds: aiExercise.restSeconds,
         notes: aiExercise.notes,
+        primaryMuscles: match.exercise.primary_muscles || [],
+        secondaryMuscles: match.exercise.secondary_muscles || [],
       });
     } else {
       // No match found - log for later review and still include in workout
@@ -786,12 +790,15 @@ Return ONLY valid JSON:
       });
 
       // Include unmatched exercise with empty ID (client will display AI name)
+      // Use AI-provided primaryMuscle as best guess
       matchedExercises.push({
         exerciseId: '', // Empty = unmatched, use AI-provided name
         name: aiExercise.name,
         sets: aiExercise.sets,
         reps: String(aiExercise.reps),
         restSeconds: aiExercise.restSeconds,
+        primaryMuscles: aiExercise.primaryMuscle ? [aiExercise.primaryMuscle] : [],
+        secondaryMuscles: [],
         notes: aiExercise.notes,
       });
     }
@@ -954,6 +961,8 @@ function generateRuleBased(
         sets,
         reps,
         restSeconds: rest,
+        primaryMuscles: ex.primary_muscles || [],
+        secondaryMuscles: ex.secondary_muscles || [],
       };
     }),
   };

@@ -13,12 +13,22 @@ import { GymManager } from '@/components/GymManager';
 import type { GymProfile } from '@/lib/supabase/types';
 
 const muscleGroups = [
-  { id: 'chest', name: 'Chest', icon: '💪' },
-  { id: 'back', name: 'Back', icon: '🔙' },
-  { id: 'shoulders', name: 'Shoulders', icon: '🎯' },
-  { id: 'arms', name: 'Arms', icon: '💪' },
-  { id: 'legs', name: 'Legs', icon: '🦵' },
-  { id: 'core', name: 'Core', icon: '🔥' },
+  // Upper body
+  { id: 'chest', name: 'Chest', category: 'upper' },
+  { id: 'back', name: 'Back', category: 'upper' },
+  { id: 'shoulders', name: 'Shoulders', category: 'upper' },
+  { id: 'biceps', name: 'Biceps', category: 'upper' },
+  { id: 'triceps', name: 'Triceps', category: 'upper' },
+  { id: 'forearms', name: 'Forearms', category: 'upper' },
+  { id: 'traps', name: 'Traps', category: 'upper' },
+  // Lower body
+  { id: 'quads', name: 'Quads', category: 'lower' },
+  { id: 'hamstrings', name: 'Hamstrings', category: 'lower' },
+  { id: 'glutes', name: 'Glutes', category: 'lower' },
+  { id: 'calves', name: 'Calves', category: 'lower' },
+  // Core
+  { id: 'abs', name: 'Abs', category: 'core' },
+  { id: 'obliques', name: 'Obliques', category: 'core' },
 ];
 
 const locations = [
@@ -487,32 +497,93 @@ export default function Home() {
                 <h2 style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   What do you want to hit?
                 </h2>
-                <div className="grid grid-cols-3 gap-2">
-                  {muscleGroups.map(muscle => (
-                    <button
-                      key={muscle.id}
-                      onClick={() => toggleMuscle(muscle.id)}
-                      style={{
-                        background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
-                        border: selectedMuscles.includes(muscle.id) ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.1)',
-                        borderRadius: '0.75rem',
-                        padding: '0.75rem',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <div style={{ fontSize: '1.25rem', marginBottom: '0.125rem' }}>{muscle.icon}</div>
-                      <div style={{ color: '#F5F1EA', fontSize: '0.75rem' }}>{muscle.name}</div>
-                    </button>
-                  ))}
+
+                {/* Upper Body */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
+                    Upper Body
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {muscleGroups.filter(m => m.category === 'upper').map(muscle => (
+                      <button
+                        key={muscle.id}
+                        onClick={() => toggleMuscle(muscle.id)}
+                        style={{
+                          background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                          border: selectedMuscles.includes(muscle.id) ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                          borderRadius: '999px',
+                          padding: '0.375rem 0.75rem',
+                          transition: 'all 0.2s ease',
+                          color: selectedMuscles.includes(muscle.id) ? '#C9A75A' : '#F5F1EA',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {muscle.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Lower Body */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
+                    Lower Body
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {muscleGroups.filter(m => m.category === 'lower').map(muscle => (
+                      <button
+                        key={muscle.id}
+                        onClick={() => toggleMuscle(muscle.id)}
+                        style={{
+                          background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                          border: selectedMuscles.includes(muscle.id) ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                          borderRadius: '999px',
+                          padding: '0.375rem 0.75rem',
+                          transition: 'all 0.2s ease',
+                          color: selectedMuscles.includes(muscle.id) ? '#C9A75A' : '#F5F1EA',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {muscle.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Core */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
+                    Core
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {muscleGroups.filter(m => m.category === 'core').map(muscle => (
+                      <button
+                        key={muscle.id}
+                        onClick={() => toggleMuscle(muscle.id)}
+                        style={{
+                          background: selectedMuscles.includes(muscle.id) ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                          border: selectedMuscles.includes(muscle.id) ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                          borderRadius: '999px',
+                          padding: '0.375rem 0.75rem',
+                          transition: 'all 0.2s ease',
+                          color: selectedMuscles.includes(muscle.id) ? '#C9A75A' : '#F5F1EA',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {muscle.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
-                  onClick={() => setSelectedMuscles(['chest', 'back', 'shoulders', 'arms', 'legs', 'core'])}
+                  onClick={() => setSelectedMuscles(muscleGroups.map(m => m.id))}
                   style={{
-                    marginTop: '0.75rem',
+                    marginTop: '0.5rem',
                     background: 'transparent',
                     border: 'none',
                     color: '#C9A75A',
-                    fontSize: '0.875rem',
+                    fontSize: '0.75rem',
                     cursor: 'pointer',
                     textDecoration: 'underline',
                   }}
@@ -772,9 +843,33 @@ export default function Home() {
                   ~{generatedWorkout.duration} min
                 </span>
               </div>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
-                {generatedWorkout.exercises.length} exercises • {generatedWorkout.workoutType} focus
+              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                {generatedWorkout.exercises.length} exercises
               </p>
+              {/* Target Muscles Tags */}
+              <div className="flex flex-wrap gap-1">
+                {generatedWorkout.targetMuscles.slice(0, 6).map(muscle => (
+                  <span
+                    key={muscle}
+                    style={{
+                      background: 'rgba(201, 167, 90, 0.15)',
+                      border: '1px solid rgba(201, 167, 90, 0.3)',
+                      borderRadius: '999px',
+                      padding: '0.125rem 0.5rem',
+                      fontSize: '0.625rem',
+                      color: '#C9A75A',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {muscle.replace('_', ' ')}
+                  </span>
+                ))}
+                {generatedWorkout.targetMuscles.length > 6 && (
+                  <span style={{ fontSize: '0.625rem', color: 'rgba(245, 241, 234, 0.4)' }}>
+                    +{generatedWorkout.targetMuscles.length - 6} more
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -812,6 +907,41 @@ export default function Home() {
                     <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.75rem' }}>
                       {exercise.sets} sets x {exercise.reps} reps
                     </p>
+                    {/* Muscle Tags */}
+                    {(exercise.primaryMuscles?.length || exercise.secondaryMuscles?.length) && (
+                      <div className="flex flex-wrap gap-1" style={{ marginTop: '0.25rem' }}>
+                        {exercise.primaryMuscles?.map(muscle => (
+                          <span
+                            key={muscle}
+                            style={{
+                              background: 'rgba(201, 167, 90, 0.2)',
+                              borderRadius: '999px',
+                              padding: '0.0625rem 0.375rem',
+                              fontSize: '0.5rem',
+                              color: '#C9A75A',
+                              textTransform: 'capitalize',
+                            }}
+                          >
+                            {muscle.replace('_', ' ')}
+                          </span>
+                        ))}
+                        {exercise.secondaryMuscles?.slice(0, 2).map(muscle => (
+                          <span
+                            key={muscle}
+                            style={{
+                              background: 'rgba(245, 241, 234, 0.1)',
+                              borderRadius: '999px',
+                              padding: '0.0625rem 0.375rem',
+                              fontSize: '0.5rem',
+                              color: 'rgba(245, 241, 234, 0.5)',
+                              textTransform: 'capitalize',
+                            }}
+                          >
+                            {muscle.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {exercise.notes && (
                       <p style={{ color: 'rgba(201, 167, 90, 0.6)', fontSize: '0.625rem', marginTop: '0.25rem' }}>
                         {exercise.notes}

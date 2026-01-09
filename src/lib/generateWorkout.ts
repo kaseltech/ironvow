@@ -54,6 +54,8 @@ export interface GeneratedExercise {
   weight?: string;
   restSeconds: number;
   notes?: string;
+  primaryMuscles?: string[];
+  secondaryMuscles?: string[];
 }
 
 export interface GeneratedWorkout {
@@ -299,6 +301,8 @@ export async function generateWorkoutLocal(request: WorkoutRequest): Promise<Gen
         sets,
         reps,
         restSeconds: rest,
+        primaryMuscles: ex.primary_muscles || [],
+        secondaryMuscles: ex.secondary_muscles || [],
       };
     }),
   };
