@@ -24,6 +24,22 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
   const [customInput, setCustomInput] = useState('');
   const [equipmentLocation, setEquipmentLocation] = useState<'home' | 'gym'>('home');
   const [saving, setSaving] = useState(false);
+  const [equipmentSearch, setEquipmentSearch] = useState('');
+
+  // Common equipment that should appear first
+  const commonEquipmentNames = [
+    'Dumbbells', 'Barbell', 'Flat Bench', 'Adjustable Bench', 'Squat Rack', 'Power Rack',
+    'Pull-up Bar', 'Kettlebells', 'Resistance Bands', 'Cable Machine', 'Lat Pulldown',
+    'Leg Press', 'Smith Machine', 'EZ Curl Bar', 'Treadmill', 'Rowing Machine',
+    'Foam Roller', 'Jump Rope', 'Plyo Box', 'Medicine Ball', 'Battle Ropes',
+  ];
+
+  const getEquipmentPriority = (name: string): number => {
+    const idx = commonEquipmentNames.findIndex(n =>
+      name.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(name.toLowerCase())
+    );
+    return idx === -1 ? 999 : idx;
+  };
 
   // Load custom equipment from profile
   useEffect(() => {
@@ -86,12 +102,52 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
     }
   };
 
-  const groupedEquipment = allEquipment.reduce((acc, eq) => {
-    const category = eq.category || 'Other';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(eq);
-    return acc;
-  }, {} as Record<string, typeof allEquipment>);
+  // Filter and sort equipment
+  const searchTerm = equipmentSearch.trim().toLowerCase();
+  const isSearching = searchTerm.length > 0;
+
+  const filteredEquipment = isSearching
+    ? allEquipment
+        .filter(eq =>
+          eq.name.toLowerCase().includes(searchTerm) ||
+          (eq.category || '').toLowerCase().includes(searchTerm)
+        )
+        .sort((a, b) => {
+          const aStarts = a.name.toLowerCase().startsWith(searchTerm) ? 0 : 1;
+          const bStarts = b.name.toLowerCase().startsWith(searchTerm) ? 0 : 1;
+          if (aStarts !== bStarts) return aStarts - bStarts;
+          return getEquipmentPriority(a.name) - getEquipmentPriority(b.name);
+        })
+    : allEquipment;
+
+  // Group by category (only when not searching)
+  const groupedEquipment = isSearching
+    ? {}
+    : filteredEquipment.reduce((acc, eq) => {
+        const category = eq.category || 'Other';
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(eq);
+        return acc;
+      }, {} as Record<string, typeof filteredEquipment>);
+
+  // Sort categories and items within
+  const categoryOrder = ['Free Weights', 'Benches', 'Racks', 'Machines', 'Cable', 'Cardio', 'Accessories', 'Other'];
+  const sortedCategories = Object.keys(groupedEquipment).sort((a, b) => {
+    const aIdx = categoryOrder.indexOf(a);
+    const bIdx = categoryOrder.indexOf(b);
+    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
+  });
+  Object.keys(groupedEquipment).forEach(cat => {
+    groupedEquipment[cat].sort((a, b) => getEquipmentPriority(a.name) - getEquipmentPriority(b.name));
+  });
+
+  // Common equipment for quick access
+  const commonEquipment = allEquipment
+    .filter(eq => commonEquipmentNames.some(name =>
+      eq.name.toLowerCase().includes(name.toLowerCase())
+    ))
+    .sort((a, b) => getEquipmentPriority(a.name) - getEquipmentPriority(b.name))
+    .slice(0, 15);
 
   if (!isOpen) return null;
 
@@ -177,7 +233,10 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
             /* Equipment Editor View */
             <>
               <button
-                onClick={() => setShowEquipmentEditor(false)}
+                onClick={() => {
+                  setShowEquipmentEditor(false);
+                  setEquipmentSearch('');
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -216,15 +275,105 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                 ))}
               </div>
 
+              {/* Search */}
+              <div style={{ marginBottom: '0.75rem', position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Search equipment (e.g., bench, cable)..."
+                  value={equipmentSearch}
+                  onChange={(e) => setEquipmentSearch(e.target.value)}
+                  autoComplete="off"
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem 2rem 0.5rem 0.75rem',
+                    background: 'rgba(15, 34, 51, 0.8)',
+                    border: `1px solid ${equipmentSearch ? '#C9A75A' : 'rgba(201, 167, 90, 0.2)'}`,
+                    borderRadius: '0.5rem',
+                    color: '#F5F1EA',
+                    fontSize: '0.875rem',
+                  }}
+                />
+                {equipmentSearch && (
+                  <button
+                    onClick={() => setEquipmentSearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: '0.5rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'rgba(201, 167, 90, 0.3)',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      color: '#F5F1EA',
+                      cursor: 'pointer',
+                      fontSize: '0.7rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
               {/* Equipment list */}
-              <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '1rem' }}>
-                {Object.entries(groupedEquipment).map(([category, items]) => (
-                  <div key={category} style={{ marginBottom: '1rem' }}>
-                    <h4 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                      {category.replace('_', ' ')}
+              <div style={{ maxHeight: '250px', overflowY: 'auto', marginBottom: '1rem' }}>
+                {/* Search results (flat list) */}
+                {isSearching && (
+                  filteredEquipment.length === 0 ? (
+                    <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', textAlign: 'center', padding: '1rem' }}>
+                      No equipment found
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'rgba(245, 241, 234, 0.4)', marginBottom: '0.5rem' }}>
+                        {filteredEquipment.length} results
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {filteredEquipment.map(eq => {
+                          const selected = hasEquipment(eq.id, equipmentLocation);
+                          const matchIdx = eq.name.toLowerCase().indexOf(searchTerm);
+                          return (
+                            <button
+                              key={eq.id}
+                              onClick={() => toggleEquipment(eq.id, equipmentLocation)}
+                              style={{
+                                padding: '0.375rem 0.625rem',
+                                borderRadius: '2rem',
+                                background: selected ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
+                                border: selected ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
+                                color: selected ? '#C9A75A' : 'rgba(245, 241, 234, 0.5)',
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              {matchIdx >= 0 ? (
+                                <>
+                                  {eq.name.slice(0, matchIdx)}
+                                  <span style={{ fontWeight: 700, textDecoration: 'underline' }}>
+                                    {eq.name.slice(matchIdx, matchIdx + searchTerm.length)}
+                                  </span>
+                                  {eq.name.slice(matchIdx + searchTerm.length)}
+                                </>
+                              ) : eq.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )
+                )}
+
+                {/* Common Equipment (when not searching) */}
+                {!isSearching && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <h4 style={{ color: '#C9A75A', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                      Common Equipment
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {items.map(eq => {
+                      {commonEquipment.map(eq => {
                         const selected = hasEquipment(eq.id, equipmentLocation);
                         return (
                           <button
@@ -234,8 +383,8 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                               padding: '0.375rem 0.625rem',
                               borderRadius: '2rem',
                               background: selected ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
-                              border: selected ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                              color: selected ? '#C9A75A' : 'rgba(245, 241, 234, 0.5)',
+                              border: selected ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.3)',
+                              color: selected ? '#C9A75A' : 'rgba(245, 241, 234, 0.6)',
                               fontSize: '0.75rem',
                             }}
                           >
@@ -245,7 +394,44 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                       })}
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Categorized list (when not searching) */}
+                {!isSearching && (
+                  <div style={{ borderTop: '1px solid rgba(201, 167, 90, 0.1)', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '0.6rem', color: 'rgba(245, 241, 234, 0.4)', marginBottom: '0.75rem' }}>
+                      All Equipment
+                    </div>
+                    {sortedCategories.map(category => (
+                      <div key={category} style={{ marginBottom: '1rem' }}>
+                        <h4 style={{ color: '#C9A75A', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>
+                          {category.replace('_', ' ')}
+                        </h4>
+                        <div className="flex flex-wrap gap-1">
+                          {groupedEquipment[category].map(eq => {
+                            const selected = hasEquipment(eq.id, equipmentLocation);
+                            return (
+                              <button
+                                key={eq.id}
+                                onClick={() => toggleEquipment(eq.id, equipmentLocation)}
+                                style={{
+                                  padding: '0.25rem 0.5rem',
+                                  borderRadius: '2rem',
+                                  background: selected ? 'rgba(201, 167, 90, 0.2)' : 'transparent',
+                                  border: selected ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.15)',
+                                  color: selected ? '#C9A75A' : 'rgba(245, 241, 234, 0.4)',
+                                  fontSize: '0.7rem',
+                                }}
+                              >
+                                {eq.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Custom Equipment */}
