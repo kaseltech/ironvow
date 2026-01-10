@@ -378,23 +378,24 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
           }}
         >
           {/* SVG contains both image and polygon regions for 1:1 coordinate alignment */}
+          {/* CRITICAL: No preserveAspectRatio so image fills exactly 0-100 in both dimensions */}
           <svg
             viewBox="0 0 100 100"
             style={{
               width: '100%',
               height: 'auto',
               display: 'block',
+              aspectRatio: '1 / 1',
             }}
-            preserveAspectRatio="xMidYMid meet"
           >
-            {/* Embedded image - same coordinate system as polygons */}
+            {/* Embedded image - stretches to fill viewBox exactly for coordinate alignment */}
             <image
               href={imageSrc}
               x="0"
               y="0"
               width="100"
               height="100"
-              preserveAspectRatio="xMidYMid meet"
+              preserveAspectRatio="none"
               style={{ filter: 'brightness(0.9)' }}
             />
             {polygons.map((polygon, idx) => {
