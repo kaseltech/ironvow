@@ -1086,10 +1086,42 @@ Return ONLY valid JSON:
   const matchedExercises: GeneratedExercise[] = [];
   const unmatchedLog: { name: string; context: any }[] = [];
 
+  // Banned exercises for rehab/mobility workouts - these should NEVER appear
+  const bannedForRehab = new Set([
+    'bench press', 'barbell bench press', 'dumbbell bench press', 'incline bench press',
+    'squat', 'barbell squat', 'back squat', 'front squat',
+    'deadlift', 'barbell deadlift', 'conventional deadlift', 'sumo deadlift', 'romanian deadlift',
+    'overhead press', 'barbell overhead press', 'military press', 'shoulder press',
+    'barbell row', 'bent over row', 'pendlay row',
+    'leg press', 'hack squat',
+    'clean', 'clean and jerk', 'snatch', 'power clean',
+    'pull-up', 'chin-up', 'dip', 'muscle-up',
+  ]);
+
+  // Helper to check if exercise is banned for current workout style
+  const isBannedExercise = (exerciseName: string): boolean => {
+    if (workoutStyle !== 'rehab' && workoutStyle !== 'mobility') return false;
+    const normalized = exerciseName.toLowerCase().trim();
+    return bannedForRehab.has(normalized) ||
+      Array.from(bannedForRehab).some(banned => normalized.includes(banned));
+  };
+
   for (const aiExercise of parsed.exercises) {
+    // Check if exercise is banned for this workout style
+    if (isBannedExercise(aiExercise.name)) {
+      console.log(`✗ BLOCKED banned exercise for ${workoutStyle}: "${aiExercise.name}"`);
+      continue; // Skip this exercise entirely
+    }
+
     const match = findBestMatch(aiExercise.name, allDbExercises);
 
     if (match) {
+      // Double-check matched exercise isn't banned either
+      if (isBannedExercise(match.exercise.name)) {
+        console.log(`✗ BLOCKED matched banned exercise for ${workoutStyle}: "${match.exercise.name}"`);
+        continue;
+      }
+
       // Found a match - use the database exercise ID and muscle data
       console.log(`✓ Matched "${aiExercise.name}" → "${match.exercise.name}" (score: ${match.score.toFixed(2)})`);
 
@@ -1112,7 +1144,13 @@ Return ONLY valid JSON:
         rehabFor: match.exercise.rehab_for || [],
       });
     } else {
-      // No match found - log for later review and still include in workout
+      // No match found - for rehab/mobility, skip unmatched heavy exercises
+      if (workoutStyle === 'rehab' || workoutStyle === 'mobility') {
+        console.log(`✗ Skipping unmatched exercise for ${workoutStyle}: "${aiExercise.name}"`);
+        continue; // Don't include unmatched exercises in rehab/mobility workouts
+      }
+
+      // For other styles, log and include
       console.log(`✗ Unmatched exercise: "${aiExercise.name}"`);
       unmatchedLog.push({
         name: aiExercise.name,
@@ -1157,15 +1195,99 @@ Return ONLY valid JSON:
     }
   }
 
-  const matchRate = matchedExercises.filter(e => e.exerciseId).length / matchedExercises.length;
+  // If rehab/mobility workout ended up with no exercises, add appropriate fallbacks
+  if ((workoutStyle === 'rehab' || workoutStyle === 'mobility') && matchedExercises.length === 0) {
+    console.log(`⚠️ ${workoutStyle} workout has no valid exercises - adding fallback exercises`);
+
+    // Fallback rehab/mobility exercises based on target muscles
+    const fallbackRehabExercises: Record<string, { name: string; muscles: string[] }[]> = {
+      shoulders: [
+        { name: 'Band Pull-Aparts', muscles: ['shoulders', 'rear_delts'] },
+        { name: 'External Rotation (Band)', muscles: ['shoulders', 'rotator_cuff'] },
+        { name: 'Wall Slides', muscles: ['shoulders', 'scapula'] },
+        { name: 'Prone Y-T-W Raises', muscles: ['shoulders', 'upper_back'] },
+      ],
+      back: [
+        { name: 'Cat-Cow Stretch', muscles: ['back', 'spine'] },
+        { name: 'Bird Dog', muscles: ['back', 'core'] },
+        { name: 'Dead Bug', muscles: ['core', 'back'] },
+        { name: 'Thoracic Rotation', muscles: ['upper_back', 'spine'] },
+      ],
+      chest: [
+        { name: 'Doorway Stretch', muscles: ['chest', 'shoulders'] },
+        { name: 'Scapular Push-ups', muscles: ['chest', 'scapula'] },
+        { name: 'Foam Roll Pecs', muscles: ['chest'] },
+      ],
+      legs: [
+        { name: 'Clamshells', muscles: ['glutes', 'hips'] },
+        { name: 'Glute Bridge', muscles: ['glutes', 'hamstrings'] },
+        { name: 'Hip 90/90 Stretch', muscles: ['hips', 'glutes'] },
+        { name: 'Pigeon Pose', muscles: ['hips', 'glutes'] },
+      ],
+      core: [
+        { name: 'Dead Bug', muscles: ['core', 'abs'] },
+        { name: 'Pelvic Tilts', muscles: ['core', 'lower_back'] },
+        { name: 'McGill Curl-up', muscles: ['abs', 'core'] },
+      ],
+    };
+
+    // Determine which fallback category to use based on target muscles
+    let fallbackCategory = 'shoulders'; // Default
+    for (const muscle of targetMuscles) {
+      if (['shoulders', 'front_delts', 'rear_delts', 'lateral_delts'].includes(muscle)) {
+        fallbackCategory = 'shoulders';
+        break;
+      } else if (['back', 'lats', 'upper_back', 'lower_back', 'traps'].includes(muscle)) {
+        fallbackCategory = 'back';
+        break;
+      } else if (['chest'].includes(muscle)) {
+        fallbackCategory = 'chest';
+        break;
+      } else if (['quads', 'hamstrings', 'glutes', 'calves', 'hips'].includes(muscle)) {
+        fallbackCategory = 'legs';
+        break;
+      } else if (['core', 'abs', 'obliques'].includes(muscle)) {
+        fallbackCategory = 'core';
+        break;
+      }
+    }
+
+    const fallbacks = fallbackRehabExercises[fallbackCategory] || fallbackRehabExercises.shoulders;
+    const exerciseCount = Math.min(Math.max(2, Math.floor(duration / 6)), fallbacks.length);
+
+    for (let i = 0; i < exerciseCount; i++) {
+      const fb = fallbacks[i];
+      matchedExercises.push({
+        exerciseId: '',
+        name: fb.name,
+        sets: 2,
+        reps: workoutStyle === 'mobility' ? '30-45s hold' : '10-15',
+        restSeconds: 30,
+        notes: `${workoutStyle === 'rehab' ? 'Rehabilitation' : 'Mobility'} exercise - controlled movement`,
+        primaryMuscles: fb.muscles,
+        secondaryMuscles: [],
+      });
+    }
+
+    console.log(`Added ${exerciseCount} fallback ${workoutStyle} exercises`);
+  }
+
+  const matchRate = matchedExercises.length > 0
+    ? matchedExercises.filter(e => e.exerciseId).length / matchedExercises.length
+    : 0;
   console.log(`Match rate: ${(matchRate * 100).toFixed(0)}% (${matchedExercises.filter(e => e.exerciseId).length}/${matchedExercises.length})`);
   console.log('=== AI GENERATION COMPLETE ===');
   console.log('Workout name:', parsed.name);
   console.log('Exercise count:', matchedExercises.length);
 
+  // Override workout name for rehab/mobility to be more appropriate
+  const workoutName = (workoutStyle === 'rehab' || workoutStyle === 'mobility')
+    ? `${targetMuscles[0] ? targetMuscles[0].charAt(0).toUpperCase() + targetMuscles[0].slice(1) : ''} ${workoutStyle === 'rehab' ? 'Rehab' : 'Mobility'} Session`.trim()
+    : parsed.name;
+
   return {
     workout: {
-      name: parsed.name,
+      name: workoutName || parsed.name,
       description: parsed.description,
       duration,
       workoutType: parsed.workoutType,
