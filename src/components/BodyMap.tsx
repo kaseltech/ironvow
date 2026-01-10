@@ -27,249 +27,251 @@ const getColor = (strength: number) => {
   return '#F87171'; // Very weak - red
 };
 
-// SVG polygon paths precisely traced from anatomy images
-// Coordinates are percentages (0-100) of the viewBox
-// These follow the exact white lines visible in male_front.png and male_back.png
+// SVG polygon paths - PRECISELY traced from white lines in male_front.png
+// Figure bounds: x=28-72%, head top=6%, feet=96%
+// All coordinates are percentages matching the actual image
 
 const frontMusclePolygons = [
-  // TRAPS - V-shaped area at base of neck (visible from front)
+  // TRAPS - small visible area at neck/shoulder junction
   {
     id: 'traps',
     name: 'Traps',
-    path: 'M 44,9 Q 50,8 56,9 L 54,13 Q 50,14 46,13 Z',
+    path: 'M 44,13 L 50,12 L 56,13 L 54,16 L 50,17 L 46,16 Z',
   },
 
-  // LEFT SHOULDER (Deltoid) - rounded muscle cap
+  // LEFT SHOULDER (Deltoid) - rounded cap, follows white outline
   {
     id: 'shoulders',
     name: 'Left Shoulder',
-    path: 'M 46,13 L 44,10 L 36,11 L 28,14 L 25,18 L 27,23 L 31,22 L 36,18 L 42,15 Z',
+    path: 'M 44,14 L 40,15 L 34,16 L 29,18 L 28,21 L 30,23 L 34,23 L 38,20 L 42,17 Z',
   },
 
   // RIGHT SHOULDER (Deltoid)
   {
     id: 'shoulders',
     name: 'Right Shoulder',
-    path: 'M 54,13 L 56,10 L 64,11 L 72,14 L 75,18 L 73,23 L 69,22 L 64,18 L 58,15 Z',
+    path: 'M 56,14 L 60,15 L 66,16 L 71,18 L 72,21 L 70,23 L 66,23 L 62,20 L 58,17 Z',
   },
 
-  // LEFT CHEST (Pectoral) - traced along white pec outline
+  // LEFT CHEST (Pectoral) - bounded by white lines
   {
     id: 'chest',
     name: 'Left Chest',
-    path: 'M 42,15 L 36,18 L 31,22 L 31,27 L 36,30 L 44,30 L 50,27 L 50,18 L 46,13 Z',
+    path: 'M 42,17 L 38,20 L 37,24 L 38,28 L 42,30 L 50,28 L 50,20 L 46,16 Z',
   },
 
   // RIGHT CHEST (Pectoral)
   {
     id: 'chest',
     name: 'Right Chest',
-    path: 'M 58,15 L 64,18 L 69,22 L 69,27 L 64,30 L 56,30 L 50,27 L 50,18 L 54,13 Z',
+    path: 'M 58,17 L 62,20 L 63,24 L 62,28 L 58,30 L 50,28 L 50,20 L 54,16 Z',
   },
 
   // LEFT BICEP - front of upper arm
   {
     id: 'biceps',
     name: 'Left Bicep',
-    path: 'M 27,23 L 25,18 L 22,20 L 20,27 L 20,34 L 23,36 L 27,34 L 29,28 L 30,24 Z',
+    path: 'M 30,23 L 28,21 L 28,26 L 28,32 L 29,37 L 32,38 L 35,36 L 35,30 L 34,23 Z',
   },
 
   // RIGHT BICEP
   {
     id: 'biceps',
     name: 'Right Bicep',
-    path: 'M 73,23 L 75,18 L 78,20 L 80,27 L 80,34 L 77,36 L 73,34 L 71,28 L 70,24 Z',
+    path: 'M 70,23 L 72,21 L 72,26 L 72,32 L 71,37 L 68,38 L 65,36 L 65,30 L 66,23 Z',
   },
 
   // LEFT FOREARM
   {
     id: 'forearms',
     name: 'Left Forearm',
-    path: 'M 20,34 L 19,41 L 19,48 L 22,51 L 25,49 L 26,43 L 25,37 L 23,36 Z',
+    path: 'M 29,37 L 27,42 L 26,48 L 27,52 L 31,51 L 33,46 L 33,40 L 32,38 Z',
   },
 
   // RIGHT FOREARM
   {
     id: 'forearms',
     name: 'Right Forearm',
-    path: 'M 80,34 L 81,41 L 81,48 L 78,51 L 75,49 L 74,43 L 75,37 L 77,36 Z',
+    path: 'M 71,37 L 73,42 L 74,48 L 73,52 L 69,51 L 67,46 L 67,40 L 68,38 Z',
   },
 
-  // ABS (Core) - central 6-pack area with distinct borders
+  // ABS (Core) - center column with visible ab lines
   {
     id: 'core',
     name: 'Abs',
-    path: 'M 44,30 L 56,30 L 56,44 L 54,46 L 46,46 L 44,44 Z',
+    path: 'M 45,30 L 55,30 L 55,46 L 53,47 L 47,47 L 45,46 Z',
   },
 
   // LEFT OBLIQUE - side of torso
   {
     id: 'obliques',
     name: 'Left Oblique',
-    path: 'M 31,27 L 36,30 L 44,30 L 44,44 L 40,46 L 34,44 L 31,38 L 30,31 Z',
+    path: 'M 38,28 L 42,30 L 45,30 L 45,46 L 42,47 L 38,45 L 37,38 L 37,32 Z',
   },
 
   // RIGHT OBLIQUE
   {
     id: 'obliques',
     name: 'Right Oblique',
-    path: 'M 69,27 L 64,30 L 56,30 L 56,44 L 60,46 L 66,44 L 69,38 L 70,31 Z',
+    path: 'M 62,28 L 58,30 L 55,30 L 55,46 L 58,47 L 62,45 L 63,38 L 63,32 Z',
   },
 
-  // LEFT QUAD - front of thigh with muscle detail
+  // LEFT QUAD - front thigh
   {
     id: 'quads',
     name: 'Left Quad',
-    path: 'M 34,44 L 40,46 L 46,46 L 46,49 L 44,59 L 42,69 L 40,74 L 35,74 L 33,69 L 32,59 L 32,49 Z',
+    path: 'M 38,49 L 42,49 L 48,50 L 48,58 L 46,66 L 44,72 L 40,72 L 37,66 L 36,58 L 37,52 Z',
   },
 
   // RIGHT QUAD
   {
     id: 'quads',
     name: 'Right Quad',
-    path: 'M 66,44 L 60,46 L 54,46 L 54,49 L 56,59 L 58,69 L 60,74 L 65,74 L 67,69 L 68,59 L 68,49 Z',
+    path: 'M 62,49 L 58,49 L 52,50 L 52,58 L 54,66 L 56,72 L 60,72 L 63,66 L 64,58 L 63,52 Z',
   },
 
-  // ADDUCTORS - inner thigh
+  // ADDUCTORS - inner thighs
   {
     id: 'adductors',
     name: 'Inner Thighs',
-    path: 'M 46,49 L 46,46 L 54,46 L 54,49 L 53,59 L 51,66 L 50,69 L 49,66 L 47,59 Z',
+    path: 'M 48,50 L 52,50 L 52,58 L 51,65 L 50,66 L 49,65 L 48,58 Z',
   },
 
-  // LEFT CALF (front - tibialis)
+  // LEFT CALF - front of lower leg (tibialis)
   {
     id: 'calves',
     name: 'Left Calf',
-    path: 'M 35,74 L 40,74 L 42,81 L 42,89 L 40,94 L 36,94 L 34,89 L 34,81 Z',
+    path: 'M 40,73 L 45,73 L 46,80 L 45,88 L 43,92 L 40,92 L 38,88 L 39,80 Z',
   },
 
-  // RIGHT CALF (front)
+  // RIGHT CALF
   {
     id: 'calves',
     name: 'Right Calf',
-    path: 'M 65,74 L 60,74 L 58,81 L 58,89 L 60,94 L 64,94 L 66,89 L 66,81 Z',
+    path: 'M 60,73 L 55,73 L 54,80 L 55,88 L 57,92 L 60,92 L 62,88 L 61,80 Z',
   },
 ];
 
+// Back view polygons - PRECISELY traced from white lines in male_back.png
+// Figure bounds: x=28-72%, head top=6%, feet=96%
 const backMusclePolygons = [
-  // TRAPS - large diamond/kite shape from neck to mid-back
+  // TRAPS - large diamond shape from neck to mid-back
   {
     id: 'traps',
     name: 'Traps',
-    path: 'M 50,7 L 44,10 L 36,14 L 40,19 L 46,21 L 50,26 L 54,21 L 60,19 L 64,14 L 56,10 Z',
+    path: 'M 50,12 L 44,14 L 40,18 L 42,24 L 46,28 L 50,30 L 54,28 L 58,24 L 60,18 L 56,14 Z',
   },
 
-  // LEFT REAR DELT - back of shoulder
+  // LEFT REAR DELT - rounded shoulder cap
   {
     id: 'shoulders',
     name: 'Left Rear Delt',
-    path: 'M 36,14 L 28,13 L 24,17 L 26,22 L 31,23 L 36,20 L 40,19 Z',
+    path: 'M 40,18 L 34,16 L 29,18 L 28,22 L 30,24 L 35,24 L 40,22 Z',
   },
 
   // RIGHT REAR DELT
   {
     id: 'shoulders',
     name: 'Right Rear Delt',
-    path: 'M 64,14 L 72,13 L 76,17 L 74,22 L 69,23 L 64,20 L 60,19 Z',
+    path: 'M 60,18 L 66,16 L 71,18 L 72,22 L 70,24 L 65,24 L 60,22 Z',
   },
 
-  // LEFT LAT - large wing muscle on side
+  // LEFT LAT - large fan-shaped muscle
   {
     id: 'lats',
     name: 'Left Lat',
-    path: 'M 36,20 L 31,23 L 29,30 L 31,38 L 35,42 L 42,44 L 46,40 L 46,26 L 44,22 Z',
+    path: 'M 40,22 L 35,24 L 33,30 L 35,38 L 38,44 L 44,46 L 46,42 L 46,32 L 42,26 Z',
   },
 
   // RIGHT LAT
   {
     id: 'lats',
     name: 'Right Lat',
-    path: 'M 64,20 L 69,23 L 71,30 L 69,38 L 65,42 L 58,44 L 54,40 L 54,26 L 56,22 Z',
+    path: 'M 60,22 L 65,24 L 67,30 L 65,38 L 62,44 L 56,46 L 54,42 L 54,32 L 58,26 Z',
   },
 
-  // UPPER BACK (Rhomboids/mid-traps area)
+  // UPPER BACK (Rhomboids) - between shoulder blades
   {
     id: 'upper_back',
     name: 'Upper Back',
-    path: 'M 46,21 L 50,26 L 54,21 L 56,22 L 54,26 L 54,35 L 50,37 L 46,35 L 46,26 L 44,22 Z',
+    path: 'M 46,28 L 50,30 L 54,28 L 54,32 L 54,38 L 50,40 L 46,38 L 46,32 Z',
   },
 
-  // LOWER BACK (Erector spinae)
+  // LOWER BACK (Erectors) - center lower back
   {
     id: 'lower_back',
     name: 'Lower Back',
-    path: 'M 46,35 L 50,37 L 54,35 L 54,40 L 53,46 L 50,48 L 47,46 L 46,40 Z',
+    path: 'M 46,38 L 50,40 L 54,38 L 54,44 L 52,48 L 50,49 L 48,48 L 46,44 Z',
   },
 
   // LEFT TRICEP - back of upper arm
   {
     id: 'triceps',
     name: 'Left Tricep',
-    path: 'M 26,22 L 24,17 L 21,20 L 19,28 L 19,36 L 22,37 L 25,34 L 27,28 L 29,24 Z',
+    path: 'M 30,24 L 28,22 L 27,27 L 27,33 L 28,38 L 31,39 L 34,36 L 34,30 L 33,25 Z',
   },
 
   // RIGHT TRICEP
   {
     id: 'triceps',
     name: 'Right Tricep',
-    path: 'M 74,22 L 76,17 L 79,20 L 81,28 L 81,36 L 78,37 L 75,34 L 73,28 L 71,24 Z',
+    path: 'M 70,24 L 72,22 L 73,27 L 73,33 L 72,38 L 69,39 L 66,36 L 66,30 L 67,25 Z',
   },
 
   // LEFT FOREARM (back)
   {
     id: 'forearms',
     name: 'Left Forearm',
-    path: 'M 19,36 L 18,43 L 18,50 L 21,53 L 24,51 L 25,45 L 24,38 L 22,37 Z',
+    path: 'M 28,38 L 26,44 L 26,50 L 28,53 L 31,51 L 32,46 L 32,40 L 31,39 Z',
   },
 
   // RIGHT FOREARM (back)
   {
     id: 'forearms',
     name: 'Right Forearm',
-    path: 'M 81,36 L 82,43 L 82,50 L 79,53 L 76,51 L 75,45 L 76,38 L 78,37 Z',
+    path: 'M 72,38 L 74,44 L 74,50 L 72,53 L 69,51 L 68,46 L 68,40 L 69,39 Z',
   },
 
-  // LEFT GLUTE - clearly defined buttock
+  // LEFT GLUTE - clearly defined
   {
     id: 'glutes',
     name: 'Left Glute',
-    path: 'M 42,44 L 47,46 L 50,48 L 50,55 L 47,57 L 41,55 L 36,51 L 36,47 Z',
+    path: 'M 44,46 L 48,48 L 50,49 L 50,56 L 46,57 L 40,55 L 38,50 L 40,47 Z',
   },
 
   // RIGHT GLUTE
   {
     id: 'glutes',
     name: 'Right Glute',
-    path: 'M 58,44 L 53,46 L 50,48 L 50,55 L 53,57 L 59,55 L 64,51 L 64,47 Z',
+    path: 'M 56,46 L 52,48 L 50,49 L 50,56 L 54,57 L 60,55 L 62,50 L 60,47 Z',
   },
 
   // LEFT HAMSTRING - back of thigh
   {
     id: 'hamstrings',
     name: 'Left Hamstring',
-    path: 'M 36,51 L 41,55 L 47,57 L 48,63 L 46,71 L 42,75 L 36,75 L 33,69 L 32,61 L 34,55 Z',
+    path: 'M 40,55 L 46,57 L 48,60 L 47,68 L 44,74 L 40,74 L 37,68 L 36,60 L 38,56 Z',
   },
 
   // RIGHT HAMSTRING
   {
     id: 'hamstrings',
     name: 'Right Hamstring',
-    path: 'M 64,51 L 59,55 L 53,57 L 52,63 L 54,71 L 58,75 L 64,75 L 67,69 L 68,61 L 66,55 Z',
+    path: 'M 60,55 L 54,57 L 52,60 L 53,68 L 56,74 L 60,74 L 63,68 L 64,60 L 62,56 Z',
   },
 
-  // LEFT CALF (back - gastrocnemius)
+  // LEFT CALF (gastrocnemius) - back of lower leg
   {
     id: 'calves',
     name: 'Left Calf',
-    path: 'M 36,75 L 42,75 L 44,81 L 43,89 L 40,94 L 37,94 L 34,89 L 34,81 Z',
+    path: 'M 40,74 L 45,74 L 46,80 L 45,87 L 43,92 L 40,92 L 38,87 L 39,80 Z',
   },
 
-  // RIGHT CALF (back)
+  // RIGHT CALF (gastrocnemius)
   {
     id: 'calves',
     name: 'Right Calf',
-    path: 'M 64,75 L 58,75 L 56,81 L 57,89 L 60,94 L 63,94 L 66,89 L 66,81 Z',
+    path: 'M 60,74 L 55,74 L 54,80 L 55,87 L 57,92 L 60,92 L 62,87 L 61,80 Z',
   },
 ];
 
