@@ -16,6 +16,7 @@ interface ChangelogEntry {
   version: string;
   date: string;
   title: string;
+  platform?: 'ios' | 'web' | 'all'; // Which platform this applies to
   changes: {
     type: 'added' | 'improved' | 'fixed' | 'changed';
     description: string;
@@ -25,9 +26,24 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.5.0',
+    date: 'January 9, 2026',
+    title: 'iOS App Launch',
+    platform: 'ios',
+    changes: [
+      { type: 'added', description: 'Native iOS app available - install from Xcode or TestFlight' },
+      { type: 'added', description: 'Native Google Sign-In - no more browser redirects on iOS' },
+      { type: 'added', description: 'Native Apple Sign-In support' },
+      { type: 'fixed', description: 'Session persistence - stay logged in between app launches' },
+      { type: 'fixed', description: 'Safe area support - UI respects notch and home indicator' },
+      { type: 'improved', description: 'Hybrid storage - sessions sync properly on native platforms' },
+    ],
+  },
+  {
     version: '1.4.1',
     date: 'January 9, 2026',
     title: 'Smart Starting Weights',
+    platform: 'all',
     changes: [
       { type: 'added', description: 'RX weight system - exercises now start with intelligent default weights' },
       { type: 'added', description: 'Weights based on your experience level, gender, and body weight' },
@@ -39,6 +55,7 @@ const CHANGELOG: ChangelogEntry[] = [
     version: '1.4.0',
     date: 'January 9, 2026',
     title: 'Themes & UI Refresh',
+    platform: 'all',
     changes: [
       { type: 'added', description: '8 color themes - Navy, Charcoal, Midnight, Forest, Slate, Plum, Coffee, Ocean' },
       { type: 'added', description: 'Themes persist across sessions on both web and iOS' },
@@ -54,6 +71,7 @@ const CHANGELOG: ChangelogEntry[] = [
     version: '1.3.0',
     date: 'January 8, 2026',
     title: 'Regenerate & Swap',
+    platform: 'all',
     changes: [
       { type: 'added', description: 'Regenerate workout - get completely different exercises' },
       { type: 'added', description: 'Swap individual exercises - pick alternatives that hit the same muscles' },
@@ -65,6 +83,7 @@ const CHANGELOG: ChangelogEntry[] = [
     version: '1.2.1',
     date: 'January 8, 2026',
     title: 'AI Workout Fixes',
+    platform: 'all',
     changes: [
       { type: 'fixed', description: 'Outdoor workouts now correctly use only bodyweight exercises' },
       { type: 'fixed', description: 'AI now properly focuses on selected muscle groups' },
@@ -77,6 +96,7 @@ const CHANGELOG: ChangelogEntry[] = [
     version: '1.2.0',
     date: 'January 8, 2026',
     title: 'Gym Profiles',
+    platform: 'all',
     changes: [
       { type: 'added', description: 'Named gym profiles - save multiple gyms with their equipment' },
       { type: 'added', description: 'Preset templates: CrossFit, Hyrox, Commercial, Powerlifting, Hotel, Olympic Lifting' },
@@ -90,6 +110,7 @@ const CHANGELOG: ChangelogEntry[] = [
     version: '1.1.0',
     date: 'January 8, 2026',
     title: 'AI & Equipment Update',
+    platform: 'all',
     changes: [
       { type: 'added', description: 'Claude AI integration for intelligent workout generation' },
       { type: 'added', description: '35+ new garage gym equipment options' },
@@ -104,6 +125,7 @@ const CHANGELOG: ChangelogEntry[] = [
     version: '1.0.0',
     date: 'January 8, 2026',
     title: 'Initial Release',
+    platform: 'all',
     changes: [
       { type: 'added', description: 'AI-powered workout generation based on your goals, equipment, and schedule' },
       { type: 'added', description: 'Personalized onboarding with experience level, body stats, and fitness goals' },
@@ -135,6 +157,13 @@ interface ChangelogProps {
 export function Changelog({ isOpen, onClose }: ChangelogProps) {
   const [mounted, setMounted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [platformFilter, setPlatformFilter] = useState<'all' | 'ios' | 'web'>('all');
+
+  // Filter changelog entries based on selected platform
+  const filteredChangelog = CHANGELOG.filter(entry => {
+    if (platformFilter === 'all') return true;
+    return entry.platform === 'all' || entry.platform === platformFilter;
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -266,26 +295,58 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
           </button>
         </div>
 
+        {/* Platform Tabs */}
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          padding: '0.75rem 1.75rem',
+          borderBottom: '1px solid rgba(201, 167, 90, 0.15)',
+          background: BRAND.navyDark,
+        }}>
+          {(['all', 'ios', 'web'] as const).map(platform => (
+            <button
+              key={platform}
+              onClick={() => setPlatformFilter(platform)}
+              style={{
+                flex: 1,
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.5rem',
+                border: 'none',
+                background: platformFilter === platform
+                  ? 'rgba(201, 167, 90, 0.2)'
+                  : 'rgba(255, 255, 255, 0.05)',
+                color: platformFilter === platform ? BRAND.gold : 'rgba(245, 241, 234, 0.6)',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {platform === 'all' ? 'All' : platform === 'ios' ? 'iOS' : 'Web'}
+            </button>
+          ))}
+        </div>
+
         {/* Changelog entries */}
         <div style={{
           flex: 1,
           overflowY: 'auto',
           padding: '1.5rem 1.75rem',
         }}>
-          {CHANGELOG.map((entry, index) => (
+          {filteredChangelog.map((entry, index) => (
             <div
               key={entry.version}
               style={{
-                marginBottom: index < CHANGELOG.length - 1 ? '2rem' : 0,
-                paddingBottom: index < CHANGELOG.length - 1 ? '2rem' : 0,
-                borderBottom: index < CHANGELOG.length - 1
+                marginBottom: index < filteredChangelog.length - 1 ? '2rem' : 0,
+                paddingBottom: index < filteredChangelog.length - 1 ? '2rem' : 0,
+                borderBottom: index < filteredChangelog.length - 1
                   ? '1px solid rgba(201, 167, 90, 0.15)'
                   : 'none',
               }}
             >
               {/* Version header */}
               <div style={{ marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                   <span style={{
                     padding: '0.25rem 0.625rem',
                     backgroundColor: 'rgba(201, 167, 90, 0.2)',
@@ -297,6 +358,19 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
                   }}>
                     v{entry.version}
                   </span>
+                  {entry.platform && entry.platform !== 'all' && (
+                    <span style={{
+                      padding: '0.125rem 0.5rem',
+                      backgroundColor: entry.platform === 'ios' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                      color: entry.platform === 'ios' ? '#3b82f6' : '#10b981',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.625rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                    }}>
+                      {entry.platform === 'ios' ? 'iOS' : 'Web'}
+                    </span>
+                  )}
                   <span style={{
                     fontSize: '0.8125rem',
                     color: 'rgba(245, 241, 234, 0.5)',
