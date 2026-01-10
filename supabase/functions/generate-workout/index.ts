@@ -925,6 +925,9 @@ ${locationContext}${equipmentContext}${injuryContext}
 
 Interpret the user's request and create an appropriate workout. Consider their experience level, available equipment, and any limitations.
 
+VARIETY SEED: ${Math.random().toString(36).substring(2, 8)} - Use this to inspire creative, varied exercise selection.
+Be creative and pick DIFFERENT exercises than you might typically choose.
+
 TIME BUDGET (CRITICAL - HARD LIMIT):
 - Total workout time: ${duration} minutes
 - Each exercise takes ~5 minutes (3 sets × 40s + 2 rest periods × 60-90s)
@@ -938,6 +941,7 @@ RULES:
 4. HARD LIMIT: Do NOT generate more than ${Math.max(2, Math.floor(duration / 6))} exercises. Quality over quantity.
 5. If they mention military/bootcamp style, include exercises like: 8-count bodybuilders, flutter kicks, scissor kicks, burpees, push-ups, sit-ups
 6. If they mention running/cardio, include: sprint intervals, tempo runs, fartlek, run/walk intervals
+7. VARIETY: Mix up your exercise selection - avoid always picking the same exercises
 
 Return ONLY valid JSON:
 {
@@ -985,6 +989,9 @@ TIME BUDGET (${workoutStyle === 'strength' ? '5x5 STRENGTH' : 'STANDARD'}):
 Generate a complete workout using your knowledge of fitness exercises. Use common, well-known exercise names.
 The exercises will be matched to our database automatically.
 
+VARIETY SEED: ${Math.random().toString(36).substring(2, 8)} - Use this to inspire creative, varied exercise selection.
+Be creative and pick DIFFERENT exercises than you might typically choose. Avoid the most common/obvious choices.
+
 RULES:
 1. Use standard exercise names (e.g., "Barbell Bench Press", "Dumbbell Curl", "Pull-ups")
 2. Follow the WORKOUT STYLE and FITNESS GOAL guidelines above
@@ -994,6 +1001,7 @@ RULES:
 6. For cardio style: include running intervals, sprints, or cardio machine work
 7. For mobility style: ONLY stretches, foam rolling, yoga poses - NO weight training
 8. For rehab style: ONLY band work, light bodyweight, corrective exercises - NO barbell exercises, NO bench press, NO squats, NO deadlifts, NO overhead press
+9. VARIETY: Mix up your exercise selection - don't always pick the same exercises
 ${workoutStyle === 'rehab' ? `
 ⚠️ REHAB WORKOUT - BANNED EXERCISES (DO NOT USE):
 - Bench Press (any variation)

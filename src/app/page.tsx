@@ -77,6 +77,8 @@ export default function Home() {
   const [swapAlternatives, setSwapAlternatives] = useState<ExerciseAlternative[]>([]);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [lastWorkoutRequest, setLastWorkoutRequest] = useState<object | null>(null);
+  // Track recently generated exercises to avoid duplicates on fresh generates
+  const [recentExerciseIds, setRecentExerciseIds] = useState<string[]>([]);
   // Freeform AI input
   const [freeformMode, setFreeformMode] = useState(false);
   const [freeformPrompt, setFreeformPrompt] = useState('');
@@ -123,6 +125,7 @@ export default function Home() {
       }));
 
       // Try AI-powered Edge Function first, fall back to local generation
+      // Include recently generated exercise IDs to avoid duplicates
       const workoutRequest = {
         userId: user.id,
         location: selectedLocation as 'gym' | 'home' | 'outdoor',
@@ -135,6 +138,7 @@ export default function Home() {
         customEquipment: customEquipmentList,
         gymName: selectedGym?.name,
         freeformPrompt: freeformMode ? freeformPrompt : undefined, // Add freeform prompt
+        excludeExerciseIds: recentExerciseIds.length > 0 ? recentExerciseIds : undefined,
       };
 
       // Save request for potential regeneration
@@ -166,6 +170,11 @@ export default function Home() {
 
       setGeneratedWorkout(workout);
       setShowWorkout(true);
+
+      // Track generated exercise IDs to avoid duplicates on next generate
+      // Keep last 20 exercises to avoid memory bloat while providing variety
+      const newIds = workout.exercises.map(ex => ex.exerciseId).filter(Boolean);
+      setRecentExerciseIds(prev => [...newIds, ...prev].slice(0, 20));
     } catch (err) {
       console.error('Failed to generate workout:', err);
       setError('Failed to generate workout. Please try again.');
@@ -190,17 +199,18 @@ export default function Home() {
     setError(null);
 
     try {
-      // Exclude current exercises
-      const excludeIds = generatedWorkout.exercises
+      // Exclude current exercises AND recently generated ones
+      const currentIds = generatedWorkout.exercises
         .map(ex => ex.exerciseId)
         .filter(Boolean);
+      const allExcludeIds = [...new Set([...currentIds, ...recentExerciseIds])];
 
       const regenerateRequest = {
         ...(lastWorkoutRequest as any),
-        excludeExerciseIds: excludeIds,
+        excludeExerciseIds: allExcludeIds,
       };
 
-      console.log('🔄 Regenerating with exclusions:', excludeIds);
+      console.log('🔄 Regenerating with exclusions:', allExcludeIds.length, 'exercises');
 
       let workout: GeneratedWorkout;
       try {
@@ -210,6 +220,11 @@ export default function Home() {
       }
 
       setGeneratedWorkout(workout);
+
+      // Track generated exercise IDs
+      const newIds = workout.exercises.map(ex => ex.exerciseId).filter(Boolean);
+      setRecentExerciseIds(prev => [...newIds, ...prev].slice(0, 20));
+
       setDebugInfo(prev => ({
         ...prev,
         regenerateRequest,
