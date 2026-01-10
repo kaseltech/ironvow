@@ -552,26 +552,30 @@ export default function Home() {
               <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 How long do you have?
               </h2>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="15"
-                  max="90"
-                  step="15"
-                  value={duration}
-                  onChange={e => setDuration(Number(e.target.value))}
-                  style={{
-                    flex: 1,
-                    accentColor: colors.accent,
-                    height: '4px',
-                  }}
-                />
-                <span style={{ color: colors.text, fontSize: '1.25rem', fontWeight: 600, minWidth: '80px', textAlign: 'right' }}>
-                  {duration} min
-                </span>
+              <div className="grid grid-cols-6 gap-2">
+                {[15, 30, 45, 60, 75, 90].map(mins => (
+                  <button
+                    key={mins}
+                    onClick={() => setDuration(mins)}
+                    style={{
+                      padding: '0.75rem 0.25rem',
+                      borderRadius: '0.75rem',
+                      border: duration === mins ? `2px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+                      background: duration === mins ? colors.accentMuted : 'transparent',
+                      color: duration === mins ? colors.accent : colors.text,
+                      fontSize: '0.9375rem',
+                      fontWeight: duration === mins ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {mins}
+                  </button>
+                ))}
               </div>
               <div className="flex justify-between mt-2" style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
                 <span>Quick</span>
+                <span>minutes</span>
                 <span>Full session</span>
               </div>
             </div>

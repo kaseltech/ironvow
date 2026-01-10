@@ -773,26 +773,61 @@ async function generateWithAI(
 - Exercises like: sprint intervals, zone 2 running, stair climbing, rowing
 - For non-running: bike intervals, rowing, assault bike`,
 
-    mobility: `WORKOUT STYLE: Mobility / Recovery
-- Focus on flexibility, stretching, and movement quality
-- Include dynamic stretches, static stretches, and foam rolling
-- Hold times for static stretches: 30-60 seconds
-- Flow from one movement to next smoothly
-- Include: hip openers, thoracic mobility, hamstring stretches
-- Can include yoga-inspired movements
-- Low intensity, focus on breath and relaxation
-- Good exercises: world's greatest stretch, pigeon pose, cat-cow, foam rolling`,
+    mobility: `WORKOUT STYLE: Mobility / Recovery / Stretching
+⚠️ CRITICAL RESTRICTIONS - READ CAREFULLY:
+- ABSOLUTELY NO weight training exercises (no bench press, squats, deadlifts, rows, curls, etc.)
+- ABSOLUTELY NO resistance machines or cable exercises
+- This is STRETCHING and MOBILITY work ONLY
 
-    rehab: `WORKOUT STYLE: Rehab / Prehab
-- Focus on injury prevention, rehabilitation, and corrective exercises
-- Sets: 2-3 per exercise
-- Reps: 10-15 (controlled, quality movement)
-- Rest: 30-45 seconds between sets
-- Include: band pull-aparts, face pulls, external rotations, scapular exercises
-- Include: glute activation (clamshells, bridges), core stability (dead bugs, bird dogs)
-- Low intensity, focus on proper form and activation
-- Good exercises: band pull-aparts, face pulls, external rotation, chin tucks, bird dog, dead bug, clamshells, pigeon pose
-- Note in each exercise which body part/injury it addresses`,
+REQUIRED exercise types:
+- Static stretches (hold 30-60 seconds)
+- Dynamic stretches and mobility drills
+- Foam rolling / self-myofascial release
+- Yoga-inspired movements
+- Joint circles and controlled articulations
+
+GOOD exercises to use:
+- World's Greatest Stretch, Pigeon Pose, Figure Four Stretch
+- Cat-Cow, Child's Pose, Downward Dog
+- Hip 90/90, Couch Stretch, Hamstring Stretch
+- Thoracic Rotations, Thread the Needle
+- Foam Roll (quads, IT band, lats, thoracic spine)
+- Shoulder Circles, Hip Circles, Ankle Circles
+
+Format: 2 sets, 30-60s holds, minimal rest between exercises
+Low intensity, focus on breath and relaxation`,
+
+    rehab: `WORKOUT STYLE: Rehab / Prehab / Corrective Exercise
+⚠️ CRITICAL RESTRICTIONS - READ CAREFULLY:
+- ABSOLUTELY NO heavy compound lifts (no bench press, squats, deadlifts, overhead press, rows)
+- ABSOLUTELY NO barbell exercises
+- ABSOLUTELY NO exercises over 15 lbs
+- This is REHABILITATION and CORRECTIVE work ONLY
+
+REQUIRED exercise types:
+- Light band exercises (resistance bands only)
+- Bodyweight stability/activation drills
+- Controlled mobility work
+- Isometric holds
+- Light dumbbell rotator cuff work (5-10 lbs max)
+
+GOOD exercises for SHOULDER rehab:
+- Band Pull-Aparts, Face Pulls (band), External Rotation (band/light DB)
+- Internal Rotation, Prone Y-T-W raises, Scapular Push-ups
+- Wall Slides, Shoulder Circles, Band Dislocates
+
+GOOD exercises for HIP/KNEE rehab:
+- Clamshells, Glute Bridges, Single Leg Glute Bridge
+- Terminal Knee Extensions, Straight Leg Raises
+- Side-Lying Hip Abduction, Monster Walks (band)
+
+GOOD exercises for BACK/CORE rehab:
+- Bird Dog, Dead Bug, Pallof Press (band)
+- Cat-Cow, Pelvic Tilts, Supine Knee-to-Chest
+- McGill Curl-up, Side Plank (modified if needed)
+
+Format: 2-3 sets, 10-15 reps, 30s rest, controlled tempo
+In notes: specify which body part/injury this addresses`,
   };
 
   // Build fitness goal context
@@ -957,7 +992,23 @@ RULES:
 4. For outdoor: ONLY bodyweight exercises
 5. HARD LIMIT: Maximum ${maxExercises} exercises for ${duration} minutes
 6. For cardio style: include running intervals, sprints, or cardio machine work
-7. For mobility style: include stretches, foam rolling, and movement prep
+7. For mobility style: ONLY stretches, foam rolling, yoga poses - NO weight training
+8. For rehab style: ONLY band work, light bodyweight, corrective exercises - NO barbell exercises, NO bench press, NO squats, NO deadlifts, NO overhead press
+${workoutStyle === 'rehab' ? `
+⚠️ REHAB WORKOUT - BANNED EXERCISES (DO NOT USE):
+- Bench Press (any variation)
+- Squat (any variation except bodyweight)
+- Deadlift (any variation)
+- Overhead Press
+- Barbell Row
+- Any exercise requiring more than 15 lbs
+` : ''}${workoutStyle === 'mobility' ? `
+⚠️ MOBILITY WORKOUT - BANNED EXERCISES (DO NOT USE):
+- Any barbell exercise
+- Any dumbbell exercise over 5 lbs
+- Any machine exercise
+- Bench Press, Squats, Deadlifts, Rows, Curls
+` : ''}
 
 Return ONLY valid JSON:
 {
