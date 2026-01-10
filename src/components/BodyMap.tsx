@@ -277,6 +277,20 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [hoveredMuscle, setHoveredMuscle] = useState<string | null>(null);
   const [view, setView] = useState<'front' | 'back'>('front');
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugTapCount, setDebugTapCount] = useState(0);
+
+  // Tap legend 5 times to toggle debug mode
+  const handleLegendTap = () => {
+    const newCount = debugTapCount + 1;
+    setDebugTapCount(newCount);
+    if (newCount >= 5) {
+      setDebugMode(!debugMode);
+      setDebugTapCount(0);
+    }
+    // Reset count after 2 seconds of no taps
+    setTimeout(() => setDebugTapCount(0), 2000);
+  };
 
   const imageSrc = view === 'front' ? '/images/male_front.png' : '/images/male_back.png';
   const polygons = view === 'front' ? frontMusclePolygons : backMusclePolygons;
@@ -383,10 +397,10 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
                 <path
                   key={`${polygon.id}-${idx}`}
                   d={polygon.path}
-                  fill={isSelected ? `${color}` : isHovered ? `${color}` : 'transparent'}
-                  fillOpacity={isSelected ? 0.4 : isHovered ? 0.25 : 0}
-                  stroke={isSelected ? color : isHovered ? color : 'transparent'}
-                  strokeWidth={isSelected ? 0.8 : isHovered ? 0.5 : 0}
+                  fill={isSelected ? `${color}` : isHovered ? `${color}` : debugMode ? 'rgba(201, 167, 90, 0.1)' : 'transparent'}
+                  fillOpacity={isSelected ? 0.4 : isHovered ? 0.25 : debugMode ? 0.3 : 0}
+                  stroke={isSelected ? color : isHovered ? color : debugMode ? '#C9A75A' : 'transparent'}
+                  strokeWidth={isSelected ? 0.8 : isHovered ? 0.5 : debugMode ? 0.3 : 0}
                   style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}
                   onClick={() => handleMuscleClick(polygon.id, polygon.name)}
                   onMouseEnter={() => setHoveredMuscle(`${polygon.id}-${idx}`)}
@@ -399,8 +413,12 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex justify-center gap-3 mt-4 flex-wrap">
+      {/* Legend - tap 5 times to toggle debug mode */}
+      <div
+        className="flex justify-center gap-3 mt-4 flex-wrap"
+        onClick={handleLegendTap}
+        style={{ cursor: 'pointer' }}
+      >
         {[
           { color: '#4ADE80', label: 'Strong' },
           { color: '#C9A75A', label: 'Good' },
@@ -414,6 +432,13 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
           </div>
         ))}
       </div>
+
+      {/* Debug indicator */}
+      {debugMode && (
+        <p className="text-center mt-1" style={{ color: '#C9A75A', fontSize: '0.625rem' }}>
+          Debug mode ON - polygon outlines visible
+        </p>
+      )}
 
       {/* Tap instruction */}
       <p className="text-center mt-2" style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.625rem' }}>
