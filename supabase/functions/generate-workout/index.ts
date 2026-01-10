@@ -451,6 +451,10 @@ serve(async (req) => {
       'arms': ['biceps', 'triceps', 'forearms', 'brachialis'],
       'legs': ['quads', 'hamstrings', 'glutes', 'calves', 'hip_flexors', 'adductors'],
       'core': ['core', 'abs', 'obliques', 'lower_back', 'transverse_abdominis'],
+      // Non-muscle goals - these map to full body for filtering purposes
+      'flexibility': ['flexibility', 'hips', 'hamstrings', 'back', 'shoulders'],
+      'balance': ['balance', 'core', 'legs', 'glutes'],
+      'endurance': ['endurance', 'cardio', 'fullbody'],
     };
 
     // Expand muscle groups to specific muscles
@@ -774,30 +778,31 @@ async function generateWithAI(
 - For non-running: bike intervals, rowing, assault bike`,
 
     yoga: `WORKOUT STYLE: Yoga Flow / Practice
-⚠️ CRITICAL RESTRICTIONS - READ CAREFULLY:
-- ABSOLUTELY NO weight training exercises
-- ABSOLUTELY NO gym equipment (dumbbells, barbells, machines)
-- This is YOGA ONLY - poses, flows, and breathwork
 
-REQUIRED exercise types:
-- Standing poses (Warrior I, II, III, Triangle, Tree)
-- Balance poses (Eagle, Half Moon, Dancer)
-- Seated poses (Seated Forward Fold, Pigeon, Butterfly)
-- Supine poses (Bridge, Happy Baby, Supine Twist)
-- Core work (Boat Pose, Plank variations)
-- Sun Salutations / Vinyasa flows
+⛔️⛔️⛔️ ABSOLUTELY CRITICAL - YOU MUST FOLLOW THESE RULES ⛔️⛔️⛔️
+- ZERO weight training exercises allowed
+- ZERO gym equipment (NO dumbbells, NO barbells, NO machines, NO cables)
+- ZERO compound lifts (NO squats, NO bench press, NO deadlifts, NO rows)
+- This is 100% YOGA - poses, flows, and breathwork ONLY
+- If you include ANY weight training, the workout will be REJECTED
 
-GOOD yoga sequences to include:
-- Sun Salutation A/B, Moon Salutation
-- Warrior Flow (I → II → Reverse Warrior → Extended Side Angle)
-- Hip Opening Sequence (Low Lunge → Lizard → Pigeon)
-- Balance Flow (Tree → Eagle → Warrior III)
-- Backbend Sequence (Cobra → Updog → Camel → Wheel)
-- Cool Down (Child's Pose, Supine Twist, Savasana)
+✅ ONLY USE THESE TYPES OF EXERCISES:
+- Standing poses: Warrior I, Warrior II, Warrior III, Triangle, Tree Pose, Chair Pose
+- Balance poses: Eagle Pose, Half Moon, Dancer's Pose, Standing Split
+- Seated poses: Seated Forward Fold, Pigeon Pose, Butterfly, Hero's Pose
+- Supine poses: Bridge Pose, Happy Baby, Supine Twist, Legs Up Wall
+- Core work: Boat Pose, Plank Pose, Side Plank, Dolphin Plank
+- Flow sequences: Sun Salutation A, Sun Salutation B, Moon Salutation
 
-Format: Hold poses 5-10 breaths (30-60 seconds), flow sequences 3-5 rounds
-Focus on breath coordination, alignment cues in notes
-Include warm-up, peak poses, and cool-down`,
+✅ EXAMPLE YOGA WORKOUT:
+1. Sun Salutation A - 3 rounds, 45s each, flow with breath
+2. Warrior Flow (I → II → Reverse) - 2 sets each side, 30s holds
+3. Tree Pose - 2 sets each side, 45s hold
+4. Pigeon Pose - 2 sets each side, 60s hold
+5. Supine Twist - 2 sets each side, 45s hold
+6. Savasana - 1 set, 3-5 min
+
+Format: Hold poses 5-10 breaths (30-60 seconds), flow sequences 3-5 rounds`,
 
     mobility: `WORKOUT STYLE: Mobility / Recovery / Stretching
 ⚠️ CRITICAL RESTRICTIONS - READ CAREFULLY:
@@ -1042,6 +1047,15 @@ ${workoutStyle === 'rehab' ? `
 - Any dumbbell exercise over 5 lbs
 - Any machine exercise
 - Bench Press, Squats, Deadlifts, Rows, Curls
+` : ''}${workoutStyle === 'yoga' ? `
+⛔️ YOGA WORKOUT - BANNED EXERCISES (STRICT - DO NOT USE):
+- ANY barbell exercise (Bench Press, Squats, Deadlifts, Rows, etc.)
+- ANY dumbbell exercise
+- ANY machine exercise
+- ANY cable exercise
+- Pull-ups, Chin-ups, Dips
+- Burpees, Mountain Climbers (these are conditioning, not yoga)
+- ONLY use yoga poses and sequences as shown in the style description above
 ` : ''}
 
 Return ONLY valid JSON:
@@ -1134,7 +1148,8 @@ Return ONLY valid JSON:
 
   // Helper to check if exercise is banned for current workout style
   const isBannedExercise = (exerciseName: string): boolean => {
-    if (workoutStyle !== 'rehab' && workoutStyle !== 'mobility') return false;
+    // Yoga, rehab, and mobility workouts should NOT have weight training exercises
+    if (workoutStyle !== 'rehab' && workoutStyle !== 'mobility' && workoutStyle !== 'yoga') return false;
     const normalized = exerciseName.toLowerCase().trim();
     return bannedForRehab.has(normalized) ||
       Array.from(bannedForRehab).some(banned => normalized.includes(banned));
@@ -1263,23 +1278,47 @@ Return ONLY valid JSON:
         { name: 'Pelvic Tilts', muscles: ['core', 'lower_back'] },
         { name: 'McGill Curl-up', muscles: ['abs', 'core'] },
       ],
-      // Yoga-specific fallbacks
+      // Yoga-specific fallbacks - comprehensive list for yoga workouts
       yoga: [
         { name: 'Sun Salutation A', muscles: ['fullbody', 'flexibility'] },
         { name: 'Warrior I', muscles: ['legs', 'hips', 'balance'] },
         { name: 'Warrior II', muscles: ['legs', 'hips', 'core'] },
+        { name: 'Warrior III', muscles: ['balance', 'legs', 'core'] },
         { name: 'Downward Dog', muscles: ['shoulders', 'hamstrings', 'back'] },
+        { name: 'Upward Dog', muscles: ['back', 'chest', 'shoulders'] },
         { name: 'Child\'s Pose', muscles: ['back', 'hips'] },
         { name: 'Pigeon Pose', muscles: ['hips', 'glutes'] },
         { name: 'Tree Pose', muscles: ['balance', 'legs', 'core'] },
         { name: 'Triangle Pose', muscles: ['legs', 'obliques', 'hips'] },
+        { name: 'Chair Pose', muscles: ['legs', 'core', 'balance'] },
+        { name: 'Eagle Pose', muscles: ['balance', 'hips', 'shoulders'] },
+        { name: 'Half Moon Pose', muscles: ['balance', 'legs', 'core'] },
+        { name: 'Bridge Pose', muscles: ['glutes', 'back', 'hips'] },
+        { name: 'Boat Pose', muscles: ['core', 'abs', 'balance'] },
+        { name: 'Supine Twist', muscles: ['back', 'hips', 'flexibility'] },
+        { name: 'Happy Baby Pose', muscles: ['hips', 'back', 'flexibility'] },
+        { name: 'Seated Forward Fold', muscles: ['hamstrings', 'back', 'flexibility'] },
+        { name: 'Cat-Cow Stretch', muscles: ['back', 'spine', 'flexibility'] },
+        { name: 'Low Lunge', muscles: ['hips', 'quads', 'flexibility'] },
       ],
-      // Flexibility/Endurance fallbacks
+      // Flexibility/Balance fallbacks - for flexibility or balance goals
       flexibility: [
         { name: 'World\'s Greatest Stretch', muscles: ['hips', 'hamstrings', 'shoulders'] },
         { name: 'Hip 90/90 Stretch', muscles: ['hips', 'glutes'] },
         { name: 'Pigeon Pose', muscles: ['hips', 'glutes'] },
         { name: 'Seated Forward Fold', muscles: ['hamstrings', 'back'] },
+        { name: 'Cat-Cow Stretch', muscles: ['back', 'spine'] },
+        { name: 'Thread the Needle', muscles: ['shoulders', 'back'] },
+        { name: 'Low Lunge', muscles: ['hips', 'quads'] },
+        { name: 'Supine Twist', muscles: ['back', 'hips'] },
+      ],
+      balance: [
+        { name: 'Tree Pose', muscles: ['balance', 'legs', 'core'] },
+        { name: 'Warrior III', muscles: ['balance', 'legs', 'core'] },
+        { name: 'Eagle Pose', muscles: ['balance', 'hips', 'shoulders'] },
+        { name: 'Half Moon Pose', muscles: ['balance', 'legs', 'core'] },
+        { name: 'Single Leg Deadlift (no weight)', muscles: ['balance', 'hamstrings', 'glutes'] },
+        { name: 'Standing Split', muscles: ['balance', 'hamstrings', 'flexibility'] },
       ],
     };
 
@@ -1289,8 +1328,10 @@ Return ONLY valid JSON:
     // Use yoga fallbacks for yoga workouts
     if (workoutStyle === 'yoga') {
       fallbackCategory = 'yoga';
-    } else if (targetMuscles.includes('flexibility')) {
+    } else if (targetMuscles.includes('flexibility') || rawTargetMuscles.includes('flexibility')) {
       fallbackCategory = 'flexibility';
+    } else if (targetMuscles.includes('balance') || rawTargetMuscles.includes('balance')) {
+      fallbackCategory = 'balance';
     } else {
       for (const muscle of targetMuscles) {
         if (['shoulders', 'front_delts', 'rear_delts', 'lateral_delts'].includes(muscle)) {
@@ -1317,13 +1358,29 @@ Return ONLY valid JSON:
 
     for (let i = 0; i < exerciseCount; i++) {
       const fb = fallbacks[i];
+      // Determine appropriate reps/notes based on style
+      let reps = '10-15';
+      let notes = 'Controlled movement';
+      if (workoutStyle === 'yoga') {
+        reps = '30-60s hold or 3-5 breaths';
+        notes = 'Focus on breath and alignment';
+      } else if (workoutStyle === 'mobility' || fallbackCategory === 'flexibility') {
+        reps = '30-45s hold';
+        notes = 'Mobility exercise - controlled, relaxed breathing';
+      } else if (fallbackCategory === 'balance') {
+        reps = '30-45s hold each side';
+        notes = 'Balance pose - find a focal point, engage core';
+      } else if (workoutStyle === 'rehab') {
+        reps = '10-15';
+        notes = 'Rehabilitation exercise - controlled movement';
+      }
       matchedExercises.push({
         exerciseId: '',
         name: fb.name,
         sets: 2,
-        reps: workoutStyle === 'mobility' ? '30-45s hold' : '10-15',
-        restSeconds: 30,
-        notes: `${workoutStyle === 'rehab' ? 'Rehabilitation' : 'Mobility'} exercise - controlled movement`,
+        reps,
+        restSeconds: 15,
+        notes,
         primaryMuscles: fb.muscles,
         secondaryMuscles: [],
       });
@@ -1343,11 +1400,25 @@ Return ONLY valid JSON:
   // Override workout name for rehab/mobility/yoga to be more appropriate
   let workoutName = parsed.name;
   if (workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') {
-    const targetName = targetMuscles[0] ? targetMuscles[0].charAt(0).toUpperCase() + targetMuscles[0].slice(1) : '';
+    // Build a nice target description from raw targets (before expansion)
+    const targetGoals = (rawTargetMuscles || []).filter(t =>
+      ['flexibility', 'balance', 'endurance'].includes(t)
+    );
+    const targetMuscleNames = (rawTargetMuscles || []).filter(t =>
+      !['flexibility', 'balance', 'endurance'].includes(t)
+    );
+
+    let targetDescription = '';
+    if (targetGoals.length > 0) {
+      targetDescription = targetGoals.map(g => g.charAt(0).toUpperCase() + g.slice(1)).join(' & ');
+    } else if (targetMuscleNames.length > 0) {
+      targetDescription = targetMuscleNames[0].charAt(0).toUpperCase() + targetMuscleNames[0].slice(1);
+    }
+
     const styleLabel = workoutStyle === 'rehab' ? 'Rehab Session' :
                        workoutStyle === 'yoga' ? 'Yoga Flow' :
                        'Mobility Session';
-    workoutName = targetName ? `${targetName} ${styleLabel}` : styleLabel;
+    workoutName = targetDescription ? `${targetDescription} ${styleLabel}` : styleLabel;
   }
 
   return {
