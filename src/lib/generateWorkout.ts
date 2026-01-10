@@ -8,6 +8,7 @@ export type WorkoutStyle =
   | 'circuit'      // Rotate through exercises with minimal rest
   | 'wod'          // CrossFit-style WOD (AMRAP, EMOM, For Time)
   | 'cardio'       // Running intervals, sprints, cardio conditioning
+  | 'yoga'         // Yoga poses, flows, breathwork, flexibility
   | 'mobility'     // Stretching, foam rolling, recovery
   | 'rehab';       // Injury prevention, prehab, rehabilitation exercises
 

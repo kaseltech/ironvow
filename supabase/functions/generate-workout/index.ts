@@ -120,7 +120,7 @@ function isBodyweightExercise(ex: any): boolean {
 }
 
 // Workout style determines programming approach
-type WorkoutStyle = 'traditional' | 'strength' | 'hiit' | 'circuit' | 'wod' | 'cardio' | 'mobility' | 'rehab';
+type WorkoutStyle = 'traditional' | 'strength' | 'hiit' | 'circuit' | 'wod' | 'cardio' | 'yoga' | 'mobility' | 'rehab';
 
 // Fitness goal affects programming (from user profile)
 type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
@@ -554,7 +554,7 @@ serve(async (req) => {
 
     // For rehab/mobility workouts, filter to only include exercises with rehab_for populated
     let exercisePoolForMatching = exercises;
-    if (workoutStyle === 'rehab' || workoutStyle === 'mobility') {
+    if (workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') {
       exercisePoolForMatching = exercises.filter((ex: any) =>
         ex.rehab_for && ex.rehab_for.length > 0
       );
@@ -773,6 +773,32 @@ async function generateWithAI(
 - Exercises like: sprint intervals, zone 2 running, stair climbing, rowing
 - For non-running: bike intervals, rowing, assault bike`,
 
+    yoga: `WORKOUT STYLE: Yoga Flow / Practice
+⚠️ CRITICAL RESTRICTIONS - READ CAREFULLY:
+- ABSOLUTELY NO weight training exercises
+- ABSOLUTELY NO gym equipment (dumbbells, barbells, machines)
+- This is YOGA ONLY - poses, flows, and breathwork
+
+REQUIRED exercise types:
+- Standing poses (Warrior I, II, III, Triangle, Tree)
+- Balance poses (Eagle, Half Moon, Dancer)
+- Seated poses (Seated Forward Fold, Pigeon, Butterfly)
+- Supine poses (Bridge, Happy Baby, Supine Twist)
+- Core work (Boat Pose, Plank variations)
+- Sun Salutations / Vinyasa flows
+
+GOOD yoga sequences to include:
+- Sun Salutation A/B, Moon Salutation
+- Warrior Flow (I → II → Reverse Warrior → Extended Side Angle)
+- Hip Opening Sequence (Low Lunge → Lizard → Pigeon)
+- Balance Flow (Tree → Eagle → Warrior III)
+- Backbend Sequence (Cobra → Updog → Camel → Wheel)
+- Cool Down (Child's Pose, Supine Twist, Savasana)
+
+Format: Hold poses 5-10 breaths (30-60 seconds), flow sequences 3-5 rounds
+Focus on breath coordination, alignment cues in notes
+Include warm-up, peak poses, and cool-down`,
+
     mobility: `WORKOUT STYLE: Mobility / Recovery / Stretching
 ⚠️ CRITICAL RESTRICTIONS - READ CAREFULLY:
 - ABSOLUTELY NO weight training exercises (no bench press, squats, deadlifts, rows, curls, etc.)
@@ -945,7 +971,7 @@ RULES:
 
 Return ONLY valid JSON:
 {
-  "name": "Descriptive workout name based on their request",
+  "name": "Creative workout name (not generic like 'Upper Body Workout' - be unique, e.g. 'Iron Protocol', 'Torch Session', 'The Grind')",
   "description": "Brief description of what this workout accomplishes",
   "workoutType": "push|pull|legs|upper|lower|fullbody|cardio|mobility",
   "exercises": [
@@ -1020,7 +1046,7 @@ ${workoutStyle === 'rehab' ? `
 
 Return ONLY valid JSON:
 {
-  "name": "Descriptive workout name",
+  "name": "Creative workout name (not generic - be unique, e.g. 'Pressing Power', 'Back Attack', 'Quad Squad')",
   "description": "Brief description of the workout",
   "workoutType": "push|pull|legs|upper|lower|fullbody|cardio|mobility",
   "exercises": [
@@ -1153,7 +1179,7 @@ Return ONLY valid JSON:
       });
     } else {
       // No match found - for rehab/mobility, skip unmatched heavy exercises
-      if (workoutStyle === 'rehab' || workoutStyle === 'mobility') {
+      if (workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') {
         console.log(`✗ Skipping unmatched exercise for ${workoutStyle}: "${aiExercise.name}"`);
         continue; // Don't include unmatched exercises in rehab/mobility workouts
       }
@@ -1204,10 +1230,10 @@ Return ONLY valid JSON:
   }
 
   // If rehab/mobility workout ended up with no exercises, add appropriate fallbacks
-  if ((workoutStyle === 'rehab' || workoutStyle === 'mobility') && matchedExercises.length === 0) {
+  if ((workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') && matchedExercises.length === 0) {
     console.log(`⚠️ ${workoutStyle} workout has no valid exercises - adding fallback exercises`);
 
-    // Fallback rehab/mobility exercises based on target muscles
+    // Fallback rehab/mobility/yoga exercises based on target muscles and style
     const fallbackRehabExercises: Record<string, { name: string; muscles: string[] }[]> = {
       shoulders: [
         { name: 'Band Pull-Aparts', muscles: ['shoulders', 'rear_delts'] },
@@ -1237,30 +1263,56 @@ Return ONLY valid JSON:
         { name: 'Pelvic Tilts', muscles: ['core', 'lower_back'] },
         { name: 'McGill Curl-up', muscles: ['abs', 'core'] },
       ],
+      // Yoga-specific fallbacks
+      yoga: [
+        { name: 'Sun Salutation A', muscles: ['fullbody', 'flexibility'] },
+        { name: 'Warrior I', muscles: ['legs', 'hips', 'balance'] },
+        { name: 'Warrior II', muscles: ['legs', 'hips', 'core'] },
+        { name: 'Downward Dog', muscles: ['shoulders', 'hamstrings', 'back'] },
+        { name: 'Child\'s Pose', muscles: ['back', 'hips'] },
+        { name: 'Pigeon Pose', muscles: ['hips', 'glutes'] },
+        { name: 'Tree Pose', muscles: ['balance', 'legs', 'core'] },
+        { name: 'Triangle Pose', muscles: ['legs', 'obliques', 'hips'] },
+      ],
+      // Flexibility/Endurance fallbacks
+      flexibility: [
+        { name: 'World\'s Greatest Stretch', muscles: ['hips', 'hamstrings', 'shoulders'] },
+        { name: 'Hip 90/90 Stretch', muscles: ['hips', 'glutes'] },
+        { name: 'Pigeon Pose', muscles: ['hips', 'glutes'] },
+        { name: 'Seated Forward Fold', muscles: ['hamstrings', 'back'] },
+      ],
     };
 
-    // Determine which fallback category to use based on target muscles
+    // Determine which fallback category to use based on workout style and target muscles
     let fallbackCategory = 'shoulders'; // Default
-    for (const muscle of targetMuscles) {
-      if (['shoulders', 'front_delts', 'rear_delts', 'lateral_delts'].includes(muscle)) {
-        fallbackCategory = 'shoulders';
-        break;
-      } else if (['back', 'lats', 'upper_back', 'lower_back', 'traps'].includes(muscle)) {
-        fallbackCategory = 'back';
-        break;
-      } else if (['chest'].includes(muscle)) {
-        fallbackCategory = 'chest';
-        break;
-      } else if (['quads', 'hamstrings', 'glutes', 'calves', 'hips'].includes(muscle)) {
-        fallbackCategory = 'legs';
-        break;
-      } else if (['core', 'abs', 'obliques'].includes(muscle)) {
-        fallbackCategory = 'core';
-        break;
+
+    // Use yoga fallbacks for yoga workouts
+    if (workoutStyle === 'yoga') {
+      fallbackCategory = 'yoga';
+    } else if (targetMuscles.includes('flexibility')) {
+      fallbackCategory = 'flexibility';
+    } else {
+      for (const muscle of targetMuscles) {
+        if (['shoulders', 'front_delts', 'rear_delts', 'lateral_delts'].includes(muscle)) {
+          fallbackCategory = 'shoulders';
+          break;
+        } else if (['back', 'lats', 'upper_back', 'lower_back', 'traps'].includes(muscle)) {
+          fallbackCategory = 'back';
+          break;
+        } else if (['chest'].includes(muscle)) {
+          fallbackCategory = 'chest';
+          break;
+        } else if (['quads', 'hamstrings', 'glutes', 'calves', 'hips'].includes(muscle)) {
+          fallbackCategory = 'legs';
+          break;
+        } else if (['core', 'abs', 'obliques'].includes(muscle)) {
+          fallbackCategory = 'core';
+          break;
+        }
       }
     }
 
-    const fallbacks = fallbackRehabExercises[fallbackCategory] || fallbackRehabExercises.shoulders;
+    const fallbacks = fallbackRehabExercises[fallbackCategory] || fallbackRehabExercises.yoga;
     const exerciseCount = Math.min(Math.max(2, Math.floor(duration / 6)), fallbacks.length);
 
     for (let i = 0; i < exerciseCount; i++) {
@@ -1288,10 +1340,15 @@ Return ONLY valid JSON:
   console.log('Workout name:', parsed.name);
   console.log('Exercise count:', matchedExercises.length);
 
-  // Override workout name for rehab/mobility to be more appropriate
-  const workoutName = (workoutStyle === 'rehab' || workoutStyle === 'mobility')
-    ? `${targetMuscles[0] ? targetMuscles[0].charAt(0).toUpperCase() + targetMuscles[0].slice(1) : ''} ${workoutStyle === 'rehab' ? 'Rehab' : 'Mobility'} Session`.trim()
-    : parsed.name;
+  // Override workout name for rehab/mobility/yoga to be more appropriate
+  let workoutName = parsed.name;
+  if (workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') {
+    const targetName = targetMuscles[0] ? targetMuscles[0].charAt(0).toUpperCase() + targetMuscles[0].slice(1) : '';
+    const styleLabel = workoutStyle === 'rehab' ? 'Rehab Session' :
+                       workoutStyle === 'yoga' ? 'Yoga Flow' :
+                       'Mobility Session';
+    workoutName = targetName ? `${targetName} ${styleLabel}` : styleLabel;
+  }
 
   return {
     workout: {
@@ -1466,41 +1523,60 @@ function determineWorkoutType(muscles: string[]): string {
 }
 
 function generateWorkoutName(type: string, level: string, style: string = 'traditional'): string {
-  // Style-based name prefixes
-  const styleNames: Record<string, string> = {
-    strength: '5x5',
-    hiit: 'HIIT',
-    circuit: 'Circuit',
-    wod: 'WOD',
-    traditional: '',
-    cardio: 'Cardio',
-    mobility: 'Mobility',
-    rehab: 'Rehab',
+  // Creative name templates for each style - randomly select one
+  const styleNameTemplates: Record<string, string[]> = {
+    strength: ['Iron Protocol', 'Heavy Metal', 'Strength Foundation', 'Power Hour', 'The Grind'],
+    hiit: ['Torch Session', 'Burn Notice', 'Sweat Storm', 'Fire Starter', 'Intensity Zone'],
+    circuit: ['The Gauntlet', 'Round Robin', 'Station Master', 'Circuit Breaker', 'Flow State'],
+    wod: ['The Crucible', 'Battle Ready', 'Forge Ahead', 'Iron Will', 'No Mercy'],
+    cardio: ['Heart Racer', 'Endurance Edge', 'Oxygen Debt', 'Mile Marker', 'Pace Setter'],
+    yoga: ['Zen Flow', 'Inner Balance', 'Breath & Flow', 'Centered Practice', 'Mindful Movement'],
+    mobility: ['Recovery Road', 'Flex Session', 'Restore & Reset', 'Loose & Limber', 'Movement Prep'],
+    rehab: ['Rebuild Session', 'Recovery Protocol', 'Corrective Care', 'Foundation Fix', 'Steady Progress'],
+    traditional: [],
   };
 
-  const typeNames: Record<string, string> = {
-    push: 'Push Power',
-    pull: 'Pull Strength',
-    legs: 'Leg Day',
-    upper: 'Upper Body',
-    lower: 'Lower Body',
-    fullbody: 'Full Body Blast',
-    cardio: 'Cardio Session',
-    mobility: 'Recovery Flow',
+  const typeNameTemplates: Record<string, string[]> = {
+    push: ['Push Day', 'Pressing Power', 'Chest & Shoulders', 'Upper Push', 'Press Protocol'],
+    pull: ['Pull Day', 'Back Attack', 'Row & Grow', 'Upper Pull', 'Lat Assault'],
+    legs: ['Leg Day', 'Lower Power', 'Quad Squad', 'Wheels of Steel', 'Foundation Builder'],
+    upper: ['Upper Body', 'Top Half', 'Arms & Armor', 'Above the Belt', 'Upper Deck'],
+    lower: ['Lower Body', 'Leg Focus', 'Base Builder', 'Ground Up', 'Lower Level'],
+    fullbody: ['Full Body', 'Total Training', 'Head to Toe', 'Complete Package', 'All Systems Go'],
+    cardio: ['Cardio Crush', 'Heart & Hustle', 'Sweat Session', 'Endurance Test'],
+    mobility: ['Flow & Flex', 'Move Better', 'Mobility Work', 'Range Finder'],
   };
 
-  const levelPrefix: Record<string, string> = {
-    beginner: 'Foundation',
-    intermediate: 'Progressive',
-    advanced: 'Intense',
+  const levelAdjectives: Record<string, string[]> = {
+    beginner: ['Foundation', 'Starter', 'Entry', 'Basic', ''],
+    intermediate: ['Progressive', 'Builder', 'Steady', '', ''],
+    advanced: ['Intense', 'Elite', 'Beast Mode', 'Max Effort', 'Hardcore'],
   };
 
-  const styleName = styleNames[style] || '';
-  const levelName = style === 'traditional' ? (levelPrefix[level] || '') : '';
-  const typeName = typeNames[type] || 'Workout';
+  // Pick random elements
+  const styleNames = styleNameTemplates[style] || [];
+  const typeNames = typeNameTemplates[type] || ['Workout'];
+  const levelAdjs = levelAdjectives[level] || [''];
 
-  const parts = [styleName, levelName, typeName].filter(Boolean);
-  return parts.join(' ').trim();
+  // For styles with specific names, use those; otherwise combine type + level
+  if (styleNames.length > 0) {
+    const styleName = styleNames[Math.floor(Math.random() * styleNames.length)];
+    // Sometimes add type context
+    if (type && type !== 'fullbody' && Math.random() > 0.5) {
+      const shortType = type.charAt(0).toUpperCase() + type.slice(1);
+      return `${shortType} ${styleName}`;
+    }
+    return styleName;
+  }
+
+  // Traditional style - combine level adjective with type name
+  const typeName = typeNames[Math.floor(Math.random() * typeNames.length)];
+  const levelAdj = levelAdjs[Math.floor(Math.random() * levelAdjs.length)];
+
+  if (levelAdj) {
+    return `${levelAdj} ${typeName}`;
+  }
+  return typeName;
 }
 
 // Map workout styles to exercise categories/tags that match
@@ -1510,6 +1586,7 @@ const styleExercisePatterns: Record<WorkoutStyle, string[]> = {
   circuit: ['compound', 'plyometric', 'bodyweight', 'kettlebell', 'dumbbell'],
   strength: ['barbell', 'powerlifting', 'squat', 'deadlift', 'bench', 'press', 'row', 'rack pull', 'pause', 'deficit'],
   cardio: ['run', 'sprint', 'interval', 'bike', 'row', 'ski', 'jump rope', 'assault', 'echo'],
+  yoga: ['yoga', 'pose', 'warrior', 'sun salutation', 'vinyasa', 'downward', 'pigeon', 'tree', 'triangle', 'cobra', 'child', 'bridge', 'flow', 'breath'],
   mobility: ['stretch', 'foam', 'mobility', 'yoga', 'flexibility', 'pigeon', 'hip opener'],
   rehab: ['rehab', 'prehab', 'band pull', 'face pull', 'external rotation', 'internal rotation', 'scapular', 'clamshell', 'bird dog', 'dead bug', 'chin tuck', 'glute bridge', 'stretch'],
   traditional: [], // No specific filter for traditional

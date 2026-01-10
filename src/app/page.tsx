@@ -31,6 +31,10 @@ const muscleGroups = [
   // Core
   { id: 'abs', name: 'Abs', category: 'core' },
   { id: 'obliques', name: 'Obliques', category: 'core' },
+  // Goals / Modalities (non-muscle targets)
+  { id: 'flexibility', name: 'Flexibility', category: 'goals' },
+  { id: 'endurance', name: 'Endurance', category: 'goals' },
+  { id: 'balance', name: 'Balance', category: 'goals' },
 ];
 
 const locations = [
@@ -46,6 +50,7 @@ const workoutStyles: { id: WorkoutStyle; name: string; description: string }[] =
   { id: 'circuit', name: 'Circuit', description: 'Back-to-back, minimal rest' },
   { id: 'wod', name: 'WOD', description: 'CrossFit-style AMRAP/EMOM' },
   { id: 'cardio', name: 'Cardio', description: 'Running, intervals, conditioning' },
+  { id: 'yoga', name: 'Yoga', description: 'Poses, flows & breathwork' },
   { id: 'mobility', name: 'Mobility', description: 'Stretching & recovery' },
   { id: 'rehab', name: 'Rehab/Prehab', description: 'Injury prevention & recovery' },
 ];
@@ -680,6 +685,32 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* Goals / Modalities */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ color: colors.textMuted, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
+                    Goals
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {muscleGroups.filter(m => m.category === 'goals').map(goal => (
+                      <button
+                        key={goal.id}
+                        onClick={() => toggleMuscle(goal.id)}
+                        style={{
+                          background: selectedMuscles.includes(goal.id) ? colors.accentMuted : colors.inputBg,
+                          border: selectedMuscles.includes(goal.id) ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                          borderRadius: '999px',
+                          padding: '0.375rem 0.75rem',
+                          transition: 'all 0.2s ease',
+                          color: selectedMuscles.includes(goal.id) ? colors.accent : colors.text,
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {goal.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Quick Select Buttons */}
                 <div className="flex flex-wrap gap-2" style={{ marginTop: '0.75rem' }}>
                   <button
@@ -898,6 +929,41 @@ export default function Home() {
               <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
                 {generatedWorkout.exercises.length} exercises
               </p>
+              {/* Context Tags: Location, Style, Muscles */}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {/* Location Tag */}
+                {selectedLocation && (
+                  <span
+                    style={{
+                      background: 'rgba(100, 149, 237, 0.15)',
+                      border: '1px solid rgba(100, 149, 237, 0.4)',
+                      borderRadius: '999px',
+                      padding: '0.125rem 0.5rem',
+                      fontSize: '0.625rem',
+                      color: '#6495ED',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {locations.find(l => l.id === selectedLocation)?.icon} {selectedLocation}
+                  </span>
+                )}
+                {/* Style Tag */}
+                {generatedWorkout.workoutStyle && generatedWorkout.workoutStyle !== 'traditional' && (
+                  <span
+                    style={{
+                      background: 'rgba(138, 43, 226, 0.15)',
+                      border: '1px solid rgba(138, 43, 226, 0.4)',
+                      borderRadius: '999px',
+                      padding: '0.125rem 0.5rem',
+                      fontSize: '0.625rem',
+                      color: '#9370DB',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {workoutStyles.find(s => s.id === generatedWorkout.workoutStyle)?.name || generatedWorkout.workoutStyle}
+                  </span>
+                )}
+              </div>
               {/* Target Muscles Tags */}
               <div className="flex flex-wrap gap-1">
                 {generatedWorkout.targetMuscles.slice(0, 6).map(muscle => (
