@@ -26,6 +26,18 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.5.1',
+    date: 'January 9, 2026',
+    title: 'UI & Workout Fixes',
+    platform: 'all',
+    changes: [
+      { type: 'improved', description: 'Duration selector now uses tappable buttons instead of slider - much easier to use on mobile' },
+      { type: 'fixed', description: 'Rehab/Prehab workouts no longer include heavy compound lifts like Bench Press' },
+      { type: 'fixed', description: 'Mobility workouts now properly suggest stretches, foam rolling, and yoga poses' },
+      { type: 'improved', description: 'Better exercise suggestions for shoulder, hip, and back rehab' },
+    ],
+  },
+  {
     version: '1.5.0',
     date: 'January 9, 2026',
     title: 'iOS App Launch',
