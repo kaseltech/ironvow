@@ -26,6 +26,24 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.6.0',
+    date: 'January 10, 2026',
+    title: 'Flex Timer',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'FlexTimer - GymNext-inspired interval timer with 5 modes: Stopwatch, Countdown, Tabata, EMOM, and Interval' },
+      { type: 'added', description: 'Tabata mode - classic 20s work / 10s rest intervals (fully configurable)' },
+      { type: 'added', description: 'EMOM mode - Every Minute On the Minute with customizable rounds' },
+      { type: 'added', description: 'Interval mode - custom work/rest durations with multiple sets' },
+      { type: 'added', description: 'Stopwatch with lap tracking' },
+      { type: 'added', description: 'Audio beeps for phase transitions using Web Audio API' },
+      { type: 'added', description: 'Haptic feedback on iOS for timer events' },
+      { type: 'added', description: '3-2-1 prelude countdown before timer starts' },
+      { type: 'added', description: 'Timer presets can be saved to cloud (coming soon)' },
+      { type: 'improved', description: 'Timer icon in header for quick access from any screen' },
+    ],
+  },
+  {
     version: '1.5.1',
     date: 'January 9, 2026',
     title: 'UI & Workout Fixes',
