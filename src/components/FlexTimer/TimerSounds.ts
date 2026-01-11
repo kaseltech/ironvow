@@ -36,8 +36,8 @@ class TimerAudio {
     this.hapticEnabled = enabled;
   }
 
-  // Speak a word/number
-  private speak(text: string, rate: number = 1.2): void {
+  // Speak a word/number with better voice selection
+  private speak(text: string, rate: number = 1.0, pitch: number = 0.9): void {
     if (!this.enabled) return;
     const synth = this.getSynth();
     if (!synth) return;
@@ -48,13 +48,22 @@ class TimerAudio {
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = rate;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+      utterance.pitch = pitch;
+      utterance.volume = 0.9;
 
-      // Try to find a good voice
+      // Try to find a good deep voice
       const voices = synth.getVoices();
+      // Prefer deeper male voices for gym timer feel
       const preferredVoice = voices.find(v =>
-        v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Daniel') || v.name.includes('Google'))
+        v.lang.startsWith('en') && (
+          v.name.includes('Alex') ||
+          v.name.includes('Daniel') ||
+          v.name.includes('Fred') ||
+          v.name.includes('Thomas') ||
+          v.name.toLowerCase().includes('male')
+        )
+      ) || voices.find(v =>
+        v.lang.startsWith('en-US') || v.lang.startsWith('en-GB')
       ) || voices.find(v => v.lang.startsWith('en'));
 
       if (preferredVoice) {
@@ -108,9 +117,19 @@ class TimerAudio {
     this.playTone(frequency, duration);
   }
 
-  // Voice countdown (4, 3, 2, 1)
+  // Voice countdown (4, 3, 2, 1) - for prelude
   playCountdownNumber(num: number): void {
-    this.speak(num.toString(), 1.3);
+    this.speak(num.toString(), 1.1, 0.8);
+    this.playHaptic(ImpactStyle.Light);
+  }
+
+  // Call out remaining seconds during timer (10, 5, 4, 3, 2, 1)
+  playTimeRemaining(seconds: number): void {
+    if (seconds === 10) {
+      this.speak('Ten', 1.0, 0.85);
+    } else if (seconds <= 5 && seconds >= 1) {
+      this.speak(seconds.toString(), 1.1, 0.8);
+    }
     this.playHaptic(ImpactStyle.Light);
   }
 
@@ -122,8 +141,20 @@ class TimerAudio {
 
   // GO! voice
   playGo(): void {
-    this.speak('Go!', 1.2);
+    this.speak('Go', 1.0, 0.7);
     this.playHaptic(ImpactStyle.Heavy);
+  }
+
+  // REST voice
+  playRest(): void {
+    this.speak('Rest', 1.0, 0.8);
+    this.playHaptic(ImpactStyle.Medium);
+  }
+
+  // WORK voice
+  playWork(): void {
+    this.speak('Work', 1.0, 0.8);
+    this.playHaptic(ImpactStyle.Medium);
   }
 
   // Work phase start - ascending tone

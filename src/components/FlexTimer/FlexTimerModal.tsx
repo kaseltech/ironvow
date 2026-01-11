@@ -135,9 +135,9 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
         return { ...prev, timeElapsed: timeElapsed + 1 };
       }
 
-      // Countdown modes
-      if (timeRemaining <= config.warningAt && timeRemaining > 0) {
-        timerAudio.play('warning');
+      // Voice countdown during timer (10, 5, 4, 3, 2, 1)
+      if (timeRemaining === 11 || timeRemaining === 6 || (timeRemaining <= 5 && timeRemaining >= 2)) {
+        timerAudio.playTimeRemaining(timeRemaining - 1);
       }
 
       if (timeRemaining <= 1) {
@@ -153,7 +153,7 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
         if (mode === 'tabata') {
           if (phase === 'work') {
             // Switch to rest
-            timerAudio.play('restStart');
+            timerAudio.playRest();
             return {
               ...prev,
               phase: 'rest',
@@ -165,7 +165,7 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
               timerAudio.play('complete');
               return { ...prev, status: 'complete', timeRemaining: 0 };
             }
-            timerAudio.play('workStart');
+            timerAudio.playWork();
             return {
               ...prev,
               phase: 'work',
@@ -193,7 +193,7 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
         if (mode === 'interval') {
           if (phase === 'work') {
             // Switch to rest
-            timerAudio.play('restStart');
+            timerAudio.playRest();
             return {
               ...prev,
               phase: 'rest',
@@ -208,7 +208,7 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
                 return { ...prev, status: 'complete', timeRemaining: 0 };
               }
               // Set rest
-              timerAudio.play('restStart');
+              timerAudio.playRest();
               return {
                 ...prev,
                 phase: 'set-rest',
@@ -216,7 +216,7 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
               };
             }
             // Next round
-            timerAudio.play('workStart');
+            timerAudio.playWork();
             return {
               ...prev,
               phase: 'work',
@@ -225,7 +225,7 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
             };
           } else {
             // Set rest done, start next set
-            timerAudio.play('workStart');
+            timerAudio.playWork();
             return {
               ...prev,
               phase: 'work',
@@ -522,13 +522,13 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
             disabled={state.status === 'running'}
             style={{
               background: state.mode === mode
-                ? (timerStyle === 'crossfit' ? '#FF3333' : `${colors.accent}20`)
+                ? (timerStyle === 'crossfit' ? '#CC2222' : `${colors.accent}20`)
                 : (timerStyle === 'crossfit' ? '#222' : 'transparent'),
               border: timerStyle === 'crossfit' ? 'none' : `1px solid ${state.mode === mode ? colors.accent : colors.accent + '30'}`,
               borderRadius: '0.5rem',
               padding: '0.625rem 1rem',
               color: state.mode === mode
-                ? (timerStyle === 'crossfit' ? '#000' : colors.accent)
+                ? (timerStyle === 'crossfit' ? '#FFF' : colors.accent)
                 : (timerStyle === 'crossfit' ? '#666' : colors.textMuted),
               fontSize: '0.8125rem',
               fontWeight: state.mode === mode ? 700 : 500,
@@ -564,16 +564,16 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
               fontSize: timerStyle === 'crossfit' ? 'min(50vw, 300px)' : '8rem',
               fontFamily: 'var(--font-geist-mono)',
               fontWeight: 900,
-              color: timerStyle === 'crossfit' ? '#FF3333' : colors.accent,
+              color: timerStyle === 'crossfit' ? '#CC2222' : colors.accent,
               lineHeight: 1,
-              textShadow: timerStyle === 'crossfit' ? '0 0 40px #FF3333' : 'none',
+              textShadow: timerStyle === 'crossfit' ? '0 0 20px rgba(180, 40, 40, 0.5)' : 'none',
             }}
           >
             {state.preludeCount - 1 || 'GO'}
           </div>
         )}
 
-        {/* Main timer - CrossFit LED style */}
+        {/* Main timer - CrossFit LED style (muted colors) */}
         {state.status !== 'prelude' && (
           <>
             <div
@@ -582,11 +582,11 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
                 fontFamily: 'var(--font-geist-mono)',
                 fontWeight: 900,
                 color: timerStyle === 'crossfit'
-                  ? (state.phase === 'rest' || state.phase === 'set-rest' ? '#33FF33' : '#FF3333')
+                  ? (state.phase === 'rest' || state.phase === 'set-rest' ? '#22AA44' : '#CC2222')
                   : state.status === 'complete' ? colors.success : colors.text,
                 lineHeight: 1,
                 textShadow: timerStyle === 'crossfit'
-                  ? `0 0 30px ${state.phase === 'rest' || state.phase === 'set-rest' ? '#33FF33' : '#FF3333'}`
+                  ? `0 0 15px ${state.phase === 'rest' || state.phase === 'set-rest' ? 'rgba(34, 170, 68, 0.4)' : 'rgba(180, 40, 40, 0.4)'}`
                   : 'none',
                 letterSpacing: timerStyle === 'crossfit' ? '0.05em' : '0',
               }}
@@ -632,11 +632,11 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
             <button
               onClick={start}
               style={{
-                background: timerStyle === 'crossfit' ? '#33FF33' : `linear-gradient(135deg, ${colors.accent}, ${colors.accent}CC)`,
+                background: timerStyle === 'crossfit' ? '#22AA44' : `linear-gradient(135deg, ${colors.accent}, ${colors.accent}CC)`,
                 border: 'none',
                 borderRadius: '1rem',
                 padding: '1.5rem 4rem',
-                color: '#000',
+                color: timerStyle === 'crossfit' ? '#FFF' : '#000',
                 fontSize: '1.5rem',
                 fontWeight: 900,
                 cursor: 'pointer',
@@ -668,11 +668,11 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
               <button
                 onClick={pause}
                 style={{
-                  background: timerStyle === 'crossfit' ? '#FF3333' : `${colors.accent}20`,
+                  background: timerStyle === 'crossfit' ? '#AA2222' : `${colors.accent}20`,
                   border: timerStyle === 'crossfit' ? 'none' : `3px solid ${colors.accent}`,
                   borderRadius: '1rem',
                   padding: '1rem 2.5rem',
-                  color: timerStyle === 'crossfit' ? '#000' : colors.accent,
+                  color: timerStyle === 'crossfit' ? '#FFF' : colors.accent,
                   fontSize: '1.25rem',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -701,11 +701,11 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
               <button
                 onClick={resume}
                 style={{
-                  background: timerStyle === 'crossfit' ? '#33FF33' : `linear-gradient(135deg, ${colors.accent}, ${colors.accent}CC)`,
+                  background: timerStyle === 'crossfit' ? '#22AA44' : `linear-gradient(135deg, ${colors.accent}, ${colors.accent}CC)`,
                   border: 'none',
                   borderRadius: '1rem',
                   padding: '1rem 2.5rem',
-                  color: '#000',
+                  color: timerStyle === 'crossfit' ? '#FFF' : '#000',
                   fontSize: '1.25rem',
                   fontWeight: 900,
                   cursor: 'pointer',
