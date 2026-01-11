@@ -212,9 +212,18 @@ export default function Home() {
 
   // Generate weekly plan
   const handleGenerateWeeklyPlan = async (days: WeeklyPlanDay[], planName: string) => {
-    if (!user) return;
+    console.log('[WeeklyPlan] handleGenerateWeeklyPlan called', { days, planName, user: !!user, selectedLocation });
+
+    if (!user) {
+      setError('Please log in to generate a workout plan');
+      return;
+    }
     if (!selectedLocation) {
       setError('Please select a location (Gym, Home, or Outdoor) first');
+      return;
+    }
+    if (!days || days.length === 0) {
+      setError('Please select at least one training day');
       return;
     }
 
@@ -234,6 +243,13 @@ export default function Home() {
         locationEquipment = userEquipment.map(e => e.equipment_id);
       }
 
+      console.log('[WeeklyPlan] Calling generateWeeklyPlan with:', {
+        location: selectedLocation,
+        duration,
+        daysCount: days.length,
+        equipmentCount: locationEquipment.length,
+      });
+
       const plan = await generateWeeklyPlan({
         userId: user.id,
         location: selectedLocation as 'gym' | 'home' | 'outdoor',
@@ -252,11 +268,13 @@ export default function Home() {
         },
       });
 
+      console.log('[WeeklyPlan] Plan generated successfully:', plan?.name);
       setGeneratedPlan(plan);
       setShowPlanReview(true);
     } catch (err) {
-      console.error('Failed to generate weekly plan:', err);
-      setError('Failed to generate weekly plan. Please try again.');
+      console.error('[WeeklyPlan] Failed to generate weekly plan:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate weekly plan';
+      setError(errorMessage);
     } finally {
       setGenerating(false);
     }
@@ -666,6 +684,22 @@ export default function Home() {
               </div>
             )}
 
+            {/* Error Message - Show for both modes */}
+            {error && (
+              <div
+                className="animate-fade-in mb-4 p-3"
+                style={{
+                  background: 'rgba(248, 113, 113, 0.1)',
+                  border: '1px solid #F87171',
+                  borderRadius: '0.5rem',
+                  color: '#F87171',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {error}
+              </div>
+            )}
+
             {/* Weekly Planner - Show when weekly mode is selected */}
             {weeklyMode ? (
               <WeeklyPlanner
@@ -979,22 +1013,6 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div
-                className="animate-fade-in mb-4 p-3"
-                style={{
-                  background: 'rgba(248, 113, 113, 0.1)',
-                  border: '1px solid #F87171',
-                  borderRadius: '0.5rem',
-                  color: '#F87171',
-                  fontSize: '0.875rem',
-                }}
-              >
-                {error}
               </div>
             )}
 
