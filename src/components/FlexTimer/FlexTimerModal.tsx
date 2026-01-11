@@ -106,10 +106,10 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
     setState(prev => {
       const { mode, status, phase, timeRemaining, timeElapsed, currentRound, totalRounds, currentSet, totalSets, preludeCount } = prev;
 
-      // Prelude countdown
+      // Prelude countdown (4, 3, 2, 1, GO!)
       if (status === 'prelude') {
         if (preludeCount > 1) {
-          timerAudio.play('countdown');
+          timerAudio.playCountdownNumber(preludeCount - 1);
           return { ...prev, preludeCount: preludeCount - 1 };
         } else {
           timerAudio.playGo();
@@ -263,7 +263,7 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
       setState(prev => ({
         ...prev,
         status: 'prelude',
-        preludeCount: 3,
+        preludeCount: 5, // Will count down 4, 3, 2, 1, GO!
       }));
     } else {
       setState(prev => ({

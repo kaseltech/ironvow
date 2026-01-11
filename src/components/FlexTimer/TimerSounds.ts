@@ -7,6 +7,7 @@ class TimerAudio {
   private audioContext: AudioContext | null = null;
   private enabled: boolean = true;
   private hapticEnabled: boolean = true;
+  private synth: SpeechSynthesis | null = null;
 
   private getContext(): AudioContext {
     if (!this.audioContext) {
@@ -19,12 +20,52 @@ class TimerAudio {
     return this.audioContext;
   }
 
+  private getSynth(): SpeechSynthesis | null {
+    if (typeof window === 'undefined') return null;
+    if (!this.synth) {
+      this.synth = window.speechSynthesis;
+    }
+    return this.synth;
+  }
+
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
   }
 
   setHapticEnabled(enabled: boolean): void {
     this.hapticEnabled = enabled;
+  }
+
+  // Speak a word/number
+  private speak(text: string, rate: number = 1.2): void {
+    if (!this.enabled) return;
+    const synth = this.getSynth();
+    if (!synth) return;
+
+    try {
+      // Cancel any ongoing speech
+      synth.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = rate;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      // Try to find a good voice
+      const voices = synth.getVoices();
+      const preferredVoice = voices.find(v =>
+        v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Daniel') || v.name.includes('Google'))
+      ) || voices.find(v => v.lang.startsWith('en'));
+
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+
+      synth.speak(utterance);
+    } catch (e) {
+      // Speech not available, fall back to beep
+      this.beep(660, 0.1);
+    }
   }
 
   private async playHaptic(style: ImpactStyle): Promise<void> {
@@ -67,15 +108,21 @@ class TimerAudio {
     this.playTone(frequency, duration);
   }
 
-  // Countdown beeps (3, 2, 1)
+  // Voice countdown (4, 3, 2, 1)
+  playCountdownNumber(num: number): void {
+    this.speak(num.toString(), 1.3);
+    this.playHaptic(ImpactStyle.Light);
+  }
+
+  // Legacy beep countdown (fallback)
   playCountdown(): void {
     this.beep(660, 0.1);
     this.playHaptic(ImpactStyle.Light);
   }
 
-  // GO! sound (higher pitch)
+  // GO! voice
   playGo(): void {
-    this.beep(880, 0.25);
+    this.speak('Go!', 1.2);
     this.playHaptic(ImpactStyle.Heavy);
   }
 

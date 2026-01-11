@@ -104,7 +104,7 @@ export const INITIAL_TIMER_STATE: TimerState = {
   currentSet: 1,
   totalSets: 1,
   phase: 'work',
-  preludeCount: 3,
+  preludeCount: 5, // Counts down 4, 3, 2, 1, GO!
   laps: [],
 };
 
