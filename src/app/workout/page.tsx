@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthGuard } from '@/components/AuthGuard';
 import { useWorkoutSessions, useSetLogs, type LoggedSet } from '@/hooks/useSupabase';
+import { ExerciseDetailModal } from '@/components/ExerciseDetailModal';
 import type { GeneratedWorkout } from '@/lib/generateWorkout';
 
 interface WorkoutExercise {
@@ -105,6 +106,9 @@ export default function WorkoutPage() {
   const [editingSet, setEditingSet] = useState<LoggedSet | null>(null);
   const [editWeight, setEditWeight] = useState(0);
   const [editReps, setEditReps] = useState(0);
+
+  // Exercise detail modal
+  const [showExerciseDetail, setShowExerciseDetail] = useState<string | null>(null);
 
   // Start workout session on mount
   useEffect(() => {
@@ -388,18 +392,40 @@ export default function WorkoutPage() {
           <div className="flex-1 flex flex-col">
             {/* Exercise name */}
             <div className="text-center mb-4">
-              <h1
-                style={{
-                  fontFamily: 'var(--font-libre-baskerville)',
-                  fontSize: '1.75rem',
-                  color: '#F5F1EA',
-                  marginBottom: '0.5rem',
-                }}
-              >
-                {exercise.name}
-              </h1>
+              <div className="flex items-center justify-center gap-2">
+                <h1
+                  style={{
+                    fontFamily: 'var(--font-libre-baskerville)',
+                    fontSize: '1.75rem',
+                    color: '#F5F1EA',
+                    marginBottom: '0',
+                  }}
+                >
+                  {exercise.name}
+                </h1>
+                <button
+                  onClick={() => setShowExerciseDetail(exercise.name)}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: 'rgba(201, 167, 90, 0.15)',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    color: '#C9A75A',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="How to do this exercise"
+                >
+                  ?
+                </button>
+              </div>
               {exercise.notes && (
-                <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>
+                <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
                   {exercise.notes}
                 </p>
               )}
@@ -837,6 +863,14 @@ export default function WorkoutPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Exercise Detail Modal */}
+      {showExerciseDetail && (
+        <ExerciseDetailModal
+          exerciseName={showExerciseDetail}
+          onClose={() => setShowExerciseDetail(null)}
+        />
       )}
     </div>
     </AuthGuard>

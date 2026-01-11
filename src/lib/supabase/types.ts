@@ -200,6 +200,8 @@ export type Database = {
           difficulty: 'beginner' | 'intermediate' | 'advanced' | null;
           is_compound: boolean;
           video_url: string | null;
+          image_urls: string[] | null;
+          category: string | null;
           created_at: string;
         };
         Insert: {
@@ -215,6 +217,8 @@ export type Database = {
           difficulty?: 'beginner' | 'intermediate' | 'advanced' | null;
           is_compound?: boolean;
           video_url?: string | null;
+          image_urls?: string[] | null;
+          category?: string | null;
           created_at?: string;
         };
         Update: {
@@ -230,6 +234,8 @@ export type Database = {
           difficulty?: 'beginner' | 'intermediate' | 'advanced' | null;
           is_compound?: boolean;
           video_url?: string | null;
+          image_urls?: string[] | null;
+          category?: string | null;
           created_at?: string;
         };
       };
