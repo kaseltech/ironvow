@@ -38,11 +38,11 @@ const getColor = (strength: number) => {
 // - Calves: y=76-93
 
 const frontMusclePolygons = [
-  // TRAPS - visible at neck base between shoulder caps
+  // TRAPS - visible at neck base between shoulder caps (below head)
   {
     id: 'traps',
     name: 'Traps',
-    path: 'M 46,14 L 50,13 L 54,14 L 53,17 L 50,18 L 47,17 Z',
+    path: 'M 46,17 L 50,16 L 54,17 L 53,20 L 50,21 L 47,20 Z',
   },
 
   // LEFT SHOULDER (Deltoid) - rounded cap wrapping arm top
@@ -167,11 +167,11 @@ const frontMusclePolygons = [
 
 // Back view polygons - traced from muscle boundary lines in image
 const backMusclePolygons = [
-  // TRAPS - large kite shape following visible lines from neck to mid-back
+  // TRAPS - large kite shape from neck base to mid-back (below head)
   {
     id: 'traps',
     name: 'Traps',
-    path: 'M 50,13 L 45,16 L 43,21 L 45,29 L 48,33 L 50,34 L 52,33 L 55,29 L 57,21 L 55,16 Z',
+    path: 'M 50,16 L 45,19 L 43,24 L 45,31 L 48,35 L 50,36 L 52,35 L 55,31 L 57,24 L 55,19 Z',
   },
 
   // LEFT REAR DELT - rounded cap at back of shoulder
@@ -386,6 +386,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
               display: 'block',
               aspectRatio: '1 / 1',
             }}
+            onMouseLeave={() => setHoveredMuscle(null)}
           >
             {/* Embedded image - stretches to fill viewBox exactly for coordinate alignment */}
             <image
