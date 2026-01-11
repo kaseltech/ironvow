@@ -1188,6 +1188,16 @@ Return ONLY valid JSON:
         continue;
       }
 
+      // For rehab/mobility/yoga workouts, ONLY allow exercises with rehab_for populated
+      // This is the key filter to prevent heavy exercises like bench press
+      if (workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') {
+        const hasRehabTag = match.exercise.rehab_for && match.exercise.rehab_for.length > 0;
+        if (!hasRehabTag) {
+          console.log(`✗ BLOCKED non-rehab exercise for ${workoutStyle}: "${match.exercise.name}" (no rehab_for tag)`);
+          continue;
+        }
+      }
+
       // Found a match - use the database exercise ID and muscle data
       console.log(`✓ Matched "${aiExercise.name}" → "${match.exercise.name}" (score: ${match.score.toFixed(2)})`);
 

@@ -13,6 +13,7 @@ import { useWorkoutPlans, DAY_NAMES_FULL } from '@/hooks/useWorkoutPlans';
 import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, generateWeeklyPlan, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan } from '@/lib/generateWorkout';
 import { WeeklyPlanner } from '@/components/WeeklyPlanner';
 import { WeeklyPlanReview } from '@/components/WeeklyPlanReview';
+import { ExerciseDetailModal } from '@/components/ExerciseDetailModal';
 import { Settings } from '@/components/Settings';
 import { GymManager } from '@/components/GymManager';
 import { FlexTimerModal } from '@/components/FlexTimer';
@@ -98,6 +99,8 @@ export default function Home() {
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedWeeklyPlan | null>(null);
   const [showPlanReview, setShowPlanReview] = useState(false);
   const [lastWeeklyRequest, setLastWeeklyRequest] = useState<{ days: WeeklyPlanDay[]; planName: string } | null>(null);
+  // Exercise detail modal
+  const [showExerciseDetail, setShowExerciseDetail] = useState<string | null>(null);
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -1200,10 +1203,36 @@ export default function Home() {
                     {i + 1}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ color: colors.text, fontSize: '1rem', fontWeight: 500 }}>
-                      {exercise.name}
-                    </h3>
-                    <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <h3 style={{ color: colors.text, fontSize: '1rem', fontWeight: 500, margin: 0 }}>
+                        {exercise.name}
+                      </h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowExerciseDetail(exercise.name);
+                        }}
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: 'rgba(201, 167, 90, 0.15)',
+                          border: '1px solid rgba(201, 167, 90, 0.3)',
+                          color: colors.accent,
+                          fontSize: '0.6875rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                        title="How to do this exercise"
+                      >
+                        ?
+                      </button>
+                    </div>
+                    <p style={{ color: colors.textMuted, fontSize: '0.75rem', margin: 0 }}>
                       {exercise.sets} sets x {exercise.reps} reps
                     </p>
                     {/* Muscle & Movement Pattern Tags */}
@@ -1605,6 +1634,14 @@ export default function Home() {
           onClose={handleClosePlanReview}
           onRegenerate={handleRegenerateWeeklyPlan}
           regenerating={generating}
+        />
+      )}
+
+      {/* Exercise Detail Modal */}
+      {showExerciseDetail && (
+        <ExerciseDetailModal
+          exerciseName={showExerciseDetail}
+          onClose={() => setShowExerciseDetail(null)}
         />
       )}
     </div>
