@@ -12,6 +12,37 @@ export type WorkoutStyle =
   | 'mobility'     // Stretching, foam rolling, recovery
   | 'rehab';       // Injury prevention, prehab, rehabilitation exercises
 
+export interface WeeklyPlanDay {
+  day_of_week: number; // 0=Sun, 1=Mon...6=Sat
+  muscle_focus?: string[];
+  workout_style?: WorkoutStyle | 'auto';
+}
+
+export interface WeeklyPlanRequest {
+  userId: string;
+  location: 'gym' | 'home' | 'outdoor';
+  duration: number;
+  experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+  workoutStyle?: WorkoutStyle;
+  injuries?: { bodyPart: string; movementsToAvoid: string[] }[];
+  equipment?: string[];
+  customEquipment?: string[];
+  weeklyPlan: {
+    planName: string;
+    days: WeeklyPlanDay[];
+  };
+}
+
+export interface GeneratedWeeklyPlan {
+  id: string;
+  name: string;
+  days: {
+    day_of_week: number;
+    day_name: string;
+    workout: GeneratedWorkout;
+  }[];
+}
+
 export interface WorkoutRequest {
   userId: string;
   location: 'gym' | 'home' | 'outdoor';
@@ -126,6 +157,40 @@ export async function getSwapAlternatives(request: SwapRequest): Promise<Exercis
   }
 
   return data.alternatives;
+}
+
+// Generate a weekly workout plan
+export async function generateWeeklyPlan(request: WeeklyPlanRequest): Promise<GeneratedWeeklyPlan> {
+  const supabase = getSupabase();
+
+  console.log('[WeeklyPlan] Calling Edge Function...', {
+    planName: request.weeklyPlan.planName,
+    dayCount: request.weeklyPlan.days.length,
+    location: request.location,
+    duration: request.duration,
+  });
+
+  const { data, error } = await supabase.functions.invoke('generate-workout', {
+    body: request,
+  });
+
+  if (error) {
+    console.error('[WeeklyPlan] Edge function error:', error);
+    throw new Error(error.message || 'Failed to generate weekly plan');
+  }
+
+  console.log('[WeeklyPlan] Response:', {
+    success: data?.success,
+    planName: data?.plan?.name,
+    dayCount: data?.plan?.days?.length,
+  });
+
+  if (!data.success) {
+    console.error('[WeeklyPlan] Generation failed:', data.error);
+    throw new Error(data.error || 'Weekly plan generation failed');
+  }
+
+  return data.plan;
 }
 
 // Map broad muscle groups to specific muscles in database

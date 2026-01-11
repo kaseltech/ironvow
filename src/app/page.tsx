@@ -9,7 +9,8 @@ import { Onboarding } from '@/components/Onboarding';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
-import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle } from '@/lib/generateWorkout';
+import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, generateWeeklyPlan, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan } from '@/lib/generateWorkout';
+import { WeeklyPlanner } from '@/components/WeeklyPlanner';
 import { Settings } from '@/components/Settings';
 import { GymManager } from '@/components/GymManager';
 import { FlexTimerModal } from '@/components/FlexTimer';
@@ -89,6 +90,9 @@ export default function Home() {
   // Freeform AI input
   const [freeformMode, setFreeformMode] = useState(false);
   const [freeformPrompt, setFreeformPrompt] = useState('');
+  // Weekly planner mode
+  const [weeklyMode, setWeeklyMode] = useState(false);
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedWeeklyPlan | null>(null);
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -195,6 +199,53 @@ export default function Home() {
       // Store workout in sessionStorage for the workout page
       sessionStorage.setItem('currentWorkout', JSON.stringify(generatedWorkout));
       router.push('/workout');
+    }
+  };
+
+  // Generate weekly plan
+  const handleGenerateWeeklyPlan = async (days: WeeklyPlanDay[], planName: string) => {
+    if (!user || !selectedLocation) return;
+
+    setGenerating(true);
+    setError(null);
+
+    try {
+      // Get equipment based on location
+      let locationEquipment: string[] = [];
+      let customEquipmentList: string[] = profile?.custom_equipment || [];
+
+      if (selectedLocation === 'gym' && selectedGym) {
+        locationEquipment = selectedGym.equipment_ids || [];
+        customEquipmentList = selectedGym.custom_equipment || [];
+      } else if (selectedLocation === 'home') {
+        locationEquipment = userEquipment.map(e => e.equipment_id);
+      }
+
+      const plan = await generateWeeklyPlan({
+        userId: user.id,
+        location: selectedLocation as 'gym' | 'home' | 'outdoor',
+        duration,
+        experienceLevel: (profile?.experience_level as 'beginner' | 'intermediate' | 'advanced') || 'intermediate',
+        workoutStyle: selectedWorkoutStyle,
+        injuries: injuries?.map(i => ({
+          bodyPart: i.body_part,
+          movementsToAvoid: i.movements_to_avoid || [],
+        })),
+        equipment: locationEquipment,
+        customEquipment: customEquipmentList,
+        weeklyPlan: {
+          planName,
+          days,
+        },
+      });
+
+      setGeneratedPlan(plan);
+      setShowWorkout(true);
+    } catch (err) {
+      console.error('Failed to generate weekly plan:', err);
+      setError('Failed to generate weekly plan. Please try again.');
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -381,6 +432,44 @@ export default function Home() {
               </button>
             </div>
 
+            {/* Single/Weekly Toggle */}
+            <div className="flex gap-2 mb-4 animate-fade-in" style={{ animationDelay: '0.075s' }}>
+              <button
+                onClick={() => setWeeklyMode(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '0.75rem',
+                  background: !weeklyMode ? colors.accent : colors.cardBg,
+                  border: !weeklyMode ? `1px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+                  color: !weeklyMode ? colors.bg : colors.text,
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Single Workout
+              </button>
+              <button
+                onClick={() => setWeeklyMode(true)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '0.75rem',
+                  background: weeklyMode ? colors.accent : colors.cardBg,
+                  border: weeklyMode ? `1px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+                  color: weeklyMode ? colors.bg : colors.text,
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Weekly Plan
+              </button>
+            </div>
+
             {/* Location Selector */}
             <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.1s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
               <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -501,6 +590,15 @@ export default function Home() {
               </div>
             )}
 
+            {/* Weekly Planner - Show when weekly mode is selected */}
+            {weeklyMode ? (
+              <WeeklyPlanner
+                duration={duration}
+                onGenerate={handleGenerateWeeklyPlan}
+                generating={generating}
+              />
+            ) : (
+              <>
             {/* Freeform Mode Toggle */}
             <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: freeformMode ? '0.75rem' : 0 }}>
@@ -841,8 +939,10 @@ export default function Home() {
                 'Generate Workout'
               )}
             </button>
+              </>
+            )}
           </>
-        ) : generatedWorkout ? (
+        ) : generatedWorkout || generatedPlan ? (
           /* Workout Display */
           <div className="animate-fade-in">
             <div className="flex items-center justify-between mb-4">
@@ -850,6 +950,7 @@ export default function Home() {
                 onClick={() => {
                   setShowWorkout(false);
                   setGeneratedWorkout(null);
+                  setGeneratedPlan(null);
                 }}
                 style={{
                   background: 'transparent',
@@ -913,6 +1014,59 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Weekly Plan Display */}
+            {generatedPlan && (
+              <div className="card mb-4" style={{ background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
+                <h2
+                  style={{
+                    fontFamily: 'var(--font-libre-baskerville)',
+                    fontSize: '1.5rem',
+                    color: colors.text,
+                    marginBottom: '1rem',
+                  }}
+                >
+                  {generatedPlan.name}
+                </h2>
+                <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '1rem' }}>
+                  {generatedPlan.days.length} workouts generated and saved to your plan
+                </p>
+                <div className="space-y-3">
+                  {generatedPlan.days.map((day) => (
+                    <div
+                      key={day.day_of_week}
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '0.75rem',
+                        padding: '0.75rem 1rem',
+                      }}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span style={{ color: colors.accent, fontWeight: 600, fontSize: '0.875rem' }}>
+                          {day.day_name}
+                        </span>
+                        <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                          ~{day.workout.duration} min
+                        </span>
+                      </div>
+                      <div style={{ color: colors.text, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                        {day.workout.name.replace(`${day.day_name}: `, '')}
+                      </div>
+                      <div style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                        {day.workout.exercises.length} exercises • {day.workout.targetMuscles.slice(0, 3).join(', ')}
+                        {day.workout.targetMuscles.length > 3 && ` +${day.workout.targetMuscles.length - 3}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '1rem', textAlign: 'center' }}>
+                  Your weekly plan is now active! Check your profile to view and start workouts.
+                </p>
+              </div>
+            )}
+
+            {/* Single Workout Display */}
+            {generatedWorkout && (
+            <>
             <div className="card mb-4" style={{ background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
               <div className="flex items-center justify-between mb-2">
                 <h2
@@ -1130,6 +1284,8 @@ export default function Home() {
             >
               Start Workout
             </button>
+            </>
+            )}
           </div>
         ) : null}
       </main>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { BodyMap } from '@/components/BodyMap';
+import { ExpandableWorkoutCard } from '@/components/ExpandableWorkoutCard';
 import { GymManager } from '@/components/GymManager';
 import { Header } from '@/components/Header';
 import { Settings } from '@/components/Settings';
@@ -56,24 +57,51 @@ function formatDateShort(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// All muscle groups for the menu
+// All muscle groups ordered head-to-toe for the front view menu
+const FRONT_MUSCLES = [
+  { id: 'traps', name: 'Traps' },
+  { id: 'shoulders', name: 'Shoulders' },
+  { id: 'chest', name: 'Chest' },
+  { id: 'biceps', name: 'Biceps' },
+  { id: 'forearms', name: 'Forearms' },
+  { id: 'core', name: 'Core' },
+  { id: 'obliques', name: 'Obliques' },
+  { id: 'quads', name: 'Quads' },
+  { id: 'adductors', name: 'Adductors' },
+];
+
+// All muscle groups ordered head-to-toe for the back view menu
+const BACK_MUSCLES = [
+  { id: 'traps', name: 'Traps' },
+  { id: 'shoulders', name: 'Rear Delts' },
+  { id: 'upper_back', name: 'Upper Back' },
+  { id: 'lats', name: 'Lats' },
+  { id: 'triceps', name: 'Triceps' },
+  { id: 'forearms', name: 'Forearms' },
+  { id: 'lower_back', name: 'Lower Back' },
+  { id: 'glutes', name: 'Glutes' },
+  { id: 'hamstrings', name: 'Hamstrings' },
+  { id: 'calves', name: 'Calves' },
+];
+
+// Combined for lookups
 const MUSCLE_GROUPS = [
-  { id: 'chest', name: 'Chest', category: 'push' },
-  { id: 'shoulders', name: 'Shoulders', category: 'push' },
-  { id: 'triceps', name: 'Triceps', category: 'push' },
-  { id: 'lats', name: 'Lats', category: 'pull' },
-  { id: 'upper_back', name: 'Upper Back', category: 'pull' },
-  { id: 'traps', name: 'Traps', category: 'pull' },
-  { id: 'biceps', name: 'Biceps', category: 'pull' },
-  { id: 'forearms', name: 'Forearms', category: 'pull' },
-  { id: 'core', name: 'Core', category: 'core' },
-  { id: 'obliques', name: 'Obliques', category: 'core' },
-  { id: 'lower_back', name: 'Lower Back', category: 'core' },
-  { id: 'glutes', name: 'Glutes', category: 'legs' },
-  { id: 'quads', name: 'Quads', category: 'legs' },
-  { id: 'hamstrings', name: 'Hamstrings', category: 'legs' },
-  { id: 'adductors', name: 'Adductors', category: 'legs' },
-  { id: 'calves', name: 'Calves', category: 'legs' },
+  { id: 'traps', name: 'Traps' },
+  { id: 'shoulders', name: 'Shoulders' },
+  { id: 'chest', name: 'Chest' },
+  { id: 'biceps', name: 'Biceps' },
+  { id: 'triceps', name: 'Triceps' },
+  { id: 'forearms', name: 'Forearms' },
+  { id: 'lats', name: 'Lats' },
+  { id: 'upper_back', name: 'Upper Back' },
+  { id: 'lower_back', name: 'Lower Back' },
+  { id: 'core', name: 'Core' },
+  { id: 'obliques', name: 'Obliques' },
+  { id: 'glutes', name: 'Glutes' },
+  { id: 'quads', name: 'Quads' },
+  { id: 'hamstrings', name: 'Hamstrings' },
+  { id: 'adductors', name: 'Adductors' },
+  { id: 'calves', name: 'Calves' },
 ];
 
 type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
@@ -124,6 +152,7 @@ export default function ProfilePage() {
   const [selectedMuscleId, setSelectedMuscleId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [exercisesExpanded, setExercisesExpanded] = useState(true);
+  const [bodyView, setBodyView] = useState<'front' | 'back'>('front');
 
   // Convert muscle volume to strength data for BodyMap
   const muscleStrengthData = useMemo(() => {
@@ -305,76 +334,85 @@ export default function ProfilePage() {
       <main className="p-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         {activeTab === 'body' && (
           <div>
-            {/* Compact Three-Panel Layout */}
-            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', minHeight: '70vh' }}>
-
-              {/* Left Panel - Muscle Menu (overlays left side) */}
+            {/* Responsive Three-Column Layout */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr minmax(200px, 320px) 1fr',
+                gap: '1rem',
+                alignItems: 'start',
+                minHeight: '60vh',
+              }}
+            >
+              {/* Left Panel - Muscle Menu */}
               <div
                 style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: '90px',
-                  maxHeight: '100%',
-                  overflowY: 'auto',
-                  background: 'rgba(15, 34, 51, 0.85)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: '0.5rem',
-                  padding: '0.5rem',
-                  border: '1px solid rgba(201, 167, 90, 0.2)',
-                  zIndex: 10,
+                  background: colors.cardBg,
+                  borderRadius: '0.75rem',
+                  padding: '1rem',
+                  border: `1px solid ${colors.borderSubtle}`,
                 }}
               >
-                <div style={{ color: colors.accent, fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem', textAlign: 'center' }}>
-                  Muscles
+                <div style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                  {bodyView === 'front' ? 'Front' : 'Back'} Muscles
                 </div>
-                {(['push', 'pull', 'core', 'legs'] as const).map(category => (
-                  <div key={category} style={{ marginBottom: '0.375rem' }}>
-                    <div style={{ color: colors.textMuted, fontSize: '0.4375rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.125rem' }}>
-                      {category}
-                    </div>
-                    {MUSCLE_GROUPS.filter(m => m.category === category).map(muscle => {
-                      const muscleData = muscleStrengthData.find(d => d.id === muscle.id);
-                      const isSelected = selectedMuscleId === muscle.id;
-                      return (
-                        <button
-                          key={muscle.id}
-                          onClick={() => handleMuscleSelect(muscle.id)}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  {(bodyView === 'front' ? FRONT_MUSCLES : BACK_MUSCLES).map(muscle => {
+                    const muscleData = muscleStrengthData.find(d => d.id === muscle.id);
+                    const isSelected = selectedMuscleId === muscle.id;
+                    const strengthColor = muscleData
+                      ? muscleData.strength >= 70 ? '#4ADE80' : muscleData.strength >= 40 ? '#FACC15' : '#F87171'
+                      : colors.borderSubtle;
+
+                    return (
+                      <button
+                        key={muscle.id}
+                        onClick={() => handleMuscleSelect(muscle.id)}
+                        onMouseEnter={() => {
+                          // Switch to back view if hovering over back-only muscles
+                          const backOnlyMuscles = ['lats', 'upper_back', 'lower_back', 'glutes', 'hamstrings', 'calves', 'triceps'];
+                          if (backOnlyMuscles.includes(muscle.id) && bodyView === 'front') {
+                            setBodyView('back');
+                          }
+                          // Switch to front view if hovering over front-only muscles
+                          const frontOnlyMuscles = ['chest', 'biceps', 'core', 'obliques', 'quads', 'adductors'];
+                          if (frontOnlyMuscles.includes(muscle.id) && bodyView === 'back') {
+                            setBodyView('front');
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
+                          padding: '0.625rem 0.75rem',
+                          borderRadius: '0.5rem',
+                          background: isSelected ? 'rgba(201, 167, 90, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                          border: isSelected ? `2px solid ${colors.accent}` : '2px solid transparent',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <span style={{ color: isSelected ? colors.accent : colors.text, fontSize: '0.875rem', fontWeight: isSelected ? 600 : 400 }}>
+                          {muscle.name}
+                        </span>
+                        <div
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            width: '100%',
-                            padding: '0.25rem 0.375rem',
-                            marginBottom: '1px',
-                            borderRadius: '0.25rem',
-                            background: isSelected ? 'rgba(201, 167, 90, 0.3)' : 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            background: strengthColor,
+                            boxShadow: muscleData ? `0 0 6px ${strengthColor}` : 'none',
                           }}
-                        >
-                          <span style={{ color: isSelected ? colors.accent : colors.text, fontSize: '0.5625rem', fontWeight: isSelected ? 600 : 400 }}>
-                            {muscle.name}
-                          </span>
-                          {muscleData && (
-                            <span
-                              style={{
-                                width: '5px',
-                                height: '5px',
-                                borderRadius: '50%',
-                                background: muscleData.strength >= 70 ? '#4ADE80' : muscleData.strength >= 40 ? '#FACC15' : '#F87171',
-                              }}
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Center - Body Map */}
-              <div style={{ maxWidth: '280px', width: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 {strengthLoading ? (
                   <div className="flex items-center justify-center" style={{ height: '400px' }}>
                     <div
@@ -388,37 +426,31 @@ export default function ProfilePage() {
                     muscleData={muscleStrengthData}
                     selectedMuscleId={selectedMuscleId}
                     onMuscleSelect={(muscle) => handleMuscleSelect(muscle.id)}
+                    view={bodyView}
+                    onViewChange={setBodyView}
                   />
                 )}
               </div>
 
-              {/* Right Panel - Details (overlays right side) */}
+              {/* Right Panel - Details & Summary */}
               <div
                 style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  width: '110px',
-                  maxHeight: '100%',
-                  overflowY: 'auto',
-                  background: 'rgba(15, 34, 51, 0.85)',
-                  backdropFilter: 'blur(8px)',
-                  borderRadius: '0.5rem',
-                  padding: '0.5rem',
-                  border: '1px solid rgba(201, 167, 90, 0.2)',
-                  zIndex: 10,
+                  background: colors.cardBg,
+                  borderRadius: '0.75rem',
+                  padding: '1rem',
+                  border: `1px solid ${colors.borderSubtle}`,
                 }}
               >
                 {selectedMuscleId ? (
                   <>
                     {/* Selected Muscle Header */}
-                    <div className="flex items-center justify-between" style={{ marginBottom: '0.375rem' }}>
-                      <span style={{ color: colors.accent, fontSize: '0.625rem', fontWeight: 600, textTransform: 'capitalize' }}>
+                    <div className="flex items-center justify-between" style={{ marginBottom: '1rem' }}>
+                      <span style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600, textTransform: 'capitalize' }}>
                         {selectedMuscleName}
                       </span>
                       <button
                         onClick={() => setSelectedMuscleId(null)}
-                        style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '0.75rem', lineHeight: 1, padding: 0 }}
+                        style={{ background: 'rgba(0,0,0,0.3)', border: 'none', color: colors.textMuted, cursor: 'pointer', fontSize: '1rem', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         ×
                       </button>
@@ -427,26 +459,26 @@ export default function ProfilePage() {
                     {selectedMuscleExercises.length > 0 || selectedMuscleVolume ? (
                       <>
                         {/* Stats */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.5rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.5rem' }}>
-                            <span style={{ color: colors.textMuted }}>Volume</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                            <span style={{ color: colors.textMuted }}>Volume (30d)</span>
                             <span style={{ color: colors.text, fontWeight: 600 }}>
-                              {selectedMuscleVolume ? formatVolumeShort(selectedMuscleVolume.total_volume) : '—'}
+                              {selectedMuscleVolume ? formatVolumeShort(selectedMuscleVolume.total_volume) : '—'} lbs
                             </span>
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.5rem' }}>
-                            <span style={{ color: colors.textMuted }}>Last</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                            <span style={{ color: colors.textMuted }}>Last Trained</span>
                             <span style={{ color: colors.text, fontWeight: 600 }}>
                               {selectedMuscleVolume ? formatDateShort(selectedMuscleVolume.last_trained) : '—'}
                             </span>
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
                             <span style={{ color: colors.textMuted }}>Trend</span>
                             <span style={{
                               color: selectedMuscleTrend === 'up' ? '#4ADE80' : selectedMuscleTrend === 'down' ? '#F87171' : colors.accent,
                               fontWeight: 600,
                             }}>
-                              {selectedMuscleTrend === 'up' ? '↑ Up' : selectedMuscleTrend === 'down' ? '↓ Down' : '→ Stable'}
+                              {selectedMuscleTrend === 'up' ? '↑ Improving' : selectedMuscleTrend === 'down' ? '↓ Declining' : '→ Stable'}
                             </span>
                           </div>
                         </div>
@@ -454,90 +486,98 @@ export default function ProfilePage() {
                         {/* Top Exercises */}
                         {selectedMuscleExercises.length > 0 && (
                           <div>
-                            <div style={{ color: colors.textMuted, fontSize: '0.4375rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                            <div style={{ color: colors.textMuted, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                               Top Exercises
                             </div>
-                            {selectedMuscleExercises.slice(0, 3).map((exercise) => (
+                            {selectedMuscleExercises.slice(0, 4).map((exercise) => (
                               <div
                                 key={exercise.exercise_id}
                                 style={{
-                                  padding: '0.25rem',
-                                  marginBottom: '0.125rem',
+                                  padding: '0.5rem 0.625rem',
+                                  marginBottom: '0.375rem',
                                   background: 'rgba(0,0,0,0.2)',
-                                  borderRadius: '0.25rem',
+                                  borderRadius: '0.5rem',
                                 }}
                               >
-                                <div style={{ color: colors.text, fontSize: '0.5rem', fontWeight: 500, lineHeight: 1.2 }}>
+                                <div style={{ color: colors.text, fontSize: '0.8125rem', fontWeight: 500, marginBottom: '0.125rem' }}>
                                   {exercise.exercise_name}
                                 </div>
-                                <div style={{ color: colors.accent, fontSize: '0.4375rem' }}>
-                                  {exercise.pr_weight}×{exercise.pr_reps} • {Math.round(exercise.estimated_1rm)} 1RM
+                                <div style={{ color: colors.accent, fontSize: '0.75rem' }}>
+                                  {exercise.pr_weight} × {exercise.pr_reps} reps • {Math.round(exercise.estimated_1rm)} e1RM
                                 </div>
                               </div>
                             ))}
-                            {selectedMuscleExercises.length > 3 && (
-                              <div style={{ color: colors.textMuted, fontSize: '0.4375rem', textAlign: 'center' }}>
-                                +{selectedMuscleExercises.length - 3} more
+                            {selectedMuscleExercises.length > 4 && (
+                              <div style={{ color: colors.textMuted, fontSize: '0.75rem', textAlign: 'center', paddingTop: '0.25rem' }}>
+                                +{selectedMuscleExercises.length - 4} more exercises
                               </div>
                             )}
                           </div>
                         )}
                       </>
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-                        <p style={{ color: colors.textMuted, fontSize: '0.5rem' }}>No data yet</p>
+                      <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                        <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>No data yet for this muscle</p>
+                        <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.5rem', opacity: 0.7 }}>
+                          Complete workouts targeting this muscle to see stats
+                        </p>
                       </div>
                     )}
                   </>
                 ) : (
                   <>
                     {/* Summary when no muscle selected */}
-                    <div style={{ color: colors.accent, fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem', textAlign: 'center' }}>
-                      Summary
+                    <div style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>
+                      Balance Summary
                     </div>
 
                     {muscleStrengthData.length > 0 ? (
                       <>
                         {strongest && (
-                          <div style={{ marginBottom: '0.5rem' }}>
-                            <div style={{ color: colors.textMuted, fontSize: '0.4375rem', marginBottom: '0.125rem' }}>Strongest</div>
-                            <div style={{ color: colors.success, fontSize: '0.625rem', fontWeight: 600 }}>{strongest.name}</div>
+                          <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(74, 222, 128, 0.1)', borderRadius: '0.5rem', border: '1px solid rgba(74, 222, 128, 0.2)' }}>
+                            <div style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.25rem' }}>Strongest Muscle</div>
+                            <div style={{ color: '#4ADE80', fontSize: '1rem', fontWeight: 600 }}>{strongest.name}</div>
                           </div>
                         )}
                         {weakest && (
-                          <div style={{ marginBottom: '0.5rem' }}>
-                            <div style={{ color: colors.textMuted, fontSize: '0.4375rem', marginBottom: '0.125rem' }}>Needs Work</div>
-                            <div style={{ color: colors.error, fontSize: '0.625rem', fontWeight: 600 }}>{weakest.name}</div>
+                          <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(248, 113, 113, 0.1)', borderRadius: '0.5rem', border: '1px solid rgba(248, 113, 113, 0.2)' }}>
+                            <div style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.25rem' }}>Needs Attention</div>
+                            <div style={{ color: '#F87171', fontSize: '1rem', fontWeight: 600 }}>{weakest.name}</div>
                           </div>
                         )}
                         {imbalances.length > 0 && (
-                          <div style={{ background: 'rgba(251, 146, 60, 0.1)', borderRadius: '0.25rem', padding: '0.375rem', marginTop: '0.5rem' }}>
-                            <div style={{ color: '#FB923C', fontSize: '0.4375rem', fontWeight: 600, marginBottom: '0.125rem' }}>Imbalance</div>
-                            <div style={{ color: colors.textMuted, fontSize: '0.4375rem' }}>
-                              {imbalances.slice(0, 2).map(m => m.name).join(', ')} need attention
+                          <div style={{ background: 'rgba(251, 146, 60, 0.1)', borderRadius: '0.5rem', padding: '0.75rem', border: '1px solid rgba(251, 146, 60, 0.2)' }}>
+                            <div style={{ color: '#FB923C', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>Potential Imbalances</div>
+                            <div style={{ color: colors.textMuted, fontSize: '0.8125rem' }}>
+                              {imbalances.slice(0, 3).map(m => m.name).join(', ')} haven't been trained recently
                             </div>
                           </div>
                         )}
                       </>
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
-                        <p style={{ color: colors.textMuted, fontSize: '0.5rem' }}>Complete workouts to see stats</p>
+                      <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                        <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>No workout data yet</p>
+                        <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.5rem', opacity: 0.7 }}>
+                          Complete workouts to see your muscle balance
+                        </p>
                       </div>
                     )}
 
-                    {/* Gender Toggle */}
-                    <div style={{ marginTop: '0.5rem', paddingTop: '0.375rem', borderTop: '1px solid rgba(201, 167, 90, 0.2)' }}>
-                      <div style={{ color: colors.textMuted, fontSize: '0.4375rem', marginBottom: '0.25rem', textAlign: 'center' }}>View</div>
-                      <div className="flex justify-center gap-1">
+                    {/* View Toggle */}
+                    <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: `1px solid ${colors.borderSubtle}` }}>
+                      <div style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.5rem' }}>Body Model</div>
+                      <div className="flex gap-2">
                         <button
                           onClick={() => setGender('male')}
                           style={{
-                            padding: '0.125rem 0.375rem',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.5rem',
-                            background: gender === 'male' ? 'rgba(201, 167, 90, 0.3)' : 'transparent',
-                            border: 'none',
-                            color: gender === 'male' ? '#C9A75A' : 'rgba(245, 241, 234, 0.5)',
+                            flex: 1,
+                            padding: '0.5rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            background: gender === 'male' ? 'rgba(201, 167, 90, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                            border: gender === 'male' ? `1px solid ${colors.accent}` : '1px solid transparent',
+                            color: gender === 'male' ? colors.accent : colors.textMuted,
+                            cursor: 'pointer',
                           }}
                         >
                           Male
@@ -545,12 +585,14 @@ export default function ProfilePage() {
                         <button
                           onClick={() => setGender('female')}
                           style={{
-                            padding: '0.125rem 0.375rem',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.5rem',
-                            background: gender === 'female' ? 'rgba(201, 167, 90, 0.3)' : 'transparent',
-                            border: 'none',
-                            color: gender === 'female' ? '#C9A75A' : 'rgba(245, 241, 234, 0.5)',
+                            flex: 1,
+                            padding: '0.5rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            background: gender === 'female' ? 'rgba(201, 167, 90, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                            border: gender === 'female' ? `1px solid ${colors.accent}` : '1px solid transparent',
+                            color: gender === 'female' ? colors.accent : colors.textMuted,
+                            cursor: 'pointer',
                           }}
                         >
                           Female
@@ -561,6 +603,11 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
+
+            {/* Tap instruction */}
+            <p className="text-center mt-4" style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+              Tap a muscle on the body or in the list to see detailed stats
+            </p>
           </div>
         )}
 
@@ -596,33 +643,10 @@ export default function ProfilePage() {
               </div>
             ) : (
               strengthSessions.map(workout => (
-                <div
+                <ExpandableWorkoutCard
                   key={workout.session_id}
-                  className="card"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 style={{ color: colors.text, fontSize: '1rem', fontWeight: 500 }}>
-                      {workout.session_name || 'Workout'}
-                    </h3>
-                    <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
-                      {formatDate(workout.started_at)}
-                    </span>
-                  </div>
-                  <div className="flex gap-4">
-                    <div>
-                      <span style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>{formatDuration(workout.duration_seconds)}</span>
-                      <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> min</span>
-                    </div>
-                    <div>
-                      <span style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>{formatVolume(workout.total_volume)}</span>
-                      <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> lbs volume</span>
-                    </div>
-                    <div>
-                      <span style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>{workout.exercise_count}</span>
-                      <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> exercises</span>
-                    </div>
-                  </div>
-                </div>
+                  session={workout}
+                />
               ))
             )}
           </div>

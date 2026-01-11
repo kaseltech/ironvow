@@ -332,6 +332,13 @@ function estimateWeightByCategory(
   return Math.max(suggestedWeight, 5);
 }
 
+// Day configuration for weekly plan
+interface WeeklyPlanDay {
+  day_of_week: number; // 0=Sun, 1=Mon...6=Sat
+  muscle_focus?: string[];
+  workout_style?: WorkoutStyle | 'auto';
+}
+
 interface WorkoutRequest {
   userId: string;
   location: 'gym' | 'home' | 'outdoor';
@@ -348,6 +355,11 @@ interface WorkoutRequest {
   swapTargetMuscles?: string[]; // Muscles the swapped exercise should target
   // NEW: Freeform AI request
   freeformPrompt?: string; // User's custom description of what they want
+  // NEW: Weekly plan generation
+  weeklyPlan?: {
+    planName: string;
+    days: WeeklyPlanDay[];
+  };
 }
 
 interface GeneratedExercise {
@@ -481,6 +493,11 @@ serve(async (req) => {
     // Handle swap request - return alternatives for a specific exercise
     if (swapExerciseId && swapTargetMuscles) {
       return await handleSwapRequest(body, supabase, allEquipment, swapTargetMuscles);
+    }
+
+    // Handle weekly plan generation
+    if (body.weeklyPlan) {
+      return await handleWeeklyPlanRequest(body, supabase, anthropicKey, userWeightContext, fitnessGoal);
     }
 
     // Fetch available exercises from database
@@ -1816,6 +1833,264 @@ async function handleSwapRequest(
     JSON.stringify({
       success: true,
       alternatives: topAlternatives,
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// =============================================================================
+// WEEKLY PLAN GENERATION
+// =============================================================================
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// Smart muscle split assignment based on training days
+function getWeeklySplit(dayCount: number, days: WeeklyPlanDay[]): Map<number, string[]> {
+  const splits: Record<number, Record<number, string[]>> = {
+    2: {
+      // 2-day: Full body both days
+      0: ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'core'],
+      1: ['chest', 'back', 'shoulders', 'quads', 'hamstrings', 'core'],
+    },
+    3: {
+      // 3-day: Push/Pull/Legs
+      0: ['chest', 'shoulders', 'triceps'],
+      1: ['back', 'biceps', 'traps'],
+      2: ['quads', 'hamstrings', 'glutes', 'calves'],
+    },
+    4: {
+      // 4-day: Upper/Lower x2
+      0: ['chest', 'back', 'shoulders', 'biceps', 'triceps'],
+      1: ['quads', 'hamstrings', 'glutes', 'calves', 'core'],
+      2: ['chest', 'back', 'shoulders', 'biceps', 'triceps'],
+      3: ['quads', 'hamstrings', 'glutes', 'calves', 'core'],
+    },
+    5: {
+      // 5-day: PPL + Upper + Lower
+      0: ['chest', 'shoulders', 'triceps'],
+      1: ['back', 'biceps', 'traps'],
+      2: ['quads', 'hamstrings', 'glutes', 'calves'],
+      3: ['chest', 'back', 'shoulders'],
+      4: ['quads', 'hamstrings', 'glutes', 'core'],
+    },
+    6: {
+      // 6-day: PPL x2
+      0: ['chest', 'shoulders', 'triceps'],
+      1: ['back', 'biceps', 'traps'],
+      2: ['quads', 'hamstrings', 'glutes', 'calves'],
+      3: ['chest', 'shoulders', 'triceps'],
+      4: ['back', 'biceps', 'traps'],
+      5: ['quads', 'hamstrings', 'glutes', 'calves', 'core'],
+    },
+  };
+
+  const result = new Map<number, string[]>();
+  const split = splits[dayCount] || splits[3]; // Default to 3-day
+
+  // Map split indices to actual days
+  const sortedDays = [...days].sort((a, b) => a.day_of_week - b.day_of_week);
+  sortedDays.forEach((day, idx) => {
+    // Use user-specified muscle focus if provided, otherwise use split
+    if (day.muscle_focus && day.muscle_focus.length > 0) {
+      result.set(day.day_of_week, day.muscle_focus);
+    } else {
+      result.set(day.day_of_week, split[idx] || split[0]);
+    }
+  });
+
+  return result;
+}
+
+async function handleWeeklyPlanRequest(
+  body: WorkoutRequest,
+  supabase: any,
+  anthropicKey: string | undefined,
+  userWeightContext: UserWeightContext,
+  fitnessGoal: FitnessGoal
+): Promise<Response> {
+  const { userId, weeklyPlan, location, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment } = body;
+
+  if (!weeklyPlan || !weeklyPlan.days || weeklyPlan.days.length === 0) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'No days specified for weekly plan' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log('=== GENERATE WEEKLY PLAN REQUEST ===');
+  console.log('Plan name:', weeklyPlan.planName);
+  console.log('Days:', weeklyPlan.days.map(d => `${DAY_NAMES[d.day_of_week]}`).join(', '));
+  console.log('Location:', location);
+  console.log('Duration per workout:', duration);
+
+  const allEquipment = [...(equipment || []), ...(customEquipment || [])];
+
+  // Create the plan in the database
+  const { data: planData, error: planError } = await supabase
+    .from('workout_plans')
+    .insert({
+      user_id: userId,
+      name: weeklyPlan.planName,
+      description: `${weeklyPlan.days.length}-day ${workoutStyle} training program`,
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (planError) {
+    console.error('Failed to create plan:', planError);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Failed to create plan' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Deactivate other plans
+  await supabase
+    .from('workout_plans')
+    .update({ is_active: false })
+    .eq('user_id', userId)
+    .neq('id', planData.id);
+
+  // Get muscle split for each day
+  const muscleSplit = getWeeklySplit(weeklyPlan.days.length, weeklyPlan.days);
+
+  // Generate workouts for each day
+  const generatedWorkouts: any[] = [];
+  const usedExerciseIds: string[] = [];
+
+  for (const day of weeklyPlan.days) {
+    const dayMuscles = muscleSplit.get(day.day_of_week) || ['chest', 'back', 'shoulders'];
+    const dayStyle = day.workout_style === 'auto' ? workoutStyle : (day.workout_style || workoutStyle);
+    const dayName = DAY_NAMES[day.day_of_week];
+
+    console.log(`Generating ${dayName}: muscles=${dayMuscles.join(',')}, style=${dayStyle}`);
+
+    // Build a sub-request for this day
+    const dayRequest: WorkoutRequest = {
+      userId,
+      location,
+      targetMuscles: dayMuscles,
+      duration,
+      experienceLevel,
+      workoutStyle: dayStyle as WorkoutStyle,
+      injuries,
+      equipment,
+      customEquipment,
+      excludeExerciseIds: usedExerciseIds.slice(-30), // Exclude recent exercises to add variety
+    };
+
+    try {
+      // Call the main generation logic for this day
+      // We'll use a simplified version - just use the AI to generate
+      const { data: exercises } = await supabase.from('exercises').select('*');
+
+      let dayWorkout;
+      if (anthropicKey) {
+        const result = await generateWithAI(
+          anthropicKey,
+          supabase,
+          exercises || [],
+          dayMuscles,
+          duration,
+          experienceLevel,
+          dayStyle as WorkoutStyle,
+          fitnessGoal,
+          location,
+          injuries,
+          allEquipment,
+          undefined, // no freeform prompt
+          userWeightContext
+        );
+        dayWorkout = result.workout;
+        // Override name to include day
+        dayWorkout.name = `${dayName}: ${dayWorkout.name}`;
+      } else {
+        // Rule-based fallback
+        dayWorkout = generateRuleBased(
+          exercises || [],
+          dayMuscles,
+          duration,
+          experienceLevel,
+          dayStyle as WorkoutStyle,
+          userWeightContext
+        );
+        dayWorkout.name = `${dayName}: ${dayWorkout.name}`;
+      }
+
+      // Track used exercises
+      const dayExerciseIds = dayWorkout.exercises.map((ex: any) => ex.exerciseId).filter(Boolean);
+      usedExerciseIds.push(...dayExerciseIds);
+
+      // Save workout to database
+      const { data: savedWorkout, error: saveError } = await supabase
+        .from('workouts')
+        .insert({
+          user_id: userId,
+          name: dayWorkout.name,
+          description: dayWorkout.description,
+          workout_type: dayWorkout.workoutType,
+          target_muscles: dayWorkout.targetMuscles,
+          estimated_duration: dayWorkout.duration,
+          is_ai_generated: !!anthropicKey,
+          is_saved: false,
+        })
+        .select()
+        .single();
+
+      if (saveError) {
+        console.error(`Failed to save ${dayName} workout:`, saveError);
+        continue;
+      }
+
+      // Save workout exercises
+      if (savedWorkout) {
+        const exerciseInserts = dayWorkout.exercises.map((ex: any, index: number) => ({
+          workout_id: savedWorkout.id,
+          exercise_id: ex.exerciseId,
+          order_index: index,
+          target_sets: ex.sets,
+          target_reps: parseInt(ex.reps.split('-')[0]) || 8,
+          rest_seconds: ex.restSeconds,
+          notes: ex.notes,
+        }));
+
+        await supabase.from('workout_exercises').insert(exerciseInserts);
+
+        // Create plan day entry
+        await supabase.from('workout_plan_days').insert({
+          plan_id: planData.id,
+          day_of_week: day.day_of_week,
+          workout_id: savedWorkout.id,
+          muscle_focus: dayMuscles,
+          workout_style: dayStyle,
+        });
+
+        generatedWorkouts.push({
+          day_of_week: day.day_of_week,
+          day_name: dayName,
+          workout: {
+            ...dayWorkout,
+            id: savedWorkout.id,
+          },
+        });
+      }
+    } catch (dayError) {
+      console.error(`Error generating ${dayName} workout:`, dayError);
+      // Continue with other days
+    }
+  }
+
+  console.log(`Weekly plan complete: ${generatedWorkouts.length}/${weeklyPlan.days.length} workouts generated`);
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      plan: {
+        id: planData.id,
+        name: planData.name,
+        days: generatedWorkouts,
+      },
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );

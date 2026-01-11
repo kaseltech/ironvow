@@ -537,6 +537,67 @@ export type Database = {
           updated_at?: string;
         };
       };
+      workout_plans: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          start_date: string | null;
+          created_at: string;
+          updated_at: string;
+          is_active: boolean;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          start_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          is_active?: boolean;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string | null;
+          start_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          is_active?: boolean;
+        };
+      };
+      workout_plan_days: {
+        Row: {
+          id: string;
+          plan_id: string;
+          day_of_week: number;
+          workout_id: string | null;
+          muscle_focus: string[] | null;
+          workout_style: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          plan_id: string;
+          day_of_week: number;
+          workout_id?: string | null;
+          muscle_focus?: string[] | null;
+          workout_style?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          plan_id?: string;
+          day_of_week?: number;
+          workout_id?: string | null;
+          muscle_focus?: string[] | null;
+          workout_style?: string | null;
+          created_at?: string;
+        };
+      };
     };
     Views: {};
     Functions: {
@@ -564,6 +625,8 @@ export type Equipment = Database['public']['Tables']['equipment']['Row'];
 export type MuscleStrength = Database['public']['Tables']['muscle_strength']['Row'];
 export type EquipmentPreset = Database['public']['Tables']['equipment_presets']['Row'];
 export type GymProfile = Database['public']['Tables']['gym_profiles']['Row'];
+export type WorkoutPlan = Database['public']['Tables']['workout_plans']['Row'];
+export type WorkoutPlanDay = Database['public']['Tables']['workout_plan_days']['Row'];
 
 // Exercise with joined data
 export type ExerciseWithDetails = Exercise & {
@@ -581,3 +644,57 @@ export type WorkoutWithExercises = Workout & {
 export type SessionWithSets = WorkoutSession & {
   sets: (SetLog & { exercise: Exercise })[];
 };
+
+// Workout summary for plan view (subset of Workout fields)
+export interface WorkoutSummary {
+  id: string;
+  name: string;
+  workout_type: string | null;
+  target_muscles: string[] | null;
+  estimated_duration: number | null;
+}
+
+// Workout plan with days
+export type WorkoutPlanWithDays = WorkoutPlan & {
+  days: (WorkoutPlanDay & { workout?: WorkoutSummary })[];
+};
+
+// Session detail for history expansion
+export interface SessionDetailSet {
+  set_log_id: string;
+  set_number: number;
+  set_type: string;
+  weight: number | null;
+  reps: number | null;
+  target_weight: number | null;
+  target_reps: number | null;
+  rpe: number | null;
+  rest_seconds: number | null;
+  set_notes: string | null;
+  set_volume: number;
+}
+
+export interface SessionDetailExercise {
+  exercise_id: string;
+  exercise_name: string;
+  exercise_slug: string;
+  primary_muscles: string[];
+  secondary_muscles: string[] | null;
+  sets: SessionDetailSet[];
+  total_volume: number;
+}
+
+export interface SessionDetail {
+  session_id: string;
+  user_id: string;
+  workout_id: string | null;
+  session_name: string;
+  location: string | null;
+  started_at: string;
+  completed_at: string | null;
+  duration_seconds: number | null;
+  session_notes: string | null;
+  rating: number | null;
+  exercises: SessionDetailExercise[];
+  total_volume: number;
+}

@@ -23,30 +23,53 @@ IronVow is an AI-powered workout generation and tracking app, part of the "Vow S
 ironvow/
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx           # Main workout generator UI
-│   │   ├── workout/page.tsx   # Active workout session
-│   │   ├── progress/page.tsx  # Weight & strength tracking
-│   │   ├── profile/page.tsx   # User profile with body map
-│   │   ├── library/page.tsx   # Exercise database
+│   │   ├── page.tsx              # Main workout generator (Single/Weekly modes)
+│   │   ├── workout/page.tsx      # Active workout session
+│   │   ├── progress/page.tsx     # Weight & strength tracking
+│   │   ├── profile/page.tsx      # User profile with body map
+│   │   ├── library/page.tsx      # Exercise database
+│   │   ├── workout-history/      # Workout history detail page
+│   │   ├── run/page.tsx          # GPS run tracking
 │   │   ├── layout.tsx
 │   │   └── globals.css
 │   ├── components/
-│   │   ├── Logo.tsx           # IronVow wordmark
-│   │   └── BodyMap.tsx        # SVG muscle visualization
+│   │   ├── Logo.tsx              # IronVow wordmark
+│   │   ├── BodyMap.tsx           # SVG muscle visualization
+│   │   ├── WeeklyPlanner.tsx     # Multi-day workout planner
+│   │   ├── ExpandableWorkoutCard.tsx  # History card component
+│   │   ├── FlexTimer.tsx         # Adjustable rest timer
+│   │   ├── Header.tsx            # App header
+│   │   ├── Settings.tsx          # Settings modal
+│   │   └── GymManager.tsx        # Gym equipment manager
+│   ├── hooks/
+│   │   ├── useSupabase.ts        # Core Supabase hooks
+│   │   ├── useStrengthData.ts    # PR & volume calculations
+│   │   ├── useSessionDetail.ts   # Workout history with caching
+│   │   └── useWorkoutPlans.ts    # Weekly plan CRUD
+│   ├── context/
+│   │   ├── AuthContext.tsx       # Auth state
+│   │   └── ThemeContext.tsx      # Theme colors
 │   └── lib/
-│       └── supabase/
-│           ├── client.ts      # Browser client
-│           ├── server.ts      # Server client
-│           └── types.ts       # TypeScript types for DB
+│       ├── supabase/
+│       │   ├── client.ts         # Browser client
+│       │   ├── server.ts         # Server client
+│       │   └── types.ts          # TypeScript types for DB
+│       ├── generateWorkout.ts    # AI workout generation
+│       └── strengthStandards.ts  # Strength level calculations
 ├── supabase/
-│   └── migrations/
-│       ├── 001_initial_schema.sql  # Full database schema
-│       └── 002_seed_data.sql       # Exercise & equipment data
+│   ├── migrations/               # Database migrations (001-016)
+│   └── functions/
+│       └── generate-workout/     # Edge function for AI generation
 ├── public/
-│   ├── manifest.json
-│   └── favicon.svg
-├── .env.local                 # Secrets (not in git)
-├── .env.example               # Template for env vars
+│   ├── images/                   # Body silhouettes
+│   ├── icons/                    # App icons
+│   └── manifest.json
+├── ios/                          # Capacitor iOS project
+├── CHANGELOG.md                  # Version history
+├── CONTEXT.md                    # This file
+├── IRONVOW.md                    # Original spec
+├── NOTES.md                      # Dev notes
+├── .env.local                    # Secrets (not in git)
 ├── capacitor.config.ts
 ├── tailwind.config.ts
 ├── next.config.ts
@@ -71,6 +94,12 @@ ironvow/
 - **set_logs** - Individual sets with actual weight/reps performed
 - **personal_records** - PRs (1RM, 5RM, etc.)
 - **muscle_strength** - Calculated strength scores per muscle (for body map visualization)
+- **workout_plans** - Weekly workout plan configurations
+- **workout_plan_days** - Individual days within plans with workout assignments
+- **gym_profiles** - Saved gym locations with equipment
+
+### Database Views
+- **user_session_detail** - Aggregated view for workout history with exercises and sets
 
 ### Key Features
 - Row-Level Security (RLS) - users can only access their own data
@@ -83,11 +112,18 @@ ironvow/
 ## App Pages
 
 ### 1. Home (/) - Workout Generator
-- Location selector (Home/Gym/Travel)
-- Muscle group picker (Push/Pull/Legs/Upper/Lower/Full Body)
-- Duration slider (15-90 min)
-- "Generate Workout" button → AI creates personalized workout
-- Shows generated workout preview with exercises
+- **Single Mode**:
+  - Location selector (Home/Gym/Travel)
+  - Muscle group picker (Push/Pull/Legs/Upper/Lower/Full Body)
+  - Duration slider (15-90 min)
+  - "Generate Workout" button → AI creates personalized workout
+  - Shows generated workout preview with exercises
+- **Weekly Mode** (toggle at top):
+  - Day selector (Mon-Sun toggle buttons)
+  - Preset splits: Push/Pull/Legs, Upper/Lower, Full Body, Custom
+  - Per-day muscle group assignment (optional)
+  - AI auto-balances based on training frequency
+  - Generates balanced multi-day workout program
 
 ### 2. Workout (/workout) - Active Session
 - Current exercise display with set/rep targets
@@ -104,16 +140,26 @@ ironvow/
 - Goal progress indicator (e.g., "Cut: 195 → 180 lbs")
 
 ### 4. Profile (/profile) - User Settings
-- **Body Map**: Interactive SVG showing muscle strength/weakness by color
-  - Green = strong, Yellow = moderate, Red = weak/undertrained
-  - Tap muscle to see stats
-  - Toggle front/back view
+- **Body Map Tab**: Interactive muscle balance visualization
+  - 3-column responsive layout (muscle list | body | details)
+  - Head-to-toe anatomical muscle ordering
+  - Front/Back view with hover-to-switch
+  - Strength indicators: Green = strong, Yellow = moderate, Red = weak
+  - Volume tracking (30-day)
+  - Imbalance detection
   - Gender toggle (male/female silhouette)
-- **User Info**: Age, height, experience level
-- **Weight Goal**: Start → Current → Target with goal type
-- **Injuries**: List of injuries with movements AI should avoid
-- **Saved Workouts**: Bookmarked workout templates
-- **Workout History**: Past sessions
+- **Saved Tab**: Bookmarked workout templates
+- **History Tab**: Past workout sessions
+  - Expandable cards (tap to see exercises inline)
+  - Tap expanded card → full detail page
+  - Bookmark and "Do Again" functionality
+- **Settings Tab**:
+  - User Info: Age, height, experience level
+  - Weight Goal: Start → Current → Target with goal type
+  - Fitness Goal: Cut/Bulk/Maintain/Endurance/General
+  - Injuries: List of injuries with movements AI should avoid
+  - Equipment: Home/gym equipment management
+  - Personal Records: Major lift PRs
 
 ### 5. Library (/library) - Exercise Database
 - Searchable/filterable exercise list

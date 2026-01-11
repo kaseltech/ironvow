@@ -16,6 +16,8 @@ interface BodyMapProps {
   muscleData: MuscleData[];
   selectedMuscleId?: string | null;
   onMuscleSelect?: (muscle: MuscleData) => void;
+  view?: 'front' | 'back';
+  onViewChange?: (view: 'front' | 'back') => void;
 }
 
 // Color based on strength score
@@ -290,12 +292,22 @@ const backMusclePolygons = [
   },
 ];
 
-export function BodyMap({ gender, muscleData, selectedMuscleId, onMuscleSelect }: BodyMapProps) {
+export function BodyMap({ gender, muscleData, selectedMuscleId, onMuscleSelect, view: externalView, onViewChange }: BodyMapProps) {
   const [internalSelectedMuscle, setInternalSelectedMuscle] = useState<string | null>(null);
   const [hoveredMuscle, setHoveredMuscle] = useState<string | null>(null);
-  const [view, setView] = useState<'front' | 'back'>('front');
+  const [internalView, setInternalView] = useState<'front' | 'back'>('front');
   const [debugMode, setDebugMode] = useState(false);
   const [debugTapCount, setDebugTapCount] = useState(0);
+
+  // Use external view if provided, otherwise use internal state
+  const view = externalView !== undefined ? externalView : internalView;
+  const setView = (newView: 'front' | 'back') => {
+    if (onViewChange) {
+      onViewChange(newView);
+    } else {
+      setInternalView(newView);
+    }
+  };
 
   // Use external selectedMuscleId if provided, otherwise use internal state
   const selectedMuscle = selectedMuscleId !== undefined ? selectedMuscleId : internalSelectedMuscle;
