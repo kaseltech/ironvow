@@ -38,252 +38,252 @@ const getColor = (strength: number) => {
 // - Calves: y=76-93
 
 const frontMusclePolygons = [
-  // TRAPS - small visible area at base of neck
+  // TRAPS - visible at neck base between shoulder caps
   {
     id: 'traps',
     name: 'Traps',
-    path: 'M 46,13 L 50,12 L 54,13 L 53,16 L 50,17 L 47,16 Z',
+    path: 'M 46,14 L 50,13 L 54,14 L 53,17 L 50,18 L 47,17 Z',
   },
 
-  // LEFT SHOULDER (Deltoid) - rounded cap shape
+  // LEFT SHOULDER (Deltoid) - rounded cap wrapping arm top
   {
     id: 'shoulders',
     name: 'Left Shoulder',
-    path: 'M 46,14 L 43,15 L 40,17 L 38,20 L 38,23 L 40,24 L 43,22 L 46,18 Z',
+    path: 'M 46,15 L 44,16 L 41,18 L 39,21 L 39,24 L 41,25 L 44,23 L 46,19 Z',
   },
 
-  // RIGHT SHOULDER (Deltoid) - rounded cap shape
+  // RIGHT SHOULDER (Deltoid) - rounded cap wrapping arm top
   {
     id: 'shoulders',
     name: 'Right Shoulder',
-    path: 'M 54,14 L 57,15 L 60,17 L 62,20 L 62,23 L 60,24 L 57,22 L 54,18 Z',
+    path: 'M 54,15 L 56,16 L 59,18 L 61,21 L 61,24 L 59,25 L 56,23 L 54,19 Z',
   },
 
-  // LEFT CHEST (Pectoral) - curved pec shape
+  // LEFT CHEST (Pectoral) - curved bottom edge sweeps UP to sternum
   {
     id: 'chest',
     name: 'Left Chest',
-    path: 'M 46,17 L 43,18 L 40,21 L 39,25 L 41,29 L 46,30 L 50,28 L 50,20 L 47,17 Z',
+    path: 'M 46,18 L 44,19 L 41,22 L 40,26 L 42,29 L 46,27 L 50,25 L 50,19 L 47,17 Z',
   },
 
-  // RIGHT CHEST (Pectoral) - curved pec shape
+  // RIGHT CHEST (Pectoral) - curved bottom edge sweeps UP to sternum
   {
     id: 'chest',
     name: 'Right Chest',
-    path: 'M 54,17 L 57,18 L 60,21 L 61,25 L 59,29 L 54,30 L 50,28 L 50,20 L 53,17 Z',
+    path: 'M 54,18 L 56,19 L 59,22 L 60,26 L 58,29 L 54,27 L 50,25 L 50,19 L 53,17 Z',
   },
 
-  // LEFT BICEP - curved arm shape
+  // LEFT BICEP - follows arm curve, bulges in middle
   {
     id: 'biceps',
     name: 'Left Bicep',
-    path: 'M 40,24 L 38,23 L 36,26 L 35,30 L 36,34 L 38,35 L 40,32 L 40,27 Z',
+    path: 'M 41,25 L 39,24 L 37,27 L 36,31 L 37,35 L 39,36 L 41,33 L 41,28 Z',
   },
 
-  // RIGHT BICEP - curved arm shape
+  // RIGHT BICEP - follows arm curve, bulges in middle
   {
     id: 'biceps',
     name: 'Right Bicep',
-    path: 'M 60,24 L 62,23 L 64,26 L 65,30 L 64,34 L 62,35 L 60,32 L 60,27 Z',
+    path: 'M 59,25 L 61,24 L 63,27 L 64,31 L 63,35 L 61,36 L 59,33 L 59,28 Z',
   },
 
-  // LEFT FOREARM - tapered shape
+  // LEFT FOREARM - tapered, wider at elbow
   {
     id: 'forearms',
     name: 'Left Forearm',
-    path: 'M 38,35 L 36,34 L 34,39 L 33,45 L 35,49 L 38,47 L 39,42 L 38,37 Z',
+    path: 'M 39,36 L 37,35 L 35,40 L 34,46 L 36,50 L 39,48 L 40,43 L 39,38 Z',
   },
 
-  // RIGHT FOREARM - tapered shape
+  // RIGHT FOREARM - tapered, wider at elbow
   {
     id: 'forearms',
     name: 'Right Forearm',
-    path: 'M 62,35 L 64,34 L 66,39 L 67,45 L 65,49 L 62,47 L 61,42 L 62,37 Z',
+    path: 'M 61,36 L 63,35 L 65,40 L 66,46 L 64,50 L 61,48 L 60,43 L 61,38 Z',
   },
 
-  // ABS (Core) - narrower center column
+  // ABS (Core) - center column with segments
   {
     id: 'core',
     name: 'Abs',
-    path: 'M 46,30 L 54,30 L 54,44 L 52,47 L 48,47 L 46,44 Z',
+    path: 'M 46,27 L 54,27 L 54,44 L 52,47 L 48,47 L 46,44 Z',
   },
 
-  // LEFT OBLIQUE - side of torso
+  // LEFT OBLIQUE - side waist area
   {
     id: 'obliques',
     name: 'Left Oblique',
-    path: 'M 41,29 L 45,30 L 46,30 L 46,44 L 43,46 L 40,43 L 40,32 Z',
+    path: 'M 42,28 L 45,27 L 46,27 L 46,44 L 44,46 L 41,44 L 40,35 Z',
   },
 
-  // RIGHT OBLIQUE - side of torso
+  // RIGHT OBLIQUE - side waist area
   {
     id: 'obliques',
     name: 'Right Oblique',
-    path: 'M 59,29 L 55,30 L 54,30 L 54,44 L 57,46 L 60,43 L 60,32 Z',
+    path: 'M 58,28 L 55,27 L 54,27 L 54,44 L 56,46 L 59,44 L 60,35 Z',
   },
 
-  // LEFT QUAD - tapered leg shape following muscle contours
+  // LEFT QUAD - follows leg muscle lines, outer sweep
   {
     id: 'quads',
     name: 'Left Quad',
-    path: 'M 40,50 L 44,50 L 48,51 L 48,55 L 47,62 L 45,68 L 42,70 L 40,68 L 39,60 L 39,53 Z',
+    path: 'M 41,49 L 45,48 L 48,49 L 48,54 L 47,61 L 45,67 L 43,69 L 40,67 L 39,59 L 40,52 Z',
   },
 
-  // RIGHT QUAD - tapered leg shape
+  // RIGHT QUAD - follows leg muscle lines, outer sweep
   {
     id: 'quads',
     name: 'Right Quad',
-    path: 'M 60,50 L 56,50 L 52,51 L 52,55 L 53,62 L 55,68 L 58,70 L 60,68 L 61,60 L 61,53 Z',
+    path: 'M 59,49 L 55,48 L 52,49 L 52,54 L 53,61 L 55,67 L 57,69 L 60,67 L 61,59 L 60,52 Z',
   },
 
-  // LEFT INNER THIGH (Adductor) - small inner area
+  // LEFT INNER THIGH (Adductor) - inner thigh muscle
   {
     id: 'adductors',
     name: 'Left Inner Thigh',
-    path: 'M 48,51 L 50,52 L 50,58 L 48,59 Z',
+    path: 'M 48,49 L 50,50 L 50,57 L 48,58 Z',
   },
 
   // RIGHT INNER THIGH (Adductor)
   {
     id: 'adductors',
     name: 'Right Inner Thigh',
-    path: 'M 52,51 L 50,52 L 50,58 L 52,59 Z',
+    path: 'M 52,49 L 50,50 L 50,57 L 52,58 Z',
   },
 
-  // LEFT CALF - diamond calf shape
+  // LEFT CALF - follows calf muscle shape
   {
     id: 'calves',
     name: 'Left Calf',
-    path: 'M 42,73 L 46,73 L 47,78 L 46,85 L 44,88 L 42,85 L 41,78 Z',
+    path: 'M 43,72 L 46,72 L 47,77 L 46,84 L 44,87 L 42,84 L 42,77 Z',
   },
 
-  // RIGHT CALF - diamond calf shape
+  // RIGHT CALF - follows calf muscle shape
   {
     id: 'calves',
     name: 'Right Calf',
-    path: 'M 58,73 L 54,73 L 53,78 L 54,85 L 56,88 L 58,85 L 59,78 Z',
+    path: 'M 57,72 L 54,72 L 53,77 L 54,84 L 56,87 L 58,84 L 58,77 Z',
   },
 ];
 
-// Back view polygons - improved shapes to match muscle contours
+// Back view polygons - traced from muscle boundary lines in image
 const backMusclePolygons = [
-  // TRAPS - kite/diamond shape from neck to mid-back
+  // TRAPS - large kite shape following visible lines from neck to mid-back
   {
     id: 'traps',
     name: 'Traps',
-    path: 'M 50,12 L 44,15 L 42,20 L 44,28 L 47,32 L 50,33 L 53,32 L 56,28 L 58,20 L 56,15 Z',
+    path: 'M 50,13 L 45,16 L 43,21 L 45,29 L 48,33 L 50,34 L 52,33 L 55,29 L 57,21 L 55,16 Z',
   },
 
-  // LEFT REAR DELT - rounded shoulder cap
+  // LEFT REAR DELT - rounded cap at back of shoulder
   {
     id: 'shoulders',
     name: 'Left Rear Delt',
-    path: 'M 44,15 L 40,17 L 38,20 L 38,23 L 40,24 L 43,22 L 44,18 Z',
+    path: 'M 45,16 L 42,18 L 40,21 L 40,24 L 42,25 L 44,23 L 45,19 Z',
   },
 
-  // RIGHT REAR DELT - rounded shoulder cap
+  // RIGHT REAR DELT - rounded cap at back of shoulder
   {
     id: 'shoulders',
     name: 'Right Rear Delt',
-    path: 'M 56,15 L 60,17 L 62,20 L 62,23 L 60,24 L 57,22 L 56,18 Z',
+    path: 'M 55,16 L 58,18 L 60,21 L 60,24 L 58,25 L 56,23 L 55,19 Z',
   },
 
-  // LEFT LAT - fan shape
+  // LEFT LAT - large fan shape on side
   {
     id: 'lats',
     name: 'Left Lat',
-    path: 'M 44,22 L 41,24 L 39,30 L 40,38 L 43,43 L 47,44 L 47,36 L 45,28 L 44,24 Z',
+    path: 'M 45,23 L 42,25 L 40,31 L 41,39 L 44,44 L 48,45 L 48,37 L 46,29 L 45,25 Z',
   },
 
-  // RIGHT LAT - fan shape
+  // RIGHT LAT - large fan shape on side
   {
     id: 'lats',
     name: 'Right Lat',
-    path: 'M 56,22 L 59,24 L 61,30 L 60,38 L 57,43 L 53,44 L 53,36 L 55,28 L 56,24 Z',
+    path: 'M 55,23 L 58,25 L 60,31 L 59,39 L 56,44 L 52,45 L 52,37 L 54,29 L 55,25 Z',
   },
 
-  // UPPER BACK (Rhomboids) - between shoulder blades
+  // UPPER BACK (Rhomboids) - center area between shoulder blades
   {
     id: 'upper_back',
     name: 'Upper Back',
-    path: 'M 47,26 L 50,27 L 53,26 L 53,33 L 50,34 L 47,33 Z',
+    path: 'M 48,27 L 50,28 L 52,27 L 52,34 L 50,35 L 48,34 Z',
   },
 
-  // LOWER BACK (Erectors) - center column
+  // LOWER BACK (Erectors) - center spinal area
   {
     id: 'lower_back',
     name: 'Lower Back',
-    path: 'M 46,36 L 50,38 L 54,36 L 54,43 L 52,46 L 48,46 L 46,43 Z',
+    path: 'M 47,37 L 50,39 L 53,37 L 53,44 L 51,46 L 49,46 L 47,44 Z',
   },
 
-  // LEFT TRICEP - curved arm shape
+  // LEFT TRICEP - back of upper arm
   {
     id: 'triceps',
     name: 'Left Tricep',
-    path: 'M 40,24 L 38,23 L 36,27 L 36,32 L 38,35 L 40,35 L 41,31 L 40,27 Z',
+    path: 'M 42,25 L 40,24 L 38,28 L 38,33 L 40,36 L 42,36 L 43,32 L 42,28 Z',
   },
 
-  // RIGHT TRICEP - curved arm shape
+  // RIGHT TRICEP - back of upper arm
   {
     id: 'triceps',
     name: 'Right Tricep',
-    path: 'M 60,24 L 62,23 L 64,27 L 64,32 L 62,35 L 60,35 L 59,31 L 60,27 Z',
+    path: 'M 58,25 L 60,24 L 62,28 L 62,33 L 60,36 L 58,36 L 57,32 L 58,28 Z',
   },
 
-  // LEFT FOREARM (back) - tapered
+  // LEFT FOREARM (back) - tapered toward wrist
   {
     id: 'forearms',
     name: 'Left Forearm',
-    path: 'M 38,35 L 36,34 L 34,40 L 34,46 L 36,49 L 39,47 L 39,41 L 38,37 Z',
+    path: 'M 40,36 L 38,35 L 36,41 L 35,47 L 37,50 L 40,48 L 41,43 L 40,38 Z',
   },
 
-  // RIGHT FOREARM (back) - tapered
+  // RIGHT FOREARM (back) - tapered toward wrist
   {
     id: 'forearms',
     name: 'Right Forearm',
-    path: 'M 62,35 L 64,34 L 66,40 L 66,46 L 64,49 L 61,47 L 61,41 L 62,37 Z',
+    path: 'M 60,36 L 62,35 L 64,41 L 65,47 L 63,50 L 60,48 L 59,43 L 60,38 Z',
   },
 
-  // LEFT GLUTE - rounded shape
+  // LEFT GLUTE - large rounded shape
   {
     id: 'glutes',
     name: 'Left Glute',
-    path: 'M 42,44 L 46,47 L 50,48 L 50,54 L 46,55 L 42,52 L 40,48 Z',
+    path: 'M 43,45 L 47,48 L 50,49 L 50,55 L 46,56 L 42,53 L 41,49 Z',
   },
 
-  // RIGHT GLUTE - rounded shape
+  // RIGHT GLUTE - large rounded shape
   {
     id: 'glutes',
     name: 'Right Glute',
-    path: 'M 58,44 L 54,47 L 50,48 L 50,54 L 54,55 L 58,52 L 60,48 Z',
+    path: 'M 57,45 L 53,48 L 50,49 L 50,55 L 54,56 L 58,53 L 59,49 Z',
   },
 
-  // LEFT HAMSTRING - tapered leg shape
+  // LEFT HAMSTRING - follows back of thigh muscle lines
   {
     id: 'hamstrings',
     name: 'Left Hamstring',
-    path: 'M 42,53 L 46,55 L 48,56 L 47,66 L 45,72 L 42,72 L 40,66 L 40,58 Z',
+    path: 'M 43,54 L 46,56 L 48,57 L 47,67 L 45,72 L 43,72 L 41,67 L 41,59 Z',
   },
 
-  // RIGHT HAMSTRING - tapered leg shape
+  // RIGHT HAMSTRING - follows back of thigh muscle lines
   {
     id: 'hamstrings',
     name: 'Right Hamstring',
-    path: 'M 58,53 L 54,55 L 52,56 L 53,66 L 55,72 L 58,72 L 60,66 L 60,58 Z',
+    path: 'M 57,54 L 54,56 L 52,57 L 53,67 L 55,72 L 57,72 L 59,67 L 59,59 Z',
   },
 
-  // LEFT CALF (gastrocnemius) - diamond shape
+  // LEFT CALF (gastrocnemius) - diamond calf shape
   {
     id: 'calves',
     name: 'Left Calf',
-    path: 'M 42,73 L 46,73 L 47,79 L 46,86 L 44,88 L 42,86 L 41,79 Z',
+    path: 'M 43,73 L 46,73 L 47,78 L 46,85 L 44,87 L 42,85 L 42,78 Z',
   },
 
-  // RIGHT CALF (gastrocnemius) - diamond shape
+  // RIGHT CALF (gastrocnemius) - diamond calf shape
   {
     id: 'calves',
     name: 'Right Calf',
-    path: 'M 58,73 L 54,73 L 53,79 L 54,86 L 56,88 L 58,86 L 59,79 Z',
+    path: 'M 57,73 L 54,73 L 53,78 L 54,85 L 56,87 L 58,85 L 58,78 Z',
   },
 ];
 
