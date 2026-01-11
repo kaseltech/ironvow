@@ -14,6 +14,7 @@ interface MuscleData {
 interface BodyMapProps {
   gender: 'male' | 'female';
   muscleData: MuscleData[];
+  selectedMuscleId?: string | null;
   onMuscleSelect?: (muscle: MuscleData) => void;
 }
 
@@ -289,12 +290,15 @@ const backMusclePolygons = [
   },
 ];
 
-export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
-  const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
+export function BodyMap({ gender, muscleData, selectedMuscleId, onMuscleSelect }: BodyMapProps) {
+  const [internalSelectedMuscle, setInternalSelectedMuscle] = useState<string | null>(null);
   const [hoveredMuscle, setHoveredMuscle] = useState<string | null>(null);
   const [view, setView] = useState<'front' | 'back'>('front');
   const [debugMode, setDebugMode] = useState(false);
   const [debugTapCount, setDebugTapCount] = useState(0);
+
+  // Use external selectedMuscleId if provided, otherwise use internal state
+  const selectedMuscle = selectedMuscleId !== undefined ? selectedMuscleId : internalSelectedMuscle;
 
   // Tap legend 5 times to toggle debug mode
   const handleLegendTap = () => {
@@ -316,7 +320,10 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
   };
 
   const handleMuscleClick = (id: string, regionName: string) => {
-    setSelectedMuscle(prev => prev === id ? null : id);
+    // Only update internal state if not controlled externally
+    if (selectedMuscleId === undefined) {
+      setInternalSelectedMuscle(prev => prev === id ? null : id);
+    }
     const muscle = getMuscleData(id);
     if (onMuscleSelect) {
       onMuscleSelect({
@@ -338,7 +345,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
           onClick={() => {
             setView('front');
             setHoveredMuscle(null);
-            setSelectedMuscle(null);
+            if (selectedMuscleId === undefined) setInternalSelectedMuscle(null);
           }}
           style={{
             padding: '0.5rem 1rem',
@@ -355,7 +362,7 @@ export function BodyMap({ gender, muscleData, onMuscleSelect }: BodyMapProps) {
           onClick={() => {
             setView('back');
             setHoveredMuscle(null);
-            setSelectedMuscle(null);
+            if (selectedMuscleId === undefined) setInternalSelectedMuscle(null);
           }}
           style={{
             padding: '0.5rem 1rem',
