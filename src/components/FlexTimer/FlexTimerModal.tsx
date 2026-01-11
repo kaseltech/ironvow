@@ -44,6 +44,10 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
   // Config panel visibility
   const [showConfig, setShowConfig] = useState(false);
 
+  // Timer display style
+  type TimerStyle = 'crossfit' | 'modern' | 'minimal';
+  const [timerStyle, setTimerStyle] = useState<TimerStyle>('crossfit');
+
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
@@ -429,15 +433,15 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
         }
       }}
     >
-      {/* Header */}
+      {/* Header - minimal for CrossFit style */}
       <header
         style={{
-          padding: '1rem 1.5rem',
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+          padding: '0.75rem 1rem',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: `1px solid ${colors.accent}20`,
+          background: timerStyle === 'crossfit' ? '#111' : 'transparent',
         }}
       >
         <button
@@ -445,36 +449,52 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
           style={{
             background: 'none',
             border: 'none',
-            color: colors.accent,
-            fontSize: '1.5rem',
+            color: timerStyle === 'crossfit' ? '#666' : colors.accent,
+            fontSize: '2rem',
             cursor: 'pointer',
             padding: '0.5rem',
+            minWidth: '48px',
+            minHeight: '48px',
           }}
         >
           ✕
         </button>
-        <h1
-          style={{
-            fontFamily: 'var(--font-libre-baskerville)',
-            fontSize: '1.25rem',
-            color: colors.text,
-            margin: 0,
-          }}
-        >
-          Flex Timer
-        </h1>
+
+        {/* Style selector in header */}
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          {(['crossfit', 'modern', 'minimal'] as const).map(style => (
+            <button
+              key={style}
+              onClick={() => setTimerStyle(style)}
+              style={{
+                background: timerStyle === style ? (timerStyle === 'crossfit' ? '#333' : `${colors.accent}20`) : 'transparent',
+                border: 'none',
+                borderRadius: '0.5rem',
+                padding: '0.5rem 0.75rem',
+                color: timerStyle === style ? (timerStyle === 'crossfit' ? '#FFF' : colors.accent) : (timerStyle === 'crossfit' ? '#555' : colors.textMuted),
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+              }}
+            >
+              {style === 'crossfit' ? 'GYM' : style === 'modern' ? 'MOD' : 'MIN'}
+            </button>
+          ))}
+        </div>
+
         <button
           onClick={() => setShowConfig(!showConfig)}
           style={{
-            background: showConfig ? `${colors.accent}20` : 'none',
-            border: `1px solid ${colors.accent}40`,
-            borderRadius: '0.5rem',
-            color: colors.accent,
-            fontSize: '1.5rem',
+            background: showConfig ? (timerStyle === 'crossfit' ? '#333' : `${colors.accent}30`) : (timerStyle === 'crossfit' ? '#222' : `${colors.accent}10`),
+            border: `2px solid ${timerStyle === 'crossfit' ? '#444' : colors.accent}`,
+            borderRadius: '0.75rem',
+            color: timerStyle === 'crossfit' ? '#FFF' : colors.accent,
+            fontSize: '1.75rem',
             cursor: 'pointer',
-            padding: '0.5rem 0.75rem',
-            minWidth: '44px',
-            minHeight: '44px',
+            padding: '0.75rem 1rem',
+            minWidth: '60px',
+            minHeight: '60px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -489,9 +509,10 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
         style={{
           display: 'flex',
           gap: '0.5rem',
-          padding: '1rem',
+          padding: '0.75rem 1rem',
           overflowX: 'auto',
-          borderBottom: `1px solid ${colors.accent}10`,
+          background: timerStyle === 'crossfit' ? '#111' : 'transparent',
+          borderBottom: timerStyle === 'crossfit' ? '1px solid #222' : `1px solid ${colors.accent}10`,
         }}
       >
         {(Object.keys(MODE_INFO) as TimerMode[]).map(mode => (
@@ -500,145 +521,130 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
             onClick={() => handleModeChange(mode)}
             disabled={state.status === 'running'}
             style={{
-              background: state.mode === mode ? `${colors.accent}20` : 'transparent',
-              border: `1px solid ${state.mode === mode ? colors.accent : colors.accent + '30'}`,
+              background: state.mode === mode
+                ? (timerStyle === 'crossfit' ? '#FF3333' : `${colors.accent}20`)
+                : (timerStyle === 'crossfit' ? '#222' : 'transparent'),
+              border: timerStyle === 'crossfit' ? 'none' : `1px solid ${state.mode === mode ? colors.accent : colors.accent + '30'}`,
               borderRadius: '0.5rem',
-              padding: '0.5rem 1rem',
-              color: state.mode === mode ? colors.accent : colors.textMuted,
-              fontSize: '0.875rem',
-              fontWeight: state.mode === mode ? 600 : 400,
+              padding: '0.625rem 1rem',
+              color: state.mode === mode
+                ? (timerStyle === 'crossfit' ? '#000' : colors.accent)
+                : (timerStyle === 'crossfit' ? '#666' : colors.textMuted),
+              fontSize: '0.8125rem',
+              fontWeight: state.mode === mode ? 700 : 500,
               cursor: state.status === 'running' ? 'not-allowed' : 'pointer',
               opacity: state.status === 'running' && state.mode !== mode ? 0.5 : 1,
               whiteSpace: 'nowrap',
               transition: 'all 0.2s ease',
+              textTransform: timerStyle === 'crossfit' ? 'uppercase' : 'none',
+              letterSpacing: timerStyle === 'crossfit' ? '0.05em' : '0',
             }}
           >
-            {MODE_INFO[mode].icon} {MODE_INFO[mode].label}
+            {timerStyle === 'crossfit' ? MODE_INFO[mode].label : `${MODE_INFO[mode].icon} ${MODE_INFO[mode].label}`}
           </button>
         ))}
       </div>
 
-      {/* Main timer display */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-        {/* Phase label */}
-        {getPhaseLabel() && (
+      {/* Main timer display - CrossFit style */}
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+          background: timerStyle === 'crossfit' ? '#000' : 'transparent',
+        }}
+      >
+        {/* Prelude countdown - massive number */}
+        {state.status === 'prelude' && (
           <div
             style={{
-              fontSize: state.status === 'prelude' ? '3rem' : '1.25rem',
-              fontWeight: 700,
-              color: getPhaseColor(),
-              textTransform: 'uppercase',
-              letterSpacing: '0.2em',
-              marginBottom: '1rem',
-              transition: 'all 0.2s ease',
+              fontSize: timerStyle === 'crossfit' ? 'min(50vw, 300px)' : '8rem',
+              fontFamily: 'var(--font-geist-mono)',
+              fontWeight: 900,
+              color: timerStyle === 'crossfit' ? '#FF3333' : colors.accent,
+              lineHeight: 1,
+              textShadow: timerStyle === 'crossfit' ? '0 0 40px #FF3333' : 'none',
             }}
           >
-            {getPhaseLabel()}
+            {state.preludeCount - 1 || 'GO'}
           </div>
         )}
 
-        {/* Timer digits */}
-        <div
-          style={{
-            fontSize: state.status === 'prelude' ? '4rem' : '6rem',
-            fontFamily: 'var(--font-geist-mono)',
-            fontWeight: 700,
-            color: state.status === 'complete' ? colors.success : colors.text,
-            lineHeight: 1,
-            marginBottom: '1rem',
-          }}
-        >
-          {state.status === 'prelude' ? '' : formatTime(displayTime)}
-        </div>
-
-        {/* Progress info */}
-        {(state.mode === 'tabata' || state.mode === 'emom' || state.mode === 'interval') && (
-          <div
-            style={{
-              fontSize: '1rem',
-              color: colors.textMuted,
-              marginBottom: '1rem',
-            }}
-          >
-            Round {state.currentRound} of {state.totalRounds}
-            {state.mode === 'interval' && (
-              <span> &bull; Set {state.currentSet} of {state.totalSets}</span>
-            )}
-          </div>
-        )}
-
-        {/* Progress bar */}
-        {state.mode !== 'stopwatch' && state.status !== 'idle' && (
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '300px',
-              height: '6px',
-              backgroundColor: `${colors.accent}20`,
-              borderRadius: '3px',
-              overflow: 'hidden',
-              marginBottom: '2rem',
-            }}
-          >
+        {/* Main timer - CrossFit LED style */}
+        {state.status !== 'prelude' && (
+          <>
             <div
               style={{
-                height: '100%',
-                width: `${getProgress()}%`,
-                backgroundColor: getPhaseColor(),
-                transition: 'width 0.2s linear',
+                fontSize: timerStyle === 'crossfit' ? 'min(28vw, 180px)' : timerStyle === 'minimal' ? '5rem' : '6rem',
+                fontFamily: 'var(--font-geist-mono)',
+                fontWeight: 900,
+                color: timerStyle === 'crossfit'
+                  ? (state.phase === 'rest' || state.phase === 'set-rest' ? '#33FF33' : '#FF3333')
+                  : state.status === 'complete' ? colors.success : colors.text,
+                lineHeight: 1,
+                textShadow: timerStyle === 'crossfit'
+                  ? `0 0 30px ${state.phase === 'rest' || state.phase === 'set-rest' ? '#33FF33' : '#FF3333'}`
+                  : 'none',
+                letterSpacing: timerStyle === 'crossfit' ? '0.05em' : '0',
               }}
-            />
-          </div>
-        )}
+            >
+              {formatTime(displayTime)}
+            </div>
 
-        {/* Laps (stopwatch) */}
-        {state.mode === 'stopwatch' && state.laps.length > 0 && (
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '300px',
-              maxHeight: '150px',
-              overflowY: 'auto',
-              marginBottom: '1rem',
-            }}
-          >
-            {state.laps.map((lapTime, i) => (
+            {/* Round info - smaller, below timer */}
+            {(state.mode === 'tabata' || state.mode === 'emom' || state.mode === 'interval') && state.status !== 'idle' && (
               <div
-                key={i}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '0.5rem',
-                  borderBottom: `1px solid ${colors.accent}10`,
-                  fontSize: '0.875rem',
+                  fontSize: timerStyle === 'crossfit' ? '1.5rem' : '1rem',
+                  color: timerStyle === 'crossfit' ? '#888' : colors.textMuted,
+                  marginTop: '1rem',
+                  fontFamily: 'var(--font-geist-mono)',
                 }}
               >
-                <span style={{ color: colors.textMuted }}>Lap {i + 1}</span>
-                <span style={{ color: colors.text, fontFamily: 'var(--font-geist-mono)' }}>
-                  {formatLapTime(lapTime)}
-                </span>
+                {state.mode === 'interval'
+                  ? `SET ${state.currentSet}/${state.totalSets} • RD ${state.currentRound}/${state.totalRounds}`
+                  : `ROUND ${state.currentRound} / ${state.totalRounds}`}
               </div>
-            ))}
-          </div>
+            )}
+
+            {/* Laps (stopwatch) */}
+            {state.mode === 'stopwatch' && state.laps.length > 0 && (
+              <div style={{ width: '100%', maxWidth: '300px', maxHeight: '120px', overflowY: 'auto', marginTop: '1rem' }}>
+                {state.laps.slice(-5).map((lapTime, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', fontSize: '0.875rem' }}>
+                    <span style={{ color: timerStyle === 'crossfit' ? '#666' : colors.textMuted }}>Lap {state.laps.length - 4 + i}</span>
+                    <span style={{ color: timerStyle === 'crossfit' ? '#AAA' : colors.text, fontFamily: 'var(--font-geist-mono)' }}>
+                      {formatLapTime(lapTime)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
-        {/* Control buttons */}
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+        {/* Control buttons - larger and clearer */}
+        <div style={{ display: 'flex', gap: '1.5rem', marginTop: '2rem' }}>
           {state.status === 'idle' || state.status === 'complete' ? (
             <button
               onClick={start}
               style={{
-                background: `linear-gradient(135deg, ${colors.accent}, ${colors.accent}CC)`,
+                background: timerStyle === 'crossfit' ? '#33FF33' : `linear-gradient(135deg, ${colors.accent}, ${colors.accent}CC)`,
                 border: 'none',
                 borderRadius: '1rem',
-                padding: '1.25rem 3rem',
-                color: '#0F2233',
-                fontSize: '1.25rem',
-                fontWeight: 700,
+                padding: '1.5rem 4rem',
+                color: '#000',
+                fontSize: '1.5rem',
+                fontWeight: 900,
                 cursor: 'pointer',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
               }}
             >
-              {state.status === 'complete' ? 'Restart' : 'Start'}
+              {state.status === 'complete' ? 'Again' : 'Start'}
             </button>
           ) : state.status === 'running' ? (
             <>
@@ -647,32 +653,32 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
                   onClick={lap}
                   style={{
                     background: 'transparent',
-                    border: `2px solid ${colors.accent}`,
+                    border: `3px solid ${timerStyle === 'crossfit' ? '#FFF' : colors.accent}`,
                     borderRadius: '1rem',
                     padding: '1rem 2rem',
-                    color: colors.accent,
-                    fontSize: '1rem',
-                    fontWeight: 600,
+                    color: timerStyle === 'crossfit' ? '#FFF' : colors.accent,
+                    fontSize: '1.25rem',
+                    fontWeight: 700,
                     cursor: 'pointer',
                   }}
                 >
-                  Lap
+                  LAP
                 </button>
               )}
               <button
                 onClick={pause}
                 style={{
-                  background: `${colors.accent}20`,
-                  border: `2px solid ${colors.accent}`,
+                  background: timerStyle === 'crossfit' ? '#FF3333' : `${colors.accent}20`,
+                  border: timerStyle === 'crossfit' ? 'none' : `3px solid ${colors.accent}`,
                   borderRadius: '1rem',
-                  padding: '1rem 2rem',
-                  color: colors.accent,
-                  fontSize: '1rem',
-                  fontWeight: 600,
+                  padding: '1rem 2.5rem',
+                  color: timerStyle === 'crossfit' ? '#000' : colors.accent,
+                  fontSize: '1.25rem',
+                  fontWeight: 700,
                   cursor: 'pointer',
                 }}
               >
-                Pause
+                STOP
               </button>
             </>
           ) : state.status === 'paused' ? (
@@ -681,39 +687,39 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
                 onClick={reset}
                 style={{
                   background: 'transparent',
-                  border: `2px solid ${colors.textMuted}`,
+                  border: `3px solid ${timerStyle === 'crossfit' ? '#666' : colors.textMuted}`,
                   borderRadius: '1rem',
                   padding: '1rem 2rem',
-                  color: colors.textMuted,
-                  fontSize: '1rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Reset
-              </button>
-              <button
-                onClick={resume}
-                style={{
-                  background: `linear-gradient(135deg, ${colors.accent}, ${colors.accent}CC)`,
-                  border: 'none',
-                  borderRadius: '1rem',
-                  padding: '1rem 2rem',
-                  color: '#0F2233',
-                  fontSize: '1rem',
+                  color: timerStyle === 'crossfit' ? '#666' : colors.textMuted,
+                  fontSize: '1.25rem',
                   fontWeight: 700,
                   cursor: 'pointer',
                 }}
               >
-                Resume
+                RESET
+              </button>
+              <button
+                onClick={resume}
+                style={{
+                  background: timerStyle === 'crossfit' ? '#33FF33' : `linear-gradient(135deg, ${colors.accent}, ${colors.accent}CC)`,
+                  border: 'none',
+                  borderRadius: '1rem',
+                  padding: '1rem 2.5rem',
+                  color: '#000',
+                  fontSize: '1.25rem',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                GO
               </button>
             </>
           ) : null}
         </div>
 
         {state.status === 'idle' && (
-          <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginTop: '1rem' }}>
-            Press Space to start
+          <p style={{ color: timerStyle === 'crossfit' ? '#555' : colors.textMuted, fontSize: '0.875rem', marginTop: '1rem' }}>
+            TAP START or press SPACE
           </p>
         )}
       </main>
@@ -726,26 +732,36 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
             bottom: 0,
             left: 0,
             right: 0,
-            background: colors.cardBg,
-            borderTop: `1px solid ${colors.accent}30`,
+            background: timerStyle === 'crossfit' ? '#111' : colors.cardBg,
+            borderTop: timerStyle === 'crossfit' ? '2px solid #333' : `1px solid ${colors.accent}30`,
             borderRadius: '1.5rem 1.5rem 0 0',
-            padding: '1rem 1.5rem',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
+            padding: '1.25rem 1.5rem',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <h3 style={{ color: colors.text, fontSize: '1rem', margin: 0 }}>
-              {MODE_INFO[state.mode].label} Settings
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{
+              color: timerStyle === 'crossfit' ? '#FFF' : colors.text,
+              fontSize: '1.125rem',
+              margin: 0,
+              fontWeight: 700,
+              textTransform: timerStyle === 'crossfit' ? 'uppercase' : 'none',
+              letterSpacing: timerStyle === 'crossfit' ? '0.1em' : '0',
+            }}>
+              {MODE_INFO[state.mode].label}
             </h3>
             <button
               onClick={() => setShowConfig(false)}
               style={{
-                background: 'none',
+                background: timerStyle === 'crossfit' ? '#333' : 'none',
                 border: 'none',
-                color: colors.accent,
-                fontSize: '1.25rem',
+                borderRadius: '0.5rem',
+                color: timerStyle === 'crossfit' ? '#FFF' : colors.accent,
+                fontSize: '1.5rem',
                 cursor: 'pointer',
-                padding: '0.25rem',
+                padding: '0.5rem',
+                minWidth: '44px',
+                minHeight: '44px',
               }}
             >
               ✕
