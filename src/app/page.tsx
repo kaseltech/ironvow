@@ -12,6 +12,7 @@ import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/u
 import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle } from '@/lib/generateWorkout';
 import { Settings } from '@/components/Settings';
 import { GymManager } from '@/components/GymManager';
+import { FlexTimerModal } from '@/components/FlexTimer';
 import type { GymProfile } from '@/lib/supabase/types';
 
 const muscleGroups = [
@@ -76,6 +77,7 @@ export default function Home() {
   const [generatedWorkout, setGeneratedWorkout] = useState<GeneratedWorkout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showTimer, setShowTimer] = useState(false);
   const [debugInfo, setDebugInfo] = useState<object | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [swappingExerciseIndex, setSwappingExerciseIndex] = useState<number | null>(null);
@@ -336,7 +338,7 @@ export default function Home() {
       <Onboarding onComplete={handleOnboardingComplete} />
     ) : (
     <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
-      <Header onSettingsClick={() => setShowSettings(true)} />
+      <Header onSettingsClick={() => setShowSettings(true)} onTimerClick={() => setShowTimer(true)} />
 
       <main className="p-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         {!showWorkout ? (
@@ -1196,6 +1198,7 @@ export default function Home() {
         setShowGymManager(false);
         refetchGymProfiles();
       }} />
+      <FlexTimerModal isOpen={showTimer} onClose={() => setShowTimer(false)} />
 
       {/* Debug Modal */}
       {showDebug && debugInfo && (

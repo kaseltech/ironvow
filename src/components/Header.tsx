@@ -7,10 +7,12 @@ import { useTheme } from '@/context/ThemeContext';
 
 interface HeaderProps {
   onSettingsClick?: () => void;
+  onTimerClick?: () => void;
   showSettings?: boolean;
+  showTimer?: boolean;
 }
 
-export function Header({ onSettingsClick, showSettings = true }: HeaderProps) {
+export function Header({ onSettingsClick, onTimerClick, showSettings = true, showTimer = true }: HeaderProps) {
   const router = useRouter();
   const { signOut } = useAuth();
   const { colors } = useTheme();
@@ -29,6 +31,27 @@ export function Header({ onSettingsClick, showSettings = true }: HeaderProps) {
       <div className="flex items-center justify-between">
         <Logo size="lg" href="/" />
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Timer Button */}
+          {showTimer && onTimerClick && (
+            <button
+              onClick={onTimerClick}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+              aria-label="Timer"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </button>
+          )}
           {/* Logout Button */}
           <button
             onClick={async () => {
