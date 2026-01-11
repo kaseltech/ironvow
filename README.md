@@ -45,7 +45,11 @@ The app is fully functional with AI workout generation, GPS run tracking, compre
 - **Do Again** - One-tap to reload past workouts
 
 ### Library & Settings
-- **Exercise Library** - 200+ exercises with muscle targeting
+- **Exercise Library** - 870+ exercises with images and instructions
+  - Step-by-step instructions for proper form
+  - Demonstration images for each exercise
+  - "?" info button during workouts to learn any exercise
+  - YouTube fallback for exercises not in database
 - **Movement Pattern Tags** - Injury-aware recommendations
 - **Gym Profiles** - Save equipment by location
 - **Offline Support** - Queue workouts for sync

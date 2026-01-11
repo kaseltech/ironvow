@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-01-11
+
+### Added
+
+#### Exercise Library with Instructions & Images
+- Imported 873 exercises from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain)
+- Each exercise includes:
+  - Step-by-step instructions for proper form
+  - 2 demonstration images showing movement
+  - Primary and secondary muscle targeting
+  - Difficulty level (beginner/intermediate/advanced)
+  - Category (strength, stretching, cardio, plyometrics)
+- **ExerciseDetailModal component** - Full-screen exercise info viewer:
+  - Image carousel with navigation
+  - Numbered instruction list
+  - Muscle group badges
+  - YouTube fallback button for any exercise
+- **"?" info button** next to exercise names during workouts
+- `useExerciseDetail` hook with caching for fast lookups
+- Database migration adding `image_urls` and `category` columns
+
+---
+
 ## [0.1.0] - 2025-01-11
 
 ### Added
