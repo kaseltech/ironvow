@@ -8,6 +8,7 @@ import { Header } from '@/components/Header';
 import { Settings } from '@/components/Settings';
 import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions } from '@/hooks/useSupabase';
 import { useStrengthData, convertToMuscleStrength, formatVolume, formatDate, formatDaysAgo, ExercisePR, MuscleVolume } from '@/hooks/useStrengthData';
+import { useWorkoutPlans, DAY_NAMES } from '@/hooks/useWorkoutPlans';
 import { useTheme } from '@/context/ThemeContext';
 import { getSupabase } from '@/lib/supabase/client';
 import { MAJOR_LIFTS, findStandardForExercise } from '@/lib/strengthStandards';
@@ -144,6 +145,7 @@ export default function ProfilePage() {
   const { goal: weightGoal } = useWeightGoal();
   const { sessions } = useWorkoutSessions(10);
   const { muscleVolume, exercisePRs, sessions: strengthSessions, loading: strengthLoading } = useStrengthData();
+  const { plans, activePlan, setActivePlanById, deletePlan, loading: plansLoading } = useWorkoutPlans();
 
   const [activeTab, setActiveTab] = useState<'body' | 'saved' | 'history' | 'settings'>('body');
   const [gender, setGender] = useState<'male' | 'female'>((profile?.gender as 'male' | 'female') || 'male');
@@ -612,17 +614,159 @@ export default function ProfilePage() {
         )}
 
         {activeTab === 'saved' && (
-          <div className="space-y-3">
-            <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '1rem' }}>
-              Workouts you've bookmarked to run again
-            </p>
-            <div className="text-center py-8">
-              <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
-                No saved workouts yet
-              </p>
-              <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                Bookmark workouts during your session to save them here
-              </p>
+          <div className="space-y-4">
+            {/* Weekly Plans Section */}
+            <div>
+              <h2 style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                Weekly Plans
+              </h2>
+
+              {plansLoading ? (
+                <div className="text-center py-4">
+                  <div
+                    className="animate-spin rounded-full h-6 w-6 border-2 mx-auto"
+                    style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: '#C9A75A' }}
+                  />
+                </div>
+              ) : plans.length > 0 ? (
+                <div className="space-y-3">
+                  {plans.map((plan) => (
+                    <div
+                      key={plan.id}
+                      style={{
+                        background: colors.cardBg,
+                        borderRadius: '0.75rem',
+                        padding: '1rem',
+                        border: plan.is_active ? `2px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span style={{ color: colors.text, fontSize: '1rem', fontWeight: 600 }}>
+                              {plan.name}
+                            </span>
+                            {plan.is_active && (
+                              <span
+                                style={{
+                                  background: colors.accent,
+                                  color: colors.bg,
+                                  fontSize: '0.625rem',
+                                  padding: '0.125rem 0.375rem',
+                                  borderRadius: '999px',
+                                  fontWeight: 600,
+                                }}
+                              >
+                                ACTIVE
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                            {plan.days.length} days • {plan.description || 'Custom plan'}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {!plan.is_active && (
+                            <button
+                              onClick={() => setActivePlanById(plan.id)}
+                              style={{
+                                background: 'rgba(201, 167, 90, 0.2)',
+                                color: colors.accent,
+                                border: 'none',
+                                borderRadius: '0.375rem',
+                                padding: '0.375rem 0.625rem',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Activate
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (confirm('Delete this plan?')) {
+                                deletePlan(plan.id);
+                              }
+                            }}
+                            style={{
+                              background: 'rgba(248, 113, 113, 0.1)',
+                              color: '#F87171',
+                              border: 'none',
+                              borderRadius: '0.375rem',
+                              padding: '0.375rem 0.625rem',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Day Schedule */}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {plan.days.map((day) => (
+                          <div
+                            key={day.id}
+                            style={{
+                              background: 'rgba(0, 0, 0, 0.2)',
+                              borderRadius: '0.375rem',
+                              padding: '0.375rem 0.5rem',
+                            }}
+                          >
+                            <div style={{ color: colors.accent, fontSize: '0.6875rem', fontWeight: 600 }}>
+                              {DAY_NAMES[day.day_of_week]}
+                            </div>
+                            <div style={{ color: colors.textMuted, fontSize: '0.625rem' }}>
+                              {day.workout?.name?.replace(/^\w+:\s*/, '') || day.muscle_focus?.slice(0, 2).join(', ') || 'Rest'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: colors.cardBg,
+                    borderRadius: '0.75rem',
+                    padding: '1.5rem',
+                    textAlign: 'center',
+                    border: `1px solid ${colors.borderSubtle}`,
+                  }}
+                >
+                  <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
+                    No workout plans yet
+                  </p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    Create a weekly plan from the home page
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Saved Workouts Section */}
+            <div style={{ marginTop: '2rem' }}>
+              <h2 style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                Bookmarked Workouts
+              </h2>
+              <div
+                style={{
+                  background: colors.cardBg,
+                  borderRadius: '0.75rem',
+                  padding: '1.5rem',
+                  textAlign: 'center',
+                  border: `1px solid ${colors.borderSubtle}`,
+                }}
+              >
+                <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
+                  No bookmarked workouts yet
+                </p>
+                <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  Bookmark workouts from your history to save them here
+                </p>
+              </div>
             </div>
           </div>
         )}

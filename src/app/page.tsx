@@ -9,8 +9,10 @@ import { Onboarding } from '@/components/Onboarding';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
+import { useWorkoutPlans, DAY_NAMES_FULL } from '@/hooks/useWorkoutPlans';
 import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, generateWeeklyPlan, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan } from '@/lib/generateWorkout';
 import { WeeklyPlanner } from '@/components/WeeklyPlanner';
+import { WeeklyPlanReview } from '@/components/WeeklyPlanReview';
 import { Settings } from '@/components/Settings';
 import { GymManager } from '@/components/GymManager';
 import { FlexTimerModal } from '@/components/FlexTimer';
@@ -65,6 +67,7 @@ export default function Home() {
   const { injuries } = useInjuries();
   const { userEquipment, allEquipment } = useEquipment();
   const { profiles: gymProfiles, getDefaultProfile, refetch: refetchGymProfiles } = useGymProfiles();
+  const { activePlan, getTodaysWorkout, fetchPlans: refetchPlans } = useWorkoutPlans();
 
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedGym, setSelectedGym] = useState<GymProfile | null>(null);
@@ -93,6 +96,8 @@ export default function Home() {
   // Weekly planner mode
   const [weeklyMode, setWeeklyMode] = useState(false);
   const [generatedPlan, setGeneratedPlan] = useState<GeneratedWeeklyPlan | null>(null);
+  const [showPlanReview, setShowPlanReview] = useState(false);
+  const [lastWeeklyRequest, setLastWeeklyRequest] = useState<{ days: WeeklyPlanDay[]; planName: string } | null>(null);
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -204,10 +209,15 @@ export default function Home() {
 
   // Generate weekly plan
   const handleGenerateWeeklyPlan = async (days: WeeklyPlanDay[], planName: string) => {
-    if (!user || !selectedLocation) return;
+    if (!user) return;
+    if (!selectedLocation) {
+      setError('Please select a location (Gym, Home, or Outdoor) first');
+      return;
+    }
 
     setGenerating(true);
     setError(null);
+    setLastWeeklyRequest({ days, planName });
 
     try {
       // Get equipment based on location
@@ -240,13 +250,28 @@ export default function Home() {
       });
 
       setGeneratedPlan(plan);
-      setShowWorkout(true);
+      setShowPlanReview(true);
     } catch (err) {
       console.error('Failed to generate weekly plan:', err);
       setError('Failed to generate weekly plan. Please try again.');
     } finally {
       setGenerating(false);
     }
+  };
+
+  // Regenerate weekly plan
+  const handleRegenerateWeeklyPlan = async () => {
+    if (lastWeeklyRequest) {
+      await handleGenerateWeeklyPlan(lastWeeklyRequest.days, lastWeeklyRequest.planName);
+    }
+  };
+
+  // Close plan review
+  const handleClosePlanReview = () => {
+    setShowPlanReview(false);
+    setGeneratedPlan(null);
+    // Refetch plans to update Today's Workout card
+    refetchPlans();
   };
 
   // Regenerate workout with different exercises
@@ -431,6 +456,54 @@ export default function Home() {
                 <span style={{ color: colors.text, fontWeight: 600, fontSize: '0.875rem' }}>Go for a Run</span>
               </button>
             </div>
+
+            {/* Today's Workout Card - Show if active plan has workout for today */}
+            {activePlan && getTodaysWorkout() && (
+              <div
+                className="card mb-4 animate-fade-in"
+                style={{
+                  background: `linear-gradient(135deg, ${colors.cardBg} 0%, rgba(201, 167, 90, 0.15) 100%)`,
+                  border: `2px solid ${colors.accent}`,
+                  animationDelay: '0.05s',
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <div style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Today's Workout
+                    </div>
+                    <div style={{ color: colors.text, fontSize: '1.125rem', fontWeight: 600, marginTop: '0.25rem' }}>
+                      {getTodaysWorkout()?.name || `${DAY_NAMES_FULL[new Date().getDay()]} Training`}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                      from {activePlan.name}
+                    </div>
+                    <div style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 500 }}>
+                      ~{getTodaysWorkout()?.estimated_duration || 45} min
+                    </div>
+                  </div>
+                </div>
+                <div style={{ color: colors.textMuted, fontSize: '0.8125rem', marginBottom: '0.75rem' }}>
+                  {getTodaysWorkout()?.target_muscles?.slice(0, 4).join(', ')}
+                  {(getTodaysWorkout()?.target_muscles?.length || 0) > 4 && ` +${(getTodaysWorkout()?.target_muscles?.length || 0) - 4}`}
+                </div>
+                <button
+                  onClick={() => {
+                    const todayWorkout = getTodaysWorkout();
+                    if (todayWorkout?.id) {
+                      sessionStorage.setItem('loadWorkoutId', todayWorkout.id);
+                      router.push('/workout');
+                    }
+                  }}
+                  className="btn-primary w-full"
+                  style={{ fontSize: '1rem' }}
+                >
+                  Start Today's Workout
+                </button>
+              </div>
+            )}
 
             {/* Single/Weekly Toggle */}
             <div className="flex gap-2 mb-4 animate-fade-in" style={{ animationDelay: '0.075s' }}>
@@ -1014,56 +1087,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Weekly Plan Display */}
-            {generatedPlan && (
-              <div className="card mb-4" style={{ background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
-                <h2
-                  style={{
-                    fontFamily: 'var(--font-libre-baskerville)',
-                    fontSize: '1.5rem',
-                    color: colors.text,
-                    marginBottom: '1rem',
-                  }}
-                >
-                  {generatedPlan.name}
-                </h2>
-                <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '1rem' }}>
-                  {generatedPlan.days.length} workouts generated and saved to your plan
-                </p>
-                <div className="space-y-3">
-                  {generatedPlan.days.map((day) => (
-                    <div
-                      key={day.day_of_week}
-                      style={{
-                        background: 'rgba(0, 0, 0, 0.2)',
-                        borderRadius: '0.75rem',
-                        padding: '0.75rem 1rem',
-                      }}
-                    >
-                      <div className="flex justify-between items-center mb-1">
-                        <span style={{ color: colors.accent, fontWeight: 600, fontSize: '0.875rem' }}>
-                          {day.day_name}
-                        </span>
-                        <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
-                          ~{day.workout.duration} min
-                        </span>
-                      </div>
-                      <div style={{ color: colors.text, fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                        {day.workout.name.replace(`${day.day_name}: `, '')}
-                      </div>
-                      <div style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
-                        {day.workout.exercises.length} exercises • {day.workout.targetMuscles.slice(0, 3).join(', ')}
-                        {day.workout.targetMuscles.length > 3 && ` +${day.workout.targetMuscles.length - 3}`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '1rem', textAlign: 'center' }}>
-                  Your weekly plan is now active! Check your profile to view and start workouts.
-                </p>
-              </div>
-            )}
-
             {/* Single Workout Display */}
             {generatedWorkout && (
             <>
@@ -1573,6 +1596,16 @@ export default function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Weekly Plan Review Modal */}
+      {showPlanReview && generatedPlan && (
+        <WeeklyPlanReview
+          plan={generatedPlan}
+          onClose={handleClosePlanReview}
+          onRegenerate={handleRegenerateWeeklyPlan}
+          regenerating={generating}
+        />
       )}
     </div>
     )}
