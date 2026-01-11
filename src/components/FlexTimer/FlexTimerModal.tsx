@@ -309,11 +309,13 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
     }));
   };
 
-  // ESC key to close
+  // ESC key to close config first, then modal
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (state.status === 'running') {
+        if (showConfig) {
+          setShowConfig(false);
+        } else if (state.status === 'running') {
           pause();
         } else {
           onClose();
@@ -336,7 +338,7 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
       document.addEventListener('keydown', handleEsc);
     }
     return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen, state.status, onClose]);
+  }, [isOpen, state.status, showConfig, onClose]);
 
   // Get display time based on mode
   const displayTime = state.mode === 'stopwatch' ? state.timeElapsed : state.timeRemaining;
@@ -376,12 +378,36 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
     return ((totalTime - state.timeRemaining) / totalTime) * 100;
   };
 
-  // Config adjustment helpers
+  // Config adjustment helpers - also update timer state
   const adjustConfig = (key: keyof TimerConfig, delta: number) => {
-    setConfig(prev => ({
-      ...prev,
-      [key]: Math.max(1, (prev[key] as number) + delta),
-    }));
+    setConfig(prev => {
+      const newValue = Math.max(1, (prev[key] as number) + delta);
+      const newConfig = { ...prev, [key]: newValue };
+
+      // Update timer state to reflect new config
+      if (state.status === 'idle') {
+        setState(s => ({
+          ...s,
+          totalRounds: (state.mode === 'tabata' || state.mode === 'emom' || state.mode === 'interval')
+            ? (key === 'rounds' ? newValue : newConfig.rounds)
+            : 1,
+          totalSets: state.mode === 'interval'
+            ? (key === 'sets' ? newValue : newConfig.sets)
+            : 1,
+          timeRemaining: state.mode === 'countdown'
+            ? (key === 'countdownDuration' ? newValue : newConfig.countdownDuration)
+            : state.mode === 'tabata'
+            ? (key === 'workDuration' ? newValue : newConfig.workDuration)
+            : state.mode === 'emom'
+            ? (key === 'emomRoundDuration' ? newValue : newConfig.emomRoundDuration)
+            : state.mode === 'interval'
+            ? (key === 'workDuration' ? newValue : newConfig.workDuration)
+            : 0,
+        }));
+      }
+
+      return newConfig;
+    });
   };
 
   if (!mounted || !isOpen) return null;
@@ -444,9 +470,14 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
             border: `1px solid ${colors.accent}40`,
             borderRadius: '0.5rem',
             color: colors.accent,
-            fontSize: '1rem',
+            fontSize: '1.5rem',
             cursor: 'pointer',
             padding: '0.5rem 0.75rem',
+            minWidth: '44px',
+            minHeight: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           ⚙
@@ -698,15 +729,28 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
             background: colors.cardBg,
             borderTop: `1px solid ${colors.accent}30`,
             borderRadius: '1.5rem 1.5rem 0 0',
-            padding: '1.5rem',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)',
-            maxHeight: '50vh',
-            overflowY: 'auto',
+            padding: '1rem 1.5rem',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
           }}
         >
-          <h3 style={{ color: colors.text, fontSize: '1rem', marginBottom: '1rem' }}>
-            {MODE_INFO[state.mode].label} Settings
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <h3 style={{ color: colors.text, fontSize: '1rem', margin: 0 }}>
+              {MODE_INFO[state.mode].label} Settings
+            </h3>
+            <button
+              onClick={() => setShowConfig(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: colors.accent,
+                fontSize: '1.25rem',
+                cursor: 'pointer',
+                padding: '0.25rem',
+              }}
+            >
+              ✕
+            </button>
+          </div>
 
           {/* Countdown duration */}
           {state.mode === 'countdown' && (
@@ -721,113 +765,38 @@ export function FlexTimerModal({ isOpen, onClose }: FlexTimerModalProps) {
 
           {/* Tabata config */}
           {state.mode === 'tabata' && (
-            <>
-              <ConfigRow
-                label="Work"
-                value={`${config.workDuration}s`}
-                onDecrease={() => adjustConfig('workDuration', -5)}
-                onIncrease={() => adjustConfig('workDuration', 5)}
-                colors={colors}
-              />
-              <ConfigRow
-                label="Rest"
-                value={`${config.restDuration}s`}
-                onDecrease={() => adjustConfig('restDuration', -5)}
-                onIncrease={() => adjustConfig('restDuration', 5)}
-                colors={colors}
-              />
-              <ConfigRow
-                label="Rounds"
-                value={config.rounds.toString()}
-                onDecrease={() => adjustConfig('rounds', -1)}
-                onIncrease={() => adjustConfig('rounds', 1)}
-                colors={colors}
-              />
-            </>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1rem' }}>
+              <ConfigRowCompact label="Work" value={`${config.workDuration}s`} onDecrease={() => adjustConfig('workDuration', -5)} onIncrease={() => adjustConfig('workDuration', 5)} colors={colors} />
+              <ConfigRowCompact label="Rest" value={`${config.restDuration}s`} onDecrease={() => adjustConfig('restDuration', -5)} onIncrease={() => adjustConfig('restDuration', 5)} colors={colors} />
+              <ConfigRowCompact label="Rounds" value={config.rounds.toString()} onDecrease={() => adjustConfig('rounds', -1)} onIncrease={() => adjustConfig('rounds', 1)} colors={colors} />
+            </div>
           )}
 
           {/* EMOM config */}
           {state.mode === 'emom' && (
-            <>
-              <ConfigRow
-                label="Round Duration"
-                value={`${config.emomRoundDuration}s`}
-                onDecrease={() => adjustConfig('emomRoundDuration', -5)}
-                onIncrease={() => adjustConfig('emomRoundDuration', 5)}
-                colors={colors}
-              />
-              <ConfigRow
-                label="Rounds"
-                value={config.rounds.toString()}
-                onDecrease={() => adjustConfig('rounds', -1)}
-                onIncrease={() => adjustConfig('rounds', 1)}
-                colors={colors}
-              />
-            </>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1rem' }}>
+              <ConfigRowCompact label="Round" value={`${config.emomRoundDuration}s`} onDecrease={() => adjustConfig('emomRoundDuration', -5)} onIncrease={() => adjustConfig('emomRoundDuration', 5)} colors={colors} />
+              <ConfigRowCompact label="Rounds" value={config.rounds.toString()} onDecrease={() => adjustConfig('rounds', -1)} onIncrease={() => adjustConfig('rounds', 1)} colors={colors} />
+            </div>
           )}
 
           {/* Interval config */}
           {state.mode === 'interval' && (
-            <>
-              <ConfigRow
-                label="Work"
-                value={`${config.workDuration}s`}
-                onDecrease={() => adjustConfig('workDuration', -5)}
-                onIncrease={() => adjustConfig('workDuration', 5)}
-                colors={colors}
-              />
-              <ConfigRow
-                label="Rest"
-                value={`${config.restDuration}s`}
-                onDecrease={() => adjustConfig('restDuration', -5)}
-                onIncrease={() => adjustConfig('restDuration', 5)}
-                colors={colors}
-              />
-              <ConfigRow
-                label="Rounds per Set"
-                value={config.rounds.toString()}
-                onDecrease={() => adjustConfig('rounds', -1)}
-                onIncrease={() => adjustConfig('rounds', 1)}
-                colors={colors}
-              />
-              <ConfigRow
-                label="Sets"
-                value={config.sets.toString()}
-                onDecrease={() => adjustConfig('sets', -1)}
-                onIncrease={() => adjustConfig('sets', 1)}
-                colors={colors}
-              />
-              <ConfigRow
-                label="Set Rest"
-                value={`${config.setRestDuration}s`}
-                onDecrease={() => adjustConfig('setRestDuration', -10)}
-                onIncrease={() => adjustConfig('setRestDuration', 10)}
-                colors={colors}
-              />
-            </>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1rem' }}>
+              <ConfigRowCompact label="Work" value={`${config.workDuration}s`} onDecrease={() => adjustConfig('workDuration', -5)} onIncrease={() => adjustConfig('workDuration', 5)} colors={colors} />
+              <ConfigRowCompact label="Rest" value={`${config.restDuration}s`} onDecrease={() => adjustConfig('restDuration', -5)} onIncrease={() => adjustConfig('restDuration', 5)} colors={colors} />
+              <ConfigRowCompact label="Rounds" value={config.rounds.toString()} onDecrease={() => adjustConfig('rounds', -1)} onIncrease={() => adjustConfig('rounds', 1)} colors={colors} />
+              <ConfigRowCompact label="Sets" value={config.sets.toString()} onDecrease={() => adjustConfig('sets', -1)} onIncrease={() => adjustConfig('sets', 1)} colors={colors} />
+              <ConfigRowCompact label="Set Rest" value={`${config.setRestDuration}s`} onDecrease={() => adjustConfig('setRestDuration', -10)} onIncrease={() => adjustConfig('setRestDuration', 10)} colors={colors} />
+            </div>
           )}
 
-          {/* Sound/Haptic toggles */}
-          <div style={{ marginTop: '1rem', borderTop: `1px solid ${colors.accent}20`, paddingTop: '1rem' }}>
-            <ToggleRow
-              label="Sound Effects"
-              value={config.soundEnabled}
-              onChange={(v) => setConfig(prev => ({ ...prev, soundEnabled: v }))}
-              colors={colors}
-            />
-            <ToggleRow
-              label="Haptic Feedback"
-              value={config.hapticEnabled}
-              onChange={(v) => setConfig(prev => ({ ...prev, hapticEnabled: v }))}
-              colors={colors}
-            />
+          {/* Sound/Haptic toggles - inline */}
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: `1px solid ${colors.accent}20`, flexWrap: 'wrap' }}>
+            <ToggleRowCompact label="Sound" value={config.soundEnabled} onChange={(v) => setConfig(prev => ({ ...prev, soundEnabled: v }))} colors={colors} />
+            <ToggleRowCompact label="Haptic" value={config.hapticEnabled} onChange={(v) => setConfig(prev => ({ ...prev, hapticEnabled: v }))} colors={colors} />
             {state.mode !== 'stopwatch' && (
-              <ToggleRow
-                label="3-2-1 Countdown"
-                value={config.preludeEnabled}
-                onChange={(v) => setConfig(prev => ({ ...prev, preludeEnabled: v }))}
-                colors={colors}
-              />
+              <ToggleRowCompact label="3-2-1" value={config.preludeEnabled} onChange={(v) => setConfig(prev => ({ ...prev, preludeEnabled: v }))} colors={colors} />
             )}
           </div>
         </div>
@@ -965,6 +934,108 @@ function ToggleRow({
         />
       </button>
     </div>
+  );
+}
+
+// Compact config row for grid layout
+function ConfigRowCompact({
+  label,
+  value,
+  onDecrease,
+  onIncrease,
+  colors,
+}: {
+  label: string;
+  value: string;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0' }}>
+      <span style={{ color: colors.textMuted, fontSize: '0.8125rem' }}>{label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <button
+          onClick={onDecrease}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: `${colors.accent}15`,
+            border: `1px solid ${colors.accent}30`,
+            color: colors.accent,
+            fontSize: '1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          −
+        </button>
+        <span style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, minWidth: '40px', textAlign: 'center', fontFamily: 'var(--font-geist-mono)' }}>
+          {value}
+        </span>
+        <button
+          onClick={onIncrease}
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: `${colors.accent}15`,
+            border: `1px solid ${colors.accent}30`,
+            color: colors.accent,
+            fontSize: '1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Compact toggle for inline layout
+function ToggleRowCompact({
+  label,
+  value,
+  onChange,
+  colors,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (value: boolean) => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  return (
+    <button
+      onClick={() => onChange(!value)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        background: value ? `${colors.accent}20` : 'transparent',
+        border: `1px solid ${value ? colors.accent : colors.textMuted}40`,
+        borderRadius: '1rem',
+        padding: '0.375rem 0.75rem',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      }}
+    >
+      <span style={{ color: value ? colors.accent : colors.textMuted, fontSize: '0.8125rem' }}>{label}</span>
+      <div
+        style={{
+          width: '8px',
+          height: '8px',
+          borderRadius: '50%',
+          background: value ? colors.accent : colors.textMuted,
+        }}
+      />
+    </button>
   );
 }
 
