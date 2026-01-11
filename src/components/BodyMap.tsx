@@ -45,18 +45,18 @@ const frontMusclePolygons = [
     path: 'M 45,12 L 50,11 L 55,12 L 54,16 L 50,17 L 46,16 Z',
   },
 
-  // LEFT SHOULDER (Deltoid) - shifted inward by 4
+  // LEFT SHOULDER (Deltoid) - narrower
   {
     id: 'shoulders',
     name: 'Left Shoulder',
-    path: 'M 45,14 L 40,15 L 35,18 L 33,22 L 35,25 L 39,24 L 42,21 L 45,18 Z',
+    path: 'M 45,14 L 41,15 L 37,18 L 36,22 L 38,24 L 41,23 L 43,20 L 45,17 Z',
   },
 
-  // RIGHT SHOULDER (Deltoid) - shifted inward by 4
+  // RIGHT SHOULDER (Deltoid) - narrower
   {
     id: 'shoulders',
     name: 'Right Shoulder',
-    path: 'M 55,14 L 60,15 L 65,18 L 67,22 L 65,25 L 61,24 L 58,21 L 55,18 Z',
+    path: 'M 55,14 L 59,15 L 63,18 L 64,22 L 62,24 L 59,23 L 57,20 L 55,17 Z',
   },
 
   // LEFT CHEST (Pectoral)
@@ -73,32 +73,32 @@ const frontMusclePolygons = [
     path: 'M 55,17 L 59,20 L 61,24 L 60,29 L 56,30 L 50,28 L 50,18 L 54,16 Z',
   },
 
-  // LEFT BICEP - shifted inward by 5
+  // LEFT BICEP - shifted inward more aggressively
   {
     id: 'biceps',
     name: 'Left Bicep',
-    path: 'M 35,25 L 33,22 L 30,26 L 29,32 L 31,37 L 34,37 L 37,33 L 36,27 Z',
+    path: 'M 38,24 L 36,22 L 34,25 L 33,30 L 35,35 L 37,35 L 39,31 L 39,26 Z',
   },
 
-  // RIGHT BICEP - shifted inward by 5
+  // RIGHT BICEP - shifted inward more aggressively
   {
     id: 'biceps',
     name: 'Right Bicep',
-    path: 'M 65,25 L 67,22 L 70,26 L 71,32 L 69,37 L 66,37 L 63,33 L 64,27 Z',
+    path: 'M 62,24 L 64,22 L 66,25 L 67,30 L 65,35 L 63,35 L 61,31 L 61,26 Z',
   },
 
-  // LEFT FOREARM - shifted inward by 5
+  // LEFT FOREARM - shifted inward more aggressively
   {
     id: 'forearms',
     name: 'Left Forearm',
-    path: 'M 31,37 L 29,43 L 27,49 L 29,53 L 33,51 L 35,45 L 34,39 L 34,37 Z',
+    path: 'M 35,35 L 33,40 L 32,46 L 34,50 L 37,48 L 38,43 L 37,38 L 37,35 Z',
   },
 
-  // RIGHT FOREARM - shifted inward by 5
+  // RIGHT FOREARM - shifted inward more aggressively
   {
     id: 'forearms',
     name: 'Right Forearm',
-    path: 'M 69,37 L 71,43 L 73,49 L 71,53 L 67,51 L 65,45 L 66,39 L 66,37 Z',
+    path: 'M 65,35 L 67,40 L 68,46 L 66,50 L 63,48 L 62,43 L 63,38 L 63,35 Z',
   },
 
   // ABS (Core) - center column
@@ -174,32 +174,32 @@ const backMusclePolygons = [
     path: 'M 50,11 L 43,14 L 40,18 L 42,26 L 45,32 L 50,34 L 55,32 L 58,26 L 60,18 L 57,14 Z',
   },
 
-  // LEFT REAR DELT - shifted inward by 4
+  // LEFT REAR DELT - narrower
   {
     id: 'shoulders',
     name: 'Left Rear Delt',
-    path: 'M 40,16 L 35,18 L 33,22 L 35,25 L 38,25 L 40,21 Z',
+    path: 'M 42,16 L 38,18 L 36,21 L 38,24 L 40,24 L 42,20 Z',
   },
 
-  // RIGHT REAR DELT - shifted inward by 4
+  // RIGHT REAR DELT - narrower
   {
     id: 'shoulders',
     name: 'Right Rear Delt',
-    path: 'M 60,16 L 65,18 L 67,22 L 65,25 L 62,25 L 60,21 Z',
+    path: 'M 58,16 L 62,18 L 64,21 L 62,24 L 60,24 L 58,20 Z',
   },
 
-  // LEFT LAT - shifted inward
+  // LEFT LAT - narrower
   {
     id: 'lats',
     name: 'Left Lat',
-    path: 'M 40,21 L 37,23 L 35,29 L 37,37 L 40,43 L 45,44 L 45,37 L 43,29 L 41,23 Z',
+    path: 'M 42,20 L 39,22 L 38,28 L 39,36 L 42,42 L 46,43 L 46,36 L 44,28 L 43,22 Z',
   },
 
-  // RIGHT LAT - shifted inward
+  // RIGHT LAT - narrower
   {
     id: 'lats',
     name: 'Right Lat',
-    path: 'M 60,21 L 63,23 L 65,29 L 63,37 L 60,43 L 55,44 L 55,37 L 57,29 L 59,23 Z',
+    path: 'M 58,20 L 61,22 L 62,28 L 61,36 L 58,42 L 54,43 L 54,36 L 56,28 L 57,22 Z',
   },
 
   // UPPER BACK (Rhomboids)
@@ -216,32 +216,32 @@ const backMusclePolygons = [
     path: 'M 45,37 L 50,39 L 55,37 L 55,44 L 52,47 L 48,47 L 45,44 Z',
   },
 
-  // LEFT TRICEP - shifted inward by 5
+  // LEFT TRICEP - narrower
   {
     id: 'triceps',
     name: 'Left Tricep',
-    path: 'M 35,25 L 32,23 L 30,27 L 30,33 L 32,38 L 35,38 L 37,34 L 36,28 Z',
+    path: 'M 38,24 L 36,22 L 34,26 L 34,31 L 36,36 L 38,36 L 40,32 L 39,27 Z',
   },
 
-  // RIGHT TRICEP - shifted inward by 5
+  // RIGHT TRICEP - narrower
   {
     id: 'triceps',
     name: 'Right Tricep',
-    path: 'M 65,25 L 68,23 L 70,27 L 70,33 L 68,38 L 65,38 L 63,34 L 64,28 Z',
+    path: 'M 62,24 L 64,22 L 66,26 L 66,31 L 64,36 L 62,36 L 60,32 L 61,27 Z',
   },
 
-  // LEFT FOREARM (back) - shifted inward by 5
+  // LEFT FOREARM (back) - narrower
   {
     id: 'forearms',
     name: 'Left Forearm',
-    path: 'M 32,38 L 29,44 L 27,50 L 30,53 L 34,51 L 35,45 L 35,40 L 35,38 Z',
+    path: 'M 36,36 L 34,41 L 33,47 L 35,50 L 38,48 L 39,43 L 38,38 L 38,36 Z',
   },
 
-  // RIGHT FOREARM (back) - shifted inward by 5
+  // RIGHT FOREARM (back) - narrower
   {
     id: 'forearms',
     name: 'Right Forearm',
-    path: 'M 68,38 L 71,44 L 73,50 L 70,53 L 66,51 L 65,45 L 65,40 L 65,38 Z',
+    path: 'M 64,36 L 66,41 L 67,47 L 65,50 L 62,48 L 61,43 L 62,38 L 62,36 Z',
   },
 
   // LEFT GLUTE - shifted inward
