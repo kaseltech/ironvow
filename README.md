@@ -18,6 +18,9 @@ The app is fully functional with AI workout generation, GPS run tracking, compre
   - Preset splits: Push/Pull/Legs, Upper/Lower, Full Body
   - Per-day muscle group customization
   - AI auto-balances based on training frequency
+  - Review modal shows all workouts before saving
+  - **Today's Workout card** on main page when plan is active
+  - **Plan management** in Profile to activate/delete saved plans
 
 ### Workout Tracking
 - **FlexTimer** - Adjustable rest timer with swipe controls

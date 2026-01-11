@@ -18,11 +18,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-day muscle group customization
 - AI auto-balances muscle splits based on training frequency:
   - 2-3 days: Full body workouts
-  - 4 days: Upper/Lower split  
+  - 4 days: Upper/Lower split
   - 5-6 days: Push/Pull/Legs or custom split
 - Database tables: `workout_plans`, `workout_plan_days`
 - `useWorkoutPlans` hook for plan CRUD operations
 - Edge function support for multi-day workout generation
+- **WeeklyPlanReview component** - Full-screen modal to review generated plans:
+  - Expandable day cards showing all exercises
+  - Today's workout highlighted
+  - Save & Activate or Regenerate options
+  - Start any day's workout directly after saving
+- **Today's Workout card** - Appears on main page when active plan has workout scheduled
+- **Plan management in Profile** - Saved tab shows all plans with:
+  - Active plan badge
+  - Day schedule preview
+  - Activate/Delete controls
 
 #### Enhanced Workout History
 - Expandable workout cards - single tap expands to show exercises inline
@@ -54,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Static export compatibility for workout history detail page
 - Build errors related to dynamic routes with `output: 'export'`
+- Weekly plan generation now shows error if location not selected (was silently failing)
 
 ---
 
