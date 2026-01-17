@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Logo } from '@/components/Logo';
 import { Header } from '@/components/Header';
 import { AuthGuard } from '@/components/AuthGuard';
 import { Onboarding } from '@/components/Onboarding';
+import { PrimaryContext } from '@/components/PrimaryContext';
+import { MuscleSelector } from '@/components/MuscleSelector';
+import { TrainingStyleSelector } from '@/components/TrainingStyleSelector';
+import { AdvancedOptions } from '@/components/AdvancedOptions';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
@@ -19,46 +22,25 @@ import { GymManager } from '@/components/GymManager';
 import { FlexTimerModal } from '@/components/FlexTimer';
 import type { GymProfile } from '@/lib/supabase/types';
 
-const muscleGroups = [
-  // Upper body
-  { id: 'chest', name: 'Chest', category: 'upper' },
-  { id: 'back', name: 'Back', category: 'upper' },
-  { id: 'shoulders', name: 'Shoulders', category: 'upper' },
-  { id: 'biceps', name: 'Biceps', category: 'upper' },
-  { id: 'triceps', name: 'Triceps', category: 'upper' },
-  { id: 'forearms', name: 'Forearms', category: 'upper' },
-  { id: 'traps', name: 'Traps', category: 'upper' },
-  // Lower body
-  { id: 'quads', name: 'Quads', category: 'lower' },
-  { id: 'hamstrings', name: 'Hamstrings', category: 'lower' },
-  { id: 'glutes', name: 'Glutes', category: 'lower' },
-  { id: 'calves', name: 'Calves', category: 'lower' },
-  // Core
-  { id: 'abs', name: 'Abs', category: 'core' },
-  { id: 'obliques', name: 'Obliques', category: 'core' },
-  // Goals / Modalities (non-muscle targets)
-  { id: 'flexibility', name: 'Flexibility', category: 'goals' },
-  { id: 'endurance', name: 'Endurance', category: 'goals' },
-  { id: 'balance', name: 'Balance', category: 'goals' },
-];
+// Location icons for workout display
+const locationIcons: Record<string, string> = {
+  gym: '🏋️',
+  home: '🏠',
+  outdoor: '🌳',
+};
 
-const locations = [
-  { id: 'gym', name: 'Gym', icon: '🏋️' },
-  { id: 'home', name: 'Home', icon: '🏠' },
-  { id: 'outdoor', name: 'Outdoor', icon: '🌳' },
-];
-
-const workoutStyles: { id: WorkoutStyle; name: string; description: string }[] = [
-  { id: 'traditional', name: 'Traditional', description: '3-4 sets × 8-12 reps' },
-  { id: 'strength', name: 'Strength (5×5)', description: '5 sets × 5 reps, heavy' },
-  { id: 'hiit', name: 'HIIT', description: 'High intensity, short rest' },
-  { id: 'circuit', name: 'Circuit', description: 'Back-to-back, minimal rest' },
-  { id: 'wod', name: 'WOD', description: 'CrossFit-style AMRAP/EMOM' },
-  { id: 'cardio', name: 'Cardio', description: 'Running, intervals, conditioning' },
-  { id: 'yoga', name: 'Yoga', description: 'Poses, flows & breathwork' },
-  { id: 'mobility', name: 'Mobility', description: 'Stretching & recovery' },
-  { id: 'rehab', name: 'Rehab/Prehab', description: 'Injury prevention & recovery' },
-];
+// Workout style names for display
+const workoutStyleNames: Record<WorkoutStyle, string> = {
+  traditional: 'Traditional',
+  strength: 'Strength (5×5)',
+  hiit: 'HIIT',
+  circuit: 'Circuit',
+  wod: 'WOD',
+  cardio: 'Cardio',
+  yoga: 'Yoga',
+  mobility: 'Mobility',
+  rehab: 'Rehab/Prehab',
+};
 
 export default function Home() {
   const router = useRouter();
@@ -437,28 +419,29 @@ export default function Home() {
     <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
       <Header onSettingsClick={() => setShowSettings(true)} onTimerClick={() => setShowTimer(true)} />
 
-      <main className="p-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+      <main className="p-4" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
         {!showWorkout ? (
           <>
-            {/* Hero Section */}
-            <div className="text-center mb-6 animate-fade-in">
-              <h1
-                style={{
-                  fontFamily: 'var(--font-libre-baskerville)',
-                  fontSize: '1.75rem',
-                  color: colors.text,
-                  marginBottom: '0.5rem',
-                }}
-              >
-                Ready to train?
-              </h1>
-              <p style={{ color: colors.textMuted, fontSize: '0.9rem' }}>
-                Let's build your personalized workout
-              </p>
-            </div>
+            {/* Primary Context - Sticky Header */}
+            <PrimaryContext
+              selectedLocation={selectedLocation}
+              setSelectedLocation={setSelectedLocation}
+              selectedGym={selectedGym}
+              setSelectedGym={setSelectedGym}
+              gymProfiles={gymProfiles}
+              getDefaultProfile={getDefaultProfile}
+              duration={duration}
+              setDuration={setDuration}
+              weeklyMode={weeklyMode}
+              setWeeklyMode={setWeeklyMode}
+              onManageGyms={() => setShowGymManager(true)}
+            />
+
+            {/* Spacer for sticky header */}
+            <div style={{ height: '1rem' }} />
 
             {/* Quick Actions */}
-            <div className="flex gap-3 mb-6 animate-fade-in" style={{ animationDelay: '0.05s' }}>
+            <div className="flex gap-3 mb-4 animate-fade-in">
               <button
                 onClick={() => router.push('/run')}
                 style={{
@@ -466,15 +449,15 @@ export default function Home() {
                   background: colors.cardBg,
                   border: `1px solid ${colors.borderSubtle}`,
                   borderRadius: '0.75rem',
-                  padding: '0.875rem',
+                  padding: '0.75rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.5rem',
                 }}
               >
-                <span style={{ fontSize: '1.25rem' }}>🏃</span>
-                <span style={{ color: colors.text, fontWeight: 600, fontSize: '0.875rem' }}>Go for a Run</span>
+                <span style={{ fontSize: '1.125rem' }}>🏃</span>
+                <span style={{ color: colors.text, fontWeight: 600, fontSize: '0.8125rem' }}>Go for a Run</span>
               </button>
             </div>
 
@@ -483,30 +466,29 @@ export default function Home() {
               <div
                 className="card mb-4 animate-fade-in"
                 style={{
-                  background: `linear-gradient(135deg, ${colors.cardBg} 0%, rgba(201, 167, 90, 0.15) 100%)`,
+                  background: colors.cardBg,
                   border: `2px solid ${colors.accent}`,
-                  animationDelay: '0.05s',
                 }}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <div style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ color: colors.accent, fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Today's Workout
                     </div>
-                    <div style={{ color: colors.text, fontSize: '1.125rem', fontWeight: 600, marginTop: '0.25rem' }}>
+                    <div style={{ color: colors.text, fontSize: '1rem', fontWeight: 600, marginTop: '0.25rem' }}>
                       {getTodaysWorkout()?.name || `${DAY_NAMES_FULL[new Date().getDay()]} Training`}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                    <div style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>
                       from {activePlan.name}
                     </div>
-                    <div style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 500 }}>
+                    <div style={{ color: colors.accent, fontSize: '0.8125rem', fontWeight: 500 }}>
                       ~{getTodaysWorkout()?.estimated_duration || 45} min
                     </div>
                   </div>
                 </div>
-                <div style={{ color: colors.textMuted, fontSize: '0.8125rem', marginBottom: '0.75rem' }}>
+                <div style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.625rem' }}>
                   {getTodaysWorkout()?.target_muscles?.slice(0, 4).join(', ')}
                   {(getTodaysWorkout()?.target_muscles?.length || 0) > 4 && ` +${(getTodaysWorkout()?.target_muscles?.length || 0) - 4}`}
                 </div>
@@ -519,168 +501,10 @@ export default function Home() {
                     }
                   }}
                   className="btn-primary w-full"
-                  style={{ fontSize: '1rem' }}
+                  style={{ fontSize: '0.9375rem' }}
                 >
                   Start Today's Workout
                 </button>
-              </div>
-            )}
-
-            {/* Single/Weekly Toggle */}
-            <div className="flex gap-2 mb-4 animate-fade-in" style={{ animationDelay: '0.075s' }}>
-              <button
-                onClick={() => setWeeklyMode(false)}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '0.75rem',
-                  background: !weeklyMode ? colors.accent : colors.cardBg,
-                  border: !weeklyMode ? `1px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
-                  color: !weeklyMode ? colors.bg : colors.text,
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                Single Workout
-              </button>
-              <button
-                onClick={() => setWeeklyMode(true)}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '0.75rem',
-                  background: weeklyMode ? colors.accent : colors.cardBg,
-                  border: weeklyMode ? `1px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
-                  color: weeklyMode ? colors.bg : colors.text,
-                  fontWeight: 600,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                Weekly Plan
-              </button>
-            </div>
-
-            {/* Location Selector */}
-            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.1s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
-              <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Where are you?
-              </h2>
-              <div className="grid grid-cols-3 gap-3">
-                {locations.map(loc => (
-                  <button
-                    key={loc.id}
-                    onClick={() => {
-                      setSelectedLocation(loc.id);
-                      // Auto-select default gym when gym is selected
-                      if (loc.id === 'gym') {
-                        setSelectedGym(getDefaultProfile() || null);
-                      } else {
-                        setSelectedGym(null);
-                      }
-                    }}
-                    style={{
-                      background: selectedLocation === loc.id ? colors.accentMuted : colors.inputBg,
-                      border: selectedLocation === loc.id ? `2px solid ${colors.accent}` : `2px solid ${colors.borderSubtle}`,
-                      borderRadius: '0.75rem',
-                      padding: '1rem',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>{loc.icon}</div>
-                    <div style={{ color: colors.text, fontSize: '0.875rem' }}>{loc.name}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Gym Selector - Only show when gym location selected */}
-            {selectedLocation === 'gym' && (
-              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.15s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Which gym?
-                  </h2>
-                  <button
-                    onClick={() => setShowGymManager(true)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: colors.accent,
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                    }}
-                  >
-                    Manage Gyms
-                  </button>
-                </div>
-
-                {gymProfiles.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {gymProfiles.map(gym => (
-                      <button
-                        key={gym.id}
-                        onClick={() => setSelectedGym(gym)}
-                        style={{
-                          background: selectedGym?.id === gym.id ? colors.accentMuted : colors.inputBg,
-                          border: selectedGym?.id === gym.id ? `2px solid ${colors.accent}` : `2px solid ${colors.borderSubtle}`,
-                          borderRadius: '0.75rem',
-                          padding: '0.75rem 1rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          transition: 'all 0.2s ease',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <div style={{ textAlign: 'left' }}>
-                          <div style={{ color: colors.text, fontSize: '0.9rem', fontWeight: 500 }}>
-                            {gym.name}
-                            {gym.is_default && (
-                              <span style={{
-                                marginLeft: '0.5rem',
-                                fontSize: '0.625rem',
-                                background: colors.accent,
-                                color: colors.bg,
-                                padding: '0.125rem 0.375rem',
-                                borderRadius: '0.25rem',
-                                fontWeight: 600,
-                              }}>
-                                DEFAULT
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ color: colors.textMuted, fontSize: '0.7rem' }}>
-                            {(gym.equipment_ids?.length || 0) + (gym.custom_equipment?.length || 0)} equipment items
-                          </div>
-                        </div>
-                        {selectedGym?.id === gym.id && (
-                          <span style={{ color: colors.accent, fontSize: '1.25rem' }}>✓</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowGymManager(true)}
-                    style={{
-                      width: '100%',
-                      padding: '1.5rem',
-                      background: colors.inputBg,
-                      border: `2px dashed ${colors.border}`,
-                      borderRadius: '0.75rem',
-                      color: colors.accent,
-                      fontSize: '0.875rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    + Add Your First Gym
-                  </button>
-                )}
               </div>
             )}
 
@@ -693,7 +517,7 @@ export default function Home() {
                   border: '1px solid #F87171',
                   borderRadius: '0.5rem',
                   color: '#F87171',
-                  fontSize: '0.875rem',
+                  fontSize: '0.8125rem',
                 }}
               >
                 {error}
@@ -709,332 +533,40 @@ export default function Home() {
               />
             ) : (
               <>
-            {/* Freeform Mode Toggle */}
-            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.2s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: freeformMode ? '0.75rem' : 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1rem' }}>✨</span>
-                  <div>
-                    <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                      Freeform Mode
-                    </h2>
-                    <p style={{ color: colors.textMuted, fontSize: '0.7rem', margin: 0 }}>
-                      Describe your ideal workout
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setFreeformMode(!freeformMode)}
-                  style={{
-                    width: '48px',
-                    height: '28px',
-                    borderRadius: '14px',
-                    background: freeformMode ? colors.accent : 'rgba(245, 241, 234, 0.2)',
-                    border: 'none',
-                    position: 'relative',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '2px',
-                      left: freeformMode ? '22px' : '2px',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '12px',
-                      background: colors.text,
-                      transition: 'left 0.2s ease',
-                    }}
+                {/* Muscle Selection - Progressive Disclosure */}
+                {!freeformMode && (
+                  <MuscleSelector
+                    selectedMuscles={selectedMuscles}
+                    setSelectedMuscles={setSelectedMuscles}
+                    selectedWorkoutStyle={selectedWorkoutStyle}
+                    setSelectedWorkoutStyle={setSelectedWorkoutStyle}
                   />
-                </button>
-              </div>
+                )}
 
-              {freeformMode && (
-                <div className="animate-fade-in">
-                  <textarea
-                    value={freeformPrompt}
-                    onChange={(e) => setFreeformPrompt(e.target.value)}
-                    placeholder="e.g., 'Army-style PT with lots of pushups and running' or 'Quick upper body pump before work' or 'Something brutal - I need to suffer today'"
-                    style={{
-                      width: '100%',
-                      minHeight: '80px',
-                      padding: '0.75rem',
-                      borderRadius: '0.75rem',
-                      background: colors.inputBg,
-                      border: `1px solid ${colors.border}`,
-                      color: colors.text,
-                      fontSize: '0.875rem',
-                      resize: 'vertical',
-                      fontFamily: 'inherit',
-                    }}
+                {/* Training Style - De-emphasized, pre-selected */}
+                {!freeformMode && selectedWorkoutStyle !== 'cardio' && (
+                  <TrainingStyleSelector
+                    selectedWorkoutStyle={selectedWorkoutStyle}
+                    setSelectedWorkoutStyle={setSelectedWorkoutStyle}
                   />
-                  <p style={{ color: colors.textMuted, fontSize: '0.7rem', marginTop: '0.5rem' }}>
-                    Your request will be tailored to your equipment and any injuries.
-                  </p>
-                </div>
-              )}
-            </div>
+                )}
 
-            {/* Duration Selector */}
-            <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.25s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
-              <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                How long do you have?
-              </h2>
-              <div className="grid grid-cols-6 gap-2">
-                {[15, 30, 45, 60, 75, 90].map(mins => (
-                  <button
-                    key={mins}
-                    onClick={() => setDuration(mins)}
-                    style={{
-                      padding: '0.75rem 0.25rem',
-                      borderRadius: '0.75rem',
-                      border: duration === mins ? `2px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
-                      background: duration === mins ? colors.accentMuted : 'transparent',
-                      color: duration === mins ? colors.accent : colors.text,
-                      fontSize: '0.9375rem',
-                      fontWeight: duration === mins ? 600 : 400,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {mins}
-                  </button>
-                ))}
-              </div>
-              <div className="flex justify-between mt-2" style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
-                <span>Quick</span>
-                <span>minutes</span>
-                <span>Full session</span>
-              </div>
-            </div>
-
-            {/* Muscle Group Selector - Only show in structured mode */}
-            {!freeformMode && (
-              <div className="card mb-4 animate-fade-in" style={{ animationDelay: '0.3s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
-                <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  What do you want to hit?
-                </h2>
-
-                {/* Upper Body */}
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ color: colors.textMuted, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
-                    Upper Body
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {muscleGroups.filter(m => m.category === 'upper').map(muscle => (
-                      <button
-                        key={muscle.id}
-                        onClick={() => toggleMuscle(muscle.id)}
-                        style={{
-                          background: selectedMuscles.includes(muscle.id) ? colors.accentMuted : colors.inputBg,
-                          border: selectedMuscles.includes(muscle.id) ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
-                          borderRadius: '999px',
-                          padding: '0.375rem 0.75rem',
-                          transition: 'all 0.2s ease',
-                          color: selectedMuscles.includes(muscle.id) ? colors.accent : colors.text,
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {muscle.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Lower Body */}
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ color: colors.textMuted, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
-                    Lower Body
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {muscleGroups.filter(m => m.category === 'lower').map(muscle => (
-                      <button
-                        key={muscle.id}
-                        onClick={() => toggleMuscle(muscle.id)}
-                        style={{
-                          background: selectedMuscles.includes(muscle.id) ? colors.accentMuted : colors.inputBg,
-                          border: selectedMuscles.includes(muscle.id) ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
-                          borderRadius: '999px',
-                          padding: '0.375rem 0.75rem',
-                          transition: 'all 0.2s ease',
-                          color: selectedMuscles.includes(muscle.id) ? colors.accent : colors.text,
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {muscle.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Core */}
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <div style={{ color: colors.textMuted, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
-                    Core
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {muscleGroups.filter(m => m.category === 'core').map(muscle => (
-                      <button
-                        key={muscle.id}
-                        onClick={() => toggleMuscle(muscle.id)}
-                        style={{
-                          background: selectedMuscles.includes(muscle.id) ? colors.accentMuted : colors.inputBg,
-                          border: selectedMuscles.includes(muscle.id) ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
-                          borderRadius: '999px',
-                          padding: '0.375rem 0.75rem',
-                          transition: 'all 0.2s ease',
-                          color: selectedMuscles.includes(muscle.id) ? colors.accent : colors.text,
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {muscle.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Goals / Modalities */}
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <div style={{ color: colors.textMuted, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.375rem' }}>
-                    Goals
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {muscleGroups.filter(m => m.category === 'goals').map(goal => (
-                      <button
-                        key={goal.id}
-                        onClick={() => toggleMuscle(goal.id)}
-                        style={{
-                          background: selectedMuscles.includes(goal.id) ? colors.accentMuted : colors.inputBg,
-                          border: selectedMuscles.includes(goal.id) ? `1px solid ${colors.accent}` : `1px solid ${colors.border}`,
-                          borderRadius: '999px',
-                          padding: '0.375rem 0.75rem',
-                          transition: 'all 0.2s ease',
-                          color: selectedMuscles.includes(goal.id) ? colors.accent : colors.text,
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {goal.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Quick Select Buttons */}
-                <div className="flex flex-wrap gap-2" style={{ marginTop: '0.75rem' }}>
-                  <button
-                    onClick={() => setSelectedMuscles(['chest', 'shoulders', 'triceps'])}
-                    style={{
-                      background: colors.inputBg,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: '0.5rem',
-                      padding: '0.375rem 0.75rem',
-                      color: colors.accent,
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Push
-                  </button>
-                  <button
-                    onClick={() => setSelectedMuscles(['back', 'biceps', 'traps'])}
-                    style={{
-                      background: colors.inputBg,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: '0.5rem',
-                      padding: '0.375rem 0.75rem',
-                      color: colors.accent,
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Pull
-                  </button>
-                  <button
-                    onClick={() => setSelectedMuscles(['quads', 'hamstrings', 'glutes', 'calves'])}
-                    style={{
-                      background: colors.inputBg,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: '0.5rem',
-                      padding: '0.375rem 0.75rem',
-                      color: colors.accent,
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Legs
-                  </button>
-                  <button
-                    onClick={() => setSelectedMuscles(muscleGroups.map(m => m.id))}
-                    style={{
-                      background: colors.inputBg,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: '0.5rem',
-                      padding: '0.375rem 0.75rem',
-                      color: colors.accent,
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Full Body
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Workout Style Selector - Only show in structured mode */}
-            {!freeformMode && (
-              <div className="card mb-6 animate-fade-in" style={{ animationDelay: '0.35s', background: colors.cardBg, border: `1px solid ${colors.borderSubtle}` }}>
-                <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Workout Style
-                </h2>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {workoutStyles.map(style => (
-                    <button
-                      key={style.id}
-                      onClick={() => setSelectedWorkoutStyle(style.id)}
-                      className="p-2 rounded-lg transition-all duration-200 text-left"
-                      style={{
-                        background: selectedWorkoutStyle === style.id
-                          ? colors.accentMuted
-                          : colors.inputBg,
-                        border: selectedWorkoutStyle === style.id
-                          ? `1px solid ${colors.accent}`
-                          : `1px solid ${colors.borderSubtle}`,
-                      }}
-                    >
-                      <div style={{ color: selectedWorkoutStyle === style.id ? colors.accent : colors.text, fontSize: '0.875rem', fontWeight: 500 }}>
-                        {style.name}
-                      </div>
-                      <div style={{ color: colors.textMuted, fontSize: '0.7rem', marginTop: '2px' }}>
-                        {style.description}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Generate Button */}
-            <button
-              onClick={handleGenerate}
-              disabled={!canGenerate || generating}
-              className="btn-primary w-full animate-fade-in"
-              style={{
-                animationDelay: '0.4s',
-                opacity: canGenerate ? 1 : 0.5,
-                cursor: canGenerate ? 'pointer' : 'not-allowed',
-              }}
-            >
-              {generating ? (
-                <span className="animate-pulse">Generating your workout...</span>
-              ) : (
-                'Generate Workout'
-              )}
-            </button>
+                {/* Advanced Options - Collapsed by default */}
+                <AdvancedOptions
+                  freeformMode={freeformMode}
+                  setFreeformMode={setFreeformMode}
+                  freeformPrompt={freeformPrompt}
+                  setFreeformPrompt={setFreeformPrompt}
+                  selectedWorkoutStyle={selectedWorkoutStyle}
+                  setSelectedWorkoutStyle={setSelectedWorkoutStyle}
+                  selectedMuscles={selectedMuscles}
+                  toggleMuscle={toggleMuscle}
+                />
               </>
             )}
+
+            {/* Spacer for sticky generate button */}
+            <div style={{ height: '1rem' }} />
           </>
         ) : generatedWorkout || generatedPlan ? (
           /* Workout Display */
@@ -1144,7 +676,7 @@ export default function Home() {
                       textTransform: 'capitalize',
                     }}
                   >
-                    {locations.find(l => l.id === selectedLocation)?.icon} {selectedLocation}
+                    {locationIcons[selectedLocation]} {selectedLocation}
                   </span>
                 )}
                 {/* Style Tag */}
@@ -1160,7 +692,7 @@ export default function Home() {
                       textTransform: 'capitalize',
                     }}
                   >
-                    {workoutStyles.find(s => s.id === generatedWorkout.workoutStyle)?.name || generatedWorkout.workoutStyle}
+                    {workoutStyleNames[generatedWorkout.workoutStyle] || generatedWorkout.workoutStyle}
                   </span>
                 )}
               </div>
@@ -1360,22 +892,53 @@ export default function Home() {
         ) : null}
       </main>
 
-      {/* Bottom Nav Mock */}
+      {/* Sticky Generate Button - Only show on single workout mode when not showing workout */}
+      {!showWorkout && !weeklyMode && (
+        <div
+          className="fixed left-0 right-0"
+          style={{
+            bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
+            padding: '0 1rem 0.75rem',
+            background: `linear-gradient(180deg, transparent 0%, ${colors.bg} 30%)`,
+            zIndex: 40,
+          }}
+        >
+          <button
+            onClick={handleGenerate}
+            disabled={!canGenerate || generating}
+            className="btn-primary w-full"
+            style={{
+              opacity: canGenerate ? 1 : 0.5,
+              cursor: canGenerate ? 'pointer' : 'not-allowed',
+              fontSize: '1rem',
+              padding: '1rem',
+              boxShadow: '0 -4px 12px rgba(0,0,0,0.1)',
+            }}
+          >
+            {generating ? (
+              <span className="animate-pulse">Generating your workout...</span>
+            ) : (
+              'Generate Workout'
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Bottom Nav - Polished (Phase 7) */}
       <nav
         className="fixed bottom-0 left-0 right-0"
         style={{
-          background: `linear-gradient(180deg, transparent 0%, ${colors.bg} 20%)`,
-          paddingTop: '1.5rem',
+          background: colors.cardBg,
+          borderTop: `1px solid ${colors.borderSubtle}`,
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          zIndex: 50,
         }}
       >
         <div
           style={{
-            background: colors.cardBg,
-            borderTop: `1px solid ${colors.borderSubtle}`,
             display: 'flex',
             justifyContent: 'space-around',
-            padding: '0.75rem 0',
+            padding: '0.625rem 0 0.5rem',
           }}
         >
           {[
@@ -1393,18 +956,41 @@ export default function Home() {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '0.25rem',
+                gap: '0.1875rem',
                 cursor: 'pointer',
+                padding: '0.25rem 1rem',
+                borderRadius: '0.5rem',
+                position: 'relative',
               }}
             >
-              <span style={{ fontSize: '1.25rem', opacity: item.active ? 1 : 0.5 }}>
+              {/* Active indicator bar */}
+              {item.active && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-0.625rem',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '1.5rem',
+                    height: '3px',
+                    background: colors.accent,
+                    borderRadius: '0 0 2px 2px',
+                  }}
+                />
+              )}
+              <span style={{
+                fontSize: '1.5rem',
+                opacity: item.active ? 1 : 0.6,
+                filter: item.active ? 'none' : 'grayscale(30%)',
+              }}>
                 {item.icon}
               </span>
               <span
                 style={{
-                  fontSize: '0.625rem',
+                  fontSize: '0.6875rem',
                   color: item.active ? colors.accent : colors.textMuted,
                   fontWeight: item.active ? 600 : 400,
+                  letterSpacing: item.active ? '0.01em' : 0,
                 }}
               >
                 {item.label}
