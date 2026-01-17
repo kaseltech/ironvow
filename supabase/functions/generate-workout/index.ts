@@ -516,7 +516,9 @@ serve(async (req) => {
     const allEquipment = [...(equipment || []), ...(customEquipment || [])];
 
     // Handle swap request - return alternatives for a specific exercise
-    if (swapExerciseId && swapTargetMuscles) {
+    // Note: Check body.swapExerciseId !== undefined (not swapExerciseId) because
+    // unmatched AI exercises have empty string IDs, which are falsy but valid swap requests
+    if (body.swapExerciseId !== undefined && swapTargetMuscles) {
       return await handleSwapRequest(body, supabase, allEquipment, swapTargetMuscles);
     }
 
@@ -1701,7 +1703,7 @@ async function handleSwapRequest(
   // Common CrossFit/WOD equipment that should always be allowed for WOD style
   const wodEquipment = ['kettlebell', 'barbell', 'dumbbell', 'pull-up bar', 'box', 'medicine ball', 'jump rope', 'rings', 'wall ball'];
 
-  console.log(`Swap request: style=${workoutStyle}, targetMuscles=${swapTargetMuscles?.join(',')}, exerciseId=${swapExerciseId}`);
+  console.log(`Swap request: style=${workoutStyle}, targetMuscles=${swapTargetMuscles?.join(',')}, exerciseId=${swapExerciseId || '(empty - unmatched AI exercise)'}`);
 
   // Filter to exercises that target the same muscles
   const alternatives = exercises.filter((ex: any) => {
