@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
 import { useWorkoutPlans, DAY_NAMES_FULL } from '@/hooks/useWorkoutPlans';
-import { generateWorkout, generateWorkoutLocal, getSwapAlternatives, generateWeeklyPlan, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan } from '@/lib/generateWorkout';
+import { generateWorkout, getSwapAlternatives, generateWeeklyPlan, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan } from '@/lib/generateWorkout';
 import { WeeklyPlanner } from '@/components/WeeklyPlanner';
 import { WeeklyPlanReview } from '@/components/WeeklyPlanReview';
 import { ExerciseDetailModal } from '@/components/ExerciseDetailModal';
@@ -152,27 +152,15 @@ export default function Home() {
       });
       console.log('🏋️ Workout Request:', JSON.stringify(workoutRequest, null, 2));
 
-      let workout: GeneratedWorkout;
-      let usedAI = false;
-      try {
-        console.log('[Page] Attempting AI generation...');
-        workout = await generateWorkout(workoutRequest);
-        usedAI = true;
-        console.log('[Page] AI generation SUCCESS');
-      } catch (edgeFnError) {
-        console.error('[Page] !!! EDGE FUNCTION FAILED - FALLING BACK TO LOCAL !!!');
-        console.error('[Page] Error was:', edgeFnError);
-        console.error('[Page] Error message:', (edgeFnError as Error)?.message);
-        console.error('[Page] Error stack:', (edgeFnError as Error)?.stack);
-        workout = await generateWorkoutLocal(workoutRequest);
-        console.log('[Page] Local generation completed');
-      }
+      // Call edge function - NO FALLBACK. If it fails, show error.
+      console.log('[Page] Calling edge function...');
+      const workout = await generateWorkout(workoutRequest);
+      console.log('[Page] Workout generated successfully');
 
       // Update debug info with response
       setDebugInfo(prev => ({
         ...prev,
         response: workout,
-        usedAI,
       }));
 
       setGeneratedWorkout(workout);
@@ -304,12 +292,8 @@ export default function Home() {
 
       console.log('🔄 Regenerating with exclusions:', allExcludeIds.length, 'exercises');
 
-      let workout: GeneratedWorkout;
-      try {
-        workout = await generateWorkout(regenerateRequest);
-      } catch {
-        workout = await generateWorkoutLocal(regenerateRequest);
-      }
+      // NO FALLBACK - if edge function fails, show error
+      const workout = await generateWorkout(regenerateRequest);
 
       setGeneratedWorkout(workout);
 
