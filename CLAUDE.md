@@ -55,8 +55,8 @@ IronVow is a fitness app that uses AI (Claude 3 Haiku) to generate personalized 
 # Build and deploy to iOS
 npm run build && npx cap sync && npx cap open ios
 
-# Deploy edge function
-/opt/homebrew/bin/supabase functions deploy generate-workout --project-ref kbqrgjogyonwhhxhpodf
+# Deploy edge function (MUST use --no-verify-jwt flag!)
+/opt/homebrew/bin/supabase functions deploy generate-workout --no-verify-jwt --project-ref kbqrgjogyonwhhxhpodf
 
 # View edge function logs
 /opt/homebrew/bin/supabase functions logs generate-workout --project-ref kbqrgjogyonwhhxhpodf
@@ -84,10 +84,42 @@ Fixed to use the actual parameter names:
 - Added CrossFit exercise ban list for traditional workouts
 - Enhanced home workout prompt to be explicit about bodyweight-only when no equipment
 
-### Fallback Removal
-- Removed 140+ line silent fallback that generated placeholder workouts
-- Now throws error with clear message when no valid exercises found
-- User sees: "Failed to generate [style] workout: No valid exercises found for [muscles]. Please try different settings."
+### Fallback Removal (CRITICAL - January 2025)
+- **REMOVED ALL client-side fallback/local workout generation**
+- Previously, when edge function failed, app silently fell back to deterministic local generation
+- This caused "same workout every time" bugs and garbage workouts
+- Now if edge function fails, user sees actual error message
+- Files cleaned: Deleted `generateWorkoutLocal()`, `getFallbackWorkout()`, and all helper functions (~350 lines)
+- **Principle: Errors are better than garbage. Show failures, don't hide them.**
+
+### Edge Function 401 Unauthorized Bug (CRITICAL - January 2025)
+**Symptom**: "Edge Function returned a non-2xx status code" with 401 Unauthorized
+
+**Root Cause**:
+- Supabase Edge Functions verify JWT tokens by default at the gateway level
+- When user's session expires or token is invalid, request is rejected with 401 BEFORE reaching function code
+- The edge function itself was working fine (curl tests passed), but client requests failed
+
+**Why it was confusing**:
+- Direct curl requests with anon key worked perfectly
+- Error message didn't clearly indicate auth issue
+- Function logs showed nothing (request never reached the function)
+
+**Fix**: Deploy edge function with `--no-verify-jwt` flag:
+```bash
+/opt/homebrew/bin/supabase functions deploy generate-workout --no-verify-jwt --project-ref kbqrgjogyonwhhxhpodf
+```
+
+**Why this is safe**:
+- The function uses SERVICE_ROLE_KEY internally for database access
+- User authentication is handled by the app, not the edge function gateway
+- The anon key is still required to call the function (not fully public)
+
+**Config**: Also added to `supabase/config.toml`:
+```toml
+[functions.generate-workout]
+verify_jwt = false
+```
 
 ## Pending Features (from plan file)
 
@@ -112,10 +144,12 @@ See `/Users/charleskasel/.claude/plans/purrfect-petting-fog.md` for full plan de
 ## Important Notes
 
 1. **Static Export**: Next.js is configured for static export (`output: 'export'`), no server-side rendering
-2. **No Fallbacks**: Edge function now throws errors instead of generating fallback workouts
+2. **No Fallbacks**: Edge function now throws errors instead of generating fallback workouts. NO CLIENT-SIDE FALLBACK.
 3. **Equipment Filtering**: Home workouts with no equipment should ONLY get bodyweight exercises
 4. **Rehab Workouts**: Should NEVER include heavy compound lifts (bench, squat, deadlift)
 5. **Traditional Workouts**: Should NOT include CrossFit exercises (muscle-ups, kipping, wall balls, etc.)
+6. **Edge Function Deployment**: ALWAYS deploy with `--no-verify-jwt` flag or users with expired sessions get 401 errors
+7. **Debug Edge Function Issues**: If getting 401/non-2xx errors, check if JWT verification is enabled. Use curl to test function directly.
 
 ## GitHub Repository
 
