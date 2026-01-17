@@ -155,11 +155,17 @@ export default function Home() {
       let workout: GeneratedWorkout;
       let usedAI = false;
       try {
+        console.log('[Page] Attempting AI generation...');
         workout = await generateWorkout(workoutRequest);
         usedAI = true;
+        console.log('[Page] AI generation SUCCESS');
       } catch (edgeFnError) {
-        console.warn('Edge function failed, using local generation:', edgeFnError);
+        console.error('[Page] !!! EDGE FUNCTION FAILED - FALLING BACK TO LOCAL !!!');
+        console.error('[Page] Error was:', edgeFnError);
+        console.error('[Page] Error message:', (edgeFnError as Error)?.message);
+        console.error('[Page] Error stack:', (edgeFnError as Error)?.stack);
         workout = await generateWorkoutLocal(workoutRequest);
+        console.log('[Page] Local generation completed');
       }
 
       // Update debug info with response
@@ -445,10 +451,10 @@ export default function Home() {
 
   // Can generate if:
   // - Location selected
-  // - Either freeform mode with text, or structured mode with muscles selected
+  // - Either freeform mode with text, OR structured mode with muscles selected, OR cardio style
   // - If gym selected, must have a gym profile
   const canGenerate = selectedLocation &&
-    (freeformMode ? freeformPrompt.trim().length > 0 : selectedMuscles.length > 0) &&
+    (freeformMode ? freeformPrompt.trim().length > 0 : (selectedMuscles.length > 0 || selectedWorkoutStyle === 'cardio')) &&
     (selectedLocation !== 'gym' || selectedGym !== null);
 
   // Show onboarding for new users

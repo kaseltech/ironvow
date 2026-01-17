@@ -108,27 +108,49 @@ export interface GeneratedWorkout {
 export async function generateWorkout(request: WorkoutRequest): Promise<GeneratedWorkout> {
   const supabase = getSupabase();
 
-  console.log('[Workout] Calling Edge Function...', {
-    freeform: !!request.freeformPrompt,
+  console.log('[Workout] === CALLING EDGE FUNCTION ===');
+  console.log('[Workout] Request:', JSON.stringify({
+    userId: request.userId,
     location: request.location,
+    targetMuscles: request.targetMuscles,
     duration: request.duration,
-  });
+    workoutStyle: request.workoutStyle,
+    freeform: !!request.freeformPrompt,
+    equipmentCount: request.equipment?.length || 0,
+  }, null, 2));
 
   // Call Supabase Edge Function
-  const { data, error } = await supabase.functions.invoke('generate-workout', {
-    body: request,
-  });
+  let data, error;
+  try {
+    const response = await supabase.functions.invoke('generate-workout', {
+      body: request,
+    });
+    data = response.data;
+    error = response.error;
+    console.log('[Workout] Raw response:', { data: !!data, error: !!error, dataKeys: data ? Object.keys(data) : [] });
+  } catch (invokeError) {
+    console.error('[Workout] Invoke threw exception:', invokeError);
+    throw invokeError;
+  }
 
   if (error) {
-    console.error('[Workout] Edge function error:', error);
-    console.error('[Workout] Error details:', JSON.stringify(error, null, 2));
+    console.error('[Workout] Edge function returned error:', error);
+    console.error('[Workout] Error type:', typeof error);
+    console.error('[Workout] Error stringified:', JSON.stringify(error, null, 2));
     throw new Error(error.message || 'Failed to generate workout');
   }
 
-  console.log('[Workout] Response:', {
+  if (!data) {
+    console.error('[Workout] No data returned from edge function');
+    throw new Error('No data returned from edge function');
+  }
+
+  console.log('[Workout] Response received:', {
     success: data?.success,
     workoutName: data?.workout?.name,
     exerciseCount: data?.workout?.exercises?.length,
+    hasError: !!data?.error,
+    errorMsg: data?.error,
   });
 
   if (!data.success) {
@@ -136,6 +158,7 @@ export async function generateWorkout(request: WorkoutRequest): Promise<Generate
     throw new Error(data.error || 'Workout generation failed');
   }
 
+  console.log('[Workout] === SUCCESS - Returning workout ===');
   return data.workout;
 }
 
@@ -143,19 +166,51 @@ export async function generateWorkout(request: WorkoutRequest): Promise<Generate
 export async function getSwapAlternatives(request: SwapRequest): Promise<ExerciseAlternative[]> {
   const supabase = getSupabase();
 
-  const { data, error } = await supabase.functions.invoke('generate-workout', {
-    body: request,
-  });
+  console.log('[Swap] === CALLING EDGE FUNCTION ===');
+  console.log('[Swap] Request:', JSON.stringify({
+    swapExerciseId: request.swapExerciseId,
+    swapTargetMuscles: request.swapTargetMuscles,
+    location: request.location,
+    workoutStyle: request.workoutStyle,
+    equipmentCount: request.equipment?.length || 0,
+  }, null, 2));
+
+  let data, error;
+  try {
+    const response = await supabase.functions.invoke('generate-workout', {
+      body: request,
+    });
+    data = response.data;
+    error = response.error;
+    console.log('[Swap] Raw response:', { data: !!data, error: !!error, dataKeys: data ? Object.keys(data) : [] });
+  } catch (invokeError) {
+    console.error('[Swap] Invoke threw exception:', invokeError);
+    throw invokeError;
+  }
 
   if (error) {
-    console.error('Swap request error:', error);
+    console.error('[Swap] Edge function returned error:', error);
+    console.error('[Swap] Error stringified:', JSON.stringify(error, null, 2));
     throw new Error(error.message || 'Failed to get alternatives');
   }
 
+  if (!data) {
+    console.error('[Swap] No data returned from edge function');
+    throw new Error('No data returned from edge function');
+  }
+
+  console.log('[Swap] Response received:', {
+    success: data?.success,
+    alternativeCount: data?.alternatives?.length,
+    hasError: !!data?.error,
+  });
+
   if (!data.success) {
+    console.error('[Swap] Failed:', data.error);
     throw new Error(data.error || 'Failed to get alternatives');
   }
 
+  console.log('[Swap] === SUCCESS - Returning', data.alternatives?.length, 'alternatives ===');
   return data.alternatives;
 }
 
