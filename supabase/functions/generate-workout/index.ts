@@ -775,7 +775,23 @@ async function generateWithAI(
 - Reps: 8-12 (hypertrophy range)
 - Rest: 60-90 seconds between sets
 - Focus on controlled tempo and mind-muscle connection
-- Start with compound movements, finish with isolation`,
+- Start with compound movements, finish with isolation
+
+GOOD exercises for traditional hypertrophy:
+- Chest: Bench Press, Incline Press, Dumbbell Fly, Cable Crossover, Push-ups
+- Back: Lat Pulldown, Seated Row, Bent Over Row, Pull-ups, T-Bar Row
+- Shoulders: Overhead Press, Lateral Raise, Front Raise, Rear Delt Fly
+- Biceps: Barbell Curl, Dumbbell Curl, Hammer Curl, Preacher Curl
+- Triceps: Tricep Pushdown, Skull Crusher, Dips, Overhead Extension
+- Legs: Squat, Leg Press, Leg Extension, Leg Curl, Romanian Deadlift
+- Core: Plank, Cable Crunch, Hanging Leg Raise
+
+DO NOT USE these exercises for traditional hypertrophy:
+- NO CrossFit exercises (Muscle-ups, Kipping Pull-ups, Wall Balls, Thrusters)
+- NO Olympic lifts (Snatch, Clean & Jerk, Power Clean)
+- NO Ring exercises (Ring Muscle-up, Ring Dips)
+- NO AMRAP or EMOM formats
+- NO Burpees, Box Jumps, or plyometrics`,
 
     strength: `WORKOUT STYLE: Strength/5x5
 - Sets: 5 per exercise (5x5 protocol)
@@ -1205,6 +1221,16 @@ Return ONLY valid JSON:
     'assisted pull-up', 'assisted dip',
   ]);
 
+  // CrossFit/WOD exercises that should NOT appear in traditional workouts
+  const crossfitExercises = new Set([
+    'muscle-up', 'muscle up', 'ring muscle-up', 'bar muscle-up',
+    'kipping pull-up', 'kipping', 'butterfly pull-up',
+    'wall ball', 'wall balls', 'thruster', 'thrusters',
+    'clean and jerk', 'snatch', 'power clean', 'hang clean',
+    'box jump', 'burpee', 'devil press', 'man maker',
+    'double under', 'toes to bar', 'knees to elbow',
+  ]);
+
   // Check if user has any equipment for home
   const hasHomeEquipment = location === 'home' && allEquipment && allEquipment.length > 0;
 
@@ -1216,6 +1242,22 @@ Return ONLY valid JSON:
     if (workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') {
       if (bannedForRehab.has(normalized) ||
           Array.from(bannedForRehab).some(banned => normalized.includes(banned))) {
+        return true;
+      }
+    }
+
+    // Traditional/Strength workouts should NOT have CrossFit exercises
+    if (workoutStyle === 'traditional' || workoutStyle === 'strength') {
+      if (crossfitExercises.has(normalized) ||
+          Array.from(crossfitExercises).some(banned => normalized.includes(banned))) {
+        console.log(`✗ Blocking CrossFit exercise "${normalized}" for ${workoutStyle} workout`);
+        return true;
+      }
+      // Also block anything with "muscle-up", "kipping", "wall ball" patterns
+      if (normalized.includes('muscle-up') || normalized.includes('muscle up') ||
+          normalized.includes('kipping') || normalized.includes('wall ball') ||
+          normalized.includes('thruster')) {
+        console.log(`✗ Blocking CrossFit pattern "${normalized}" for ${workoutStyle} workout`);
         return true;
       }
     }
