@@ -124,6 +124,11 @@ enabled = false
 port = 54327
 backend = "postgres"
 
+# Edge Functions configuration
+[functions.generate-workout]
+# Disable JWT verification - the function handles auth internally
+verify_jwt = false
+
 # Experimental features may be deprecated any time
 [experimental]
 # Configures Postgres storage engine to use OrioleDB (S3)
