@@ -1703,7 +1703,13 @@ async function handleSwapRequest(
   // Common CrossFit/WOD equipment that should always be allowed for WOD style
   const wodEquipment = ['kettlebell', 'barbell', 'dumbbell', 'pull-up bar', 'box', 'medicine ball', 'jump rope', 'rings', 'wall ball'];
 
-  console.log(`Swap request: style=${workoutStyle}, targetMuscles=${swapTargetMuscles?.join(',')}, exerciseId=${swapExerciseId || '(empty - unmatched AI exercise)'}`);
+  console.log(`Swap request: style=${workoutStyle}, targetMuscles=${swapTargetMuscles?.join(',')}, exerciseId=${swapExerciseId || '(empty - unmatched AI exercise)'}, location=${location}, equipment=${allEquipment?.length || 0} items`);
+
+  // Count exercises at each filter stage for debugging
+  let muscleFilterCount = 0;
+  let equipmentFilterCount = 0;
+  let difficultyFilterCount = 0;
+  let injuryFilterCount = 0;
 
   // Filter to exercises that target the same muscles
   const alternatives = exercises.filter((ex: any) => {
@@ -1717,10 +1723,29 @@ async function handleSwapRequest(
       );
       if (!targetsMuscle) return false;
     }
+    muscleFilterCount++;
 
     // For WOD/HIIT, if exercise matches style, be lenient on equipment
     const isStyleMatch = checkStyleMatch(ex, workoutStyle);
     const isExplosiveStyle = workoutStyle === 'wod' || workoutStyle === 'hiit' || workoutStyle === 'circuit';
+
+    // Helper for fuzzy equipment matching (case-insensitive, partial match)
+    const equipmentMatches = (required: string, available: string[]): boolean => {
+      const reqLower = required.toLowerCase().trim();
+      if (reqLower === 'none' || reqLower === 'bodyweight' || reqLower === 'body weight') return true;
+      return available.some(avail => {
+        const availLower = avail.toLowerCase().trim();
+        return availLower.includes(reqLower) || reqLower.includes(availLower) ||
+          // Common variations
+          (reqLower === 'dumbbell' && availLower.includes('dumbbell')) ||
+          (reqLower === 'barbell' && availLower.includes('barbell')) ||
+          (reqLower === 'cable' && availLower.includes('cable')) ||
+          (reqLower === 'machine' && availLower.includes('machine')) ||
+          (reqLower === 'bench' && availLower.includes('bench')) ||
+          (reqLower === 'pull-up bar' && (availLower.includes('pull') || availLower.includes('bar'))) ||
+          (reqLower === 'kettlebell' && availLower.includes('kettlebell'));
+      });
+    };
 
     // Check equipment based on location
     let hasEquipment = false;
@@ -1728,22 +1753,27 @@ async function handleSwapRequest(
       // Outdoor: ONLY bodyweight exercises
       hasEquipment = isBodyweightExercise(ex);
     } else if (location === 'gym') {
-      if (allEquipment && allEquipment.length > 0) {
-        const equipReq = ex.equipment_required || [];
-        // For WOD-style matches in gym, allow common CrossFit equipment
-        if (isExplosiveStyle && isStyleMatch) {
-          hasEquipment = equipReq.length === 0 ||
-            equipReq.every((eq: string) =>
-              allEquipment.includes(eq) || wodEquipment.includes(eq.toLowerCase()) || eq === 'none' || eq === 'bodyweight'
-            );
-        } else {
-          hasEquipment = equipReq.length === 0 ||
-            equipReq.every((eq: string) =>
-              allEquipment.includes(eq) || eq === 'none' || eq === 'bodyweight'
-            );
-        }
-      } else {
+      // Gym location - be more lenient since gyms have most equipment
+      const equipReq = ex.equipment_required || [];
+      if (equipReq.length === 0) {
         hasEquipment = true;
+      } else if (!allEquipment || allEquipment.length === 0) {
+        // No specific equipment listed for gym = assume it has everything common
+        const commonGymEquip = ['barbell', 'dumbbell', 'cable', 'machine', 'bench', 'pull-up bar', 'kettlebell', 'ez bar', 'smith machine'];
+        hasEquipment = equipReq.every((eq: string) => {
+          const eqLower = eq.toLowerCase();
+          return eqLower === 'none' || eqLower === 'bodyweight' ||
+            commonGymEquip.some(common => eqLower.includes(common) || common.includes(eqLower));
+        });
+      } else {
+        // Use fuzzy matching with provided equipment
+        hasEquipment = equipReq.every((eq: string) => equipmentMatches(eq, allEquipment));
+        // For WOD-style, also allow common CrossFit equipment
+        if (!hasEquipment && isExplosiveStyle && isStyleMatch) {
+          hasEquipment = equipReq.every((eq: string) =>
+            equipmentMatches(eq, allEquipment) || wodEquipment.includes(eq.toLowerCase())
+          );
+        }
       }
     } else {
       // Home location
@@ -1751,15 +1781,18 @@ async function handleSwapRequest(
       if (!allEquipment || allEquipment.length === 0) {
         // No home equipment - only bodyweight exercises
         hasEquipment = isBodyweightExercise(ex) || equipReq.length === 0 ||
-          equipReq.every((eq: string) => eq === 'none' || eq === 'bodyweight');
+          equipReq.every((eq: string) => {
+            const eqLower = eq.toLowerCase();
+            return eqLower === 'none' || eqLower === 'bodyweight' || eqLower === 'body weight';
+          });
       } else {
+        // Use fuzzy matching with home equipment
         hasEquipment = equipReq.length === 0 ||
-          equipReq.every((eq: string) =>
-            allEquipment.includes(eq) || eq === 'none' || eq === 'bodyweight'
-          );
+          equipReq.every((eq: string) => equipmentMatches(eq, allEquipment));
       }
     }
     if (!hasEquipment) return false;
+    equipmentFilterCount++;
 
     // Check difficulty
     const appropriateDifficulty = !ex.difficulty ||
@@ -1767,6 +1800,7 @@ async function handleSwapRequest(
       (experienceLevel === 'intermediate') ||
       (experienceLevel === 'advanced');
     if (!appropriateDifficulty) return false;
+    difficultyFilterCount++;
 
     // Check injuries
     const avoidDueToInjury = injuries?.some((injury: any) =>
@@ -1776,9 +1810,13 @@ async function handleSwapRequest(
       )
     );
     if (avoidDueToInjury) return false;
+    injuryFilterCount++;
 
     return true;
   });
+
+  // Log filter stats
+  console.log(`Swap filter stats: total=${exercises.length}, muscles=${muscleFilterCount}, equipment=${equipmentFilterCount}, difficulty=${difficultyFilterCount}, injury=${injuryFilterCount}, final=${alternatives.length}`);
 
   // Sort by: 1) style match, 2) primary muscle match
   alternatives.sort((a: any, b: any) => {

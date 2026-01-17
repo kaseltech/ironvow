@@ -8,11 +8,13 @@ import { useTheme } from '@/context/ThemeContext';
 interface HeaderProps {
   onSettingsClick?: () => void;
   onTimerClick?: () => void;
+  onRunClick?: () => void;
   showSettings?: boolean;
   showTimer?: boolean;
+  showRun?: boolean;
 }
 
-export function Header({ onSettingsClick, onTimerClick, showSettings = true, showTimer = true }: HeaderProps) {
+export function Header({ onSettingsClick, onTimerClick, onRunClick, showSettings = true, showTimer = true, showRun = false }: HeaderProps) {
   const router = useRouter();
   const { signOut } = useAuth();
   const { colors } = useTheme();
@@ -31,6 +33,29 @@ export function Header({ onSettingsClick, onTimerClick, showSettings = true, sho
       <div className="flex items-center justify-between">
         <Logo size="lg" href="/" />
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Run Button */}
+          {showRun && onRunClick && (
+            <button
+              onClick={onRunClick}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+              aria-label="Go for a Run"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="17" cy="4" r="2" />
+                <path d="M15 7l-2.5 2.5L9 8l-4 4" />
+                <path d="M15 7l2 5-3 2 1 5" />
+                <path d="M9 8l-1 7" />
+              </svg>
+            </button>
+          )}
           {/* Timer Button */}
           {showTimer && onTimerClick && (
             <button

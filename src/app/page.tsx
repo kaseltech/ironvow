@@ -334,10 +334,57 @@ export default function Home() {
     setSwapAlternatives([]);
 
     try {
-      // Use exercise's muscles if available, otherwise fallback to workout's target muscles
-      const targetMuscles = exercise.primaryMuscles?.length
-        ? exercise.primaryMuscles
-        : generatedWorkout.targetMuscles;
+      // Build target muscles from multiple sources, ensuring we always have something
+      let targetMuscles: string[] = [];
+
+      // First try exercise's primary muscles
+      if (exercise.primaryMuscles?.length) {
+        targetMuscles = [...exercise.primaryMuscles];
+      }
+
+      // Add secondary muscles if available
+      if (exercise.secondaryMuscles?.length) {
+        targetMuscles = [...targetMuscles, ...exercise.secondaryMuscles];
+      }
+
+      // Fallback to workout's target muscles if still empty
+      if (targetMuscles.length === 0 && generatedWorkout.targetMuscles?.length) {
+        targetMuscles = [...generatedWorkout.targetMuscles];
+      }
+
+      // Final fallback - infer from exercise name for common patterns
+      if (targetMuscles.length === 0) {
+        const name = exercise.name.toLowerCase();
+        if (name.includes('bench') || name.includes('chest') || name.includes('push')) {
+          targetMuscles = ['chest', 'triceps', 'shoulders'];
+        } else if (name.includes('row') || name.includes('pull') || name.includes('lat')) {
+          targetMuscles = ['back', 'biceps'];
+        } else if (name.includes('squat') || name.includes('leg') || name.includes('lunge')) {
+          targetMuscles = ['quads', 'glutes', 'hamstrings'];
+        } else if (name.includes('deadlift') || name.includes('hip')) {
+          targetMuscles = ['hamstrings', 'glutes', 'back'];
+        } else if (name.includes('shoulder') || name.includes('press') || name.includes('delt')) {
+          targetMuscles = ['shoulders', 'triceps'];
+        } else if (name.includes('curl') || name.includes('bicep')) {
+          targetMuscles = ['biceps'];
+        } else if (name.includes('tricep') || name.includes('extension')) {
+          targetMuscles = ['triceps'];
+        } else if (name.includes('core') || name.includes('ab') || name.includes('plank')) {
+          targetMuscles = ['abs', 'core'];
+        } else {
+          // Generic fallback
+          targetMuscles = ['chest', 'back', 'shoulders'];
+        }
+      }
+
+      console.log('[Swap] Request:', {
+        exercise: exercise.name,
+        exerciseId: exercise.exerciseId || '(empty)',
+        targetMuscles,
+        workoutStyle: generatedWorkout.workoutStyle,
+        location: (lastWorkoutRequest as any).location,
+        equipment: (lastWorkoutRequest as any).equipment?.length || 0,
+      });
 
       const alternatives = await getSwapAlternatives({
         userId: user!.id,
@@ -351,9 +398,10 @@ export default function Home() {
         workoutStyle: generatedWorkout.workoutStyle, // Pass workout style for style-appropriate alternatives
       });
 
+      console.log('[Swap] Got alternatives:', alternatives?.length || 0);
       setSwapAlternatives(alternatives || []);
     } catch (err) {
-      console.error('Failed to get alternatives:', err);
+      console.error('[Swap] Failed to get alternatives:', err);
       setSwapAlternatives([]);
     } finally {
       setLoadingAlternatives(false);
@@ -417,7 +465,12 @@ export default function Home() {
       <Onboarding onComplete={handleOnboardingComplete} />
     ) : (
     <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
-      <Header onSettingsClick={() => setShowSettings(true)} onTimerClick={() => setShowTimer(true)} />
+      <Header
+        onSettingsClick={() => setShowSettings(true)}
+        onTimerClick={() => setShowTimer(true)}
+        onRunClick={() => router.push('/run')}
+        showRun={true}
+      />
 
       <main className="p-4" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
         {!showWorkout ? (
@@ -439,27 +492,6 @@ export default function Home() {
 
             {/* Spacer for sticky header */}
             <div style={{ height: '1rem' }} />
-
-            {/* Quick Actions */}
-            <div className="flex gap-3 mb-4 animate-fade-in">
-              <button
-                onClick={() => router.push('/run')}
-                style={{
-                  flex: 1,
-                  background: colors.cardBg,
-                  border: `1px solid ${colors.borderSubtle}`,
-                  borderRadius: '0.75rem',
-                  padding: '0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontSize: '1.125rem' }}>🏃</span>
-                <span style={{ color: colors.text, fontWeight: 600, fontSize: '0.8125rem' }}>Go for a Run</span>
-              </button>
-            </div>
 
             {/* Today's Workout Card - Show if active plan has workout for today */}
             {activePlan && getTodaysWorkout() && (
