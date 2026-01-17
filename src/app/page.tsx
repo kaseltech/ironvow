@@ -171,8 +171,10 @@ export default function Home() {
       const newIds = workout.exercises.map(ex => ex.exerciseId).filter(Boolean);
       setRecentExerciseIds(prev => [...newIds, ...prev].slice(0, 20));
     } catch (err) {
+      const errorMsg = (err as Error)?.message || 'Unknown error';
       console.error('Failed to generate workout:', err);
-      setError('Failed to generate workout. Please try again.');
+      console.error('Error message:', errorMsg);
+      setError(`Failed to generate workout: ${errorMsg}`);
     } finally {
       setGenerating(false);
     }
@@ -307,8 +309,9 @@ export default function Home() {
         regenerateResponse: workout,
       }));
     } catch (err) {
+      const errorMsg = (err as Error)?.message || 'Unknown error';
       console.error('Failed to regenerate workout:', err);
-      setError('Failed to regenerate. Try again.');
+      setError(`Failed to regenerate: ${errorMsg}`);
     } finally {
       setGenerating(false);
     }
