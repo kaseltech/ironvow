@@ -1232,7 +1232,7 @@ Return ONLY valid JSON:
   ]);
 
   // Check if user has any equipment for home
-  const hasHomeEquipment = location === 'home' && allEquipment && allEquipment.length > 0;
+  const hasHomeEquipment = location === 'home' && equipment && equipment.length > 0;
 
   // Helper to check if exercise is banned for current workout style or location
   const isBannedExercise = (exerciseName: string): boolean => {
@@ -1461,9 +1461,9 @@ Return ONLY valid JSON:
     // Use yoga fallbacks for yoga workouts
     if (workoutStyle === 'yoga') {
       fallbackCategory = 'yoga';
-    } else if (targetMuscles.includes('flexibility') || rawTargetMuscles.includes('flexibility')) {
+    } else if (targetMuscles.includes('flexibility')) {
       fallbackCategory = 'flexibility';
-    } else if (targetMuscles.includes('balance') || rawTargetMuscles.includes('balance')) {
+    } else if (targetMuscles.includes('balance')) {
       fallbackCategory = 'balance';
     } else {
       for (const muscle of targetMuscles) {
@@ -1533,11 +1533,11 @@ Return ONLY valid JSON:
   // Override workout name for rehab/mobility/yoga to be more appropriate
   let workoutName = parsed.name;
   if (workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') {
-    // Build a nice target description from raw targets (before expansion)
-    const targetGoals = (rawTargetMuscles || []).filter(t =>
+    // Build a nice target description from target muscles
+    const targetGoals = (targetMuscles || []).filter(t =>
       ['flexibility', 'balance', 'endurance'].includes(t)
     );
-    const targetMuscleNames = (rawTargetMuscles || []).filter(t =>
+    const targetMuscleNames = (targetMuscles || []).filter(t =>
       !['flexibility', 'balance', 'endurance'].includes(t)
     );
 
