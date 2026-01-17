@@ -109,11 +109,36 @@ const bodyweightExercises = new Set([
 
 // Helper to check if exercise is bodyweight-compatible
 function isBodyweightExercise(ex: any): boolean {
-  return bodyweightExercises.has(ex.slug) ||
-    ex.name.toLowerCase().includes('bodyweight') ||
-    ex.name.toLowerCase().includes('push-up') ||
-    ex.name.toLowerCase().includes('pull-up') ||
-    ex.name.toLowerCase().includes('lunge') ||
+  const name = ex.name.toLowerCase();
+  const slug = (ex.slug || '').toLowerCase();
+
+  // Check explicit bodyweight set
+  if (bodyweightExercises.has(slug)) return true;
+
+  // Check name patterns that indicate bodyweight
+  const bodyweightPatterns = [
+    'bodyweight', 'push-up', 'push up', 'pushup',
+    'pull-up', 'pull up', 'pullup', 'chin-up', 'chin up',
+    'lunge', 'squat', 'plank', 'crunch', 'sit-up', 'sit up',
+    'dip', 'burpee', 'mountain climber', 'jumping jack',
+    'leg raise', 'flutter kick', 'bicycle', 'dead bug', 'bird dog',
+    'glute bridge', 'hip bridge', 'superman', 'calf raise',
+    'step-up', 'step up', 'box jump', 'jump squat',
+    'stretch', 'hold', // for mobility/stretches
+  ];
+
+  if (bodyweightPatterns.some(p => name.includes(p))) return true;
+
+  // Check equipment_required - if empty or only bodyweight/none, it's bodyweight
+  const equipReq = ex.equipment_required || [];
+  if (equipReq.length === 0) return true;
+  if (equipReq.every((eq: string) => eq === 'none' || eq === 'bodyweight' || eq === 'body only')) return true;
+
+  // Legacy checks
+  return name.includes('bodyweight') ||
+    name.includes('push-up') ||
+    name.includes('pull-up') ||
+    name.includes('lunge') ||
     ex.name.toLowerCase().includes('plank') ||
     ex.name.toLowerCase().includes('crunch') ||
     ex.name.toLowerCase().includes('squat') && !ex.name.toLowerCase().includes('barbell') && !ex.name.toLowerCase().includes('goblet');
@@ -924,9 +949,14 @@ In notes: specify which body part/injury this addresses`,
 - Good outdoor exercises: push-ups, pull-ups (if bar available), dips (bench/bars), lunges, squats, burpees, mountain climbers, planks, running, sprints
 - DO NOT include exercises requiring: dumbbells, barbells, machines, cables, or gym equipment`;
   } else if (location === 'home') {
-    locationContext = `\n\nLOCATION: HOME GYM
-- Only use exercises that can be done with limited equipment
-- Focus on movements that work well in small spaces`;
+    const hasHomeEquipment = equipment && equipment.length > 0;
+    locationContext = `\n\nLOCATION: HOME WORKOUT
+- This is a HOME workout, NOT a gym workout
+- DO NOT use: gymnastics rings, cable machines, leg press, smith machine, lat pulldown machine, or any gym-only equipment
+- DO NOT use: Ring Muscle-ups, Ring Dips, Cable Flyes, Machine exercises
+${hasHomeEquipment ? `- Available equipment: ${equipment.slice(0, 15).join(', ')}` : `- NO EQUIPMENT - use ONLY bodyweight exercises
+- Good bodyweight exercises: push-ups (and variations), pull-ups (if bar), dips (chair/bench), lunges, squats, planks, crunches, glute bridges, mountain climbers, burpees`}
+- Focus on exercises that work in small spaces`;
   } else if (location === 'gym') {
     locationContext = `\n\nLOCATION: GYM${equipment && equipment.length > 0 ? ` with equipment: ${equipment.slice(0, 15).join(', ')}${equipment.length > 15 ? '...' : ''}` : ' (commercial gym - full equipment assumed)'}`;
   }
@@ -935,6 +965,8 @@ In notes: specify which body part/injury this addresses`,
   let equipmentContext = '';
   if (location === 'outdoor') {
     equipmentContext = `\nNo equipment available - bodyweight only.`;
+  } else if (location === 'home' && (!equipment || equipment.length === 0)) {
+    equipmentContext = `\nNo equipment available - BODYWEIGHT EXERCISES ONLY. No dumbbells, no barbells, no machines.`;
   } else if (equipment && equipment.length > 0) {
     equipmentContext = `\nAvailable equipment includes: ${equipment.slice(0, 20).join(', ')}. Prioritize exercises using this equipment.`;
   }
@@ -1163,13 +1195,45 @@ Return ONLY valid JSON:
     'pull-up', 'chin-up', 'dip', 'muscle-up',
   ]);
 
-  // Helper to check if exercise is banned for current workout style
+  // Gym-only exercises that require equipment not available at home
+  const gymOnlyExercises = new Set([
+    'ring muscle-up', 'ring dip', 'ring row', 'ring push-up',
+    'muscle-up', 'muscle up',
+    'cable fly', 'cable crossover', 'cable curl', 'cable tricep', 'cable row',
+    'lat pulldown', 'seated row machine', 'leg press', 'leg extension', 'leg curl',
+    'smith machine', 'hack squat', 'pec deck', 'chest fly machine',
+    'assisted pull-up', 'assisted dip',
+  ]);
+
+  // Check if user has any equipment for home
+  const hasHomeEquipment = location === 'home' && allEquipment && allEquipment.length > 0;
+
+  // Helper to check if exercise is banned for current workout style or location
   const isBannedExercise = (exerciseName: string): boolean => {
-    // Yoga, rehab, and mobility workouts should NOT have weight training exercises
-    if (workoutStyle !== 'rehab' && workoutStyle !== 'mobility' && workoutStyle !== 'yoga') return false;
     const normalized = exerciseName.toLowerCase().trim();
-    return bannedForRehab.has(normalized) ||
-      Array.from(bannedForRehab).some(banned => normalized.includes(banned));
+
+    // Yoga, rehab, and mobility workouts should NOT have weight training exercises
+    if (workoutStyle === 'rehab' || workoutStyle === 'mobility' || workoutStyle === 'yoga') {
+      if (bannedForRehab.has(normalized) ||
+          Array.from(bannedForRehab).some(banned => normalized.includes(banned))) {
+        return true;
+      }
+    }
+
+    // Home workouts without equipment should NOT have gym-only exercises
+    if (location === 'home' && !hasHomeEquipment) {
+      if (gymOnlyExercises.has(normalized) ||
+          Array.from(gymOnlyExercises).some(banned => normalized.includes(banned))) {
+        return true;
+      }
+      // Also block anything with "ring", "cable", "machine" in the name
+      if (normalized.includes('ring ') || normalized.includes('cable ') ||
+          normalized.includes('machine') || normalized.includes('smith')) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   for (const aiExercise of parsed.exercises) {
@@ -1777,11 +1841,18 @@ async function handleSwapRequest(
         hasEquipment = true;
       }
     } else {
+      // Home location
       const equipReq = ex.equipment_required || [];
-      hasEquipment = equipReq.length === 0 ||
-        equipReq.every((eq: string) =>
-          allEquipment?.includes(eq) || eq === 'none' || eq === 'bodyweight'
-        );
+      if (!allEquipment || allEquipment.length === 0) {
+        // No home equipment - only bodyweight exercises
+        hasEquipment = isBodyweightExercise(ex) || equipReq.length === 0 ||
+          equipReq.every((eq: string) => eq === 'none' || eq === 'bodyweight');
+      } else {
+        hasEquipment = equipReq.length === 0 ||
+          equipReq.every((eq: string) =>
+            allEquipment.includes(eq) || eq === 'none' || eq === 'bodyweight'
+          );
+      }
     }
     if (!hasEquipment) return false;
 
