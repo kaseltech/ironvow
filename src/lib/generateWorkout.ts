@@ -109,15 +109,7 @@ export async function generateWorkout(request: WorkoutRequest): Promise<Generate
   const supabase = getSupabase();
 
   console.log('[Workout] === CALLING EDGE FUNCTION ===');
-  console.log('[Workout] Request:', JSON.stringify({
-    userId: request.userId,
-    location: request.location,
-    targetMuscles: request.targetMuscles,
-    duration: request.duration,
-    workoutStyle: request.workoutStyle,
-    freeform: !!request.freeformPrompt,
-    equipmentCount: request.equipment?.length || 0,
-  }, null, 2));
+  console.log('[Workout] Full request:', JSON.stringify(request, null, 2));
 
   // Call Supabase Edge Function
   let data, error;
@@ -127,38 +119,50 @@ export async function generateWorkout(request: WorkoutRequest): Promise<Generate
     });
     data = response.data;
     error = response.error;
-    console.log('[Workout] Raw response:', { data: !!data, error: !!error, dataKeys: data ? Object.keys(data) : [] });
-  } catch (invokeError) {
+
+    console.log('[Workout] Response received');
+    console.log('[Workout] Has data:', !!data);
+    console.log('[Workout] Has error:', !!error);
+
+    if (data) {
+      console.log('[Workout] Data keys:', Object.keys(data));
+      console.log('[Workout] Data.success:', data.success);
+      console.log('[Workout] Data.error:', data.error);
+    }
+
+    if (error) {
+      console.log('[Workout] Error object:', JSON.stringify(error, null, 2));
+      console.log('[Workout] Error.message:', error.message);
+      console.log('[Workout] Error.context:', (error as any).context);
+      console.log('[Workout] Error.status:', (error as any).status);
+    }
+  } catch (invokeError: any) {
     console.error('[Workout] Invoke threw exception:', invokeError);
-    throw invokeError;
+    console.error('[Workout] Exception message:', invokeError?.message);
+    console.error('[Workout] Exception stack:', invokeError?.stack);
+    throw new Error(`Edge function invoke failed: ${invokeError?.message || 'Unknown error'}`);
   }
 
   if (error) {
-    console.error('[Workout] Edge function returned error:', error);
-    console.error('[Workout] Error type:', typeof error);
-    console.error('[Workout] Error stringified:', JSON.stringify(error, null, 2));
+    // Try to get more details from the error
+    const errorDetails = (error as any).context?.body || (error as any).details || error.message;
+    console.error('[Workout] Error details:', errorDetails);
     throw new Error(error.message || 'Failed to generate workout');
   }
 
   if (!data) {
-    console.error('[Workout] No data returned from edge function');
     throw new Error('No data returned from edge function');
   }
-
-  console.log('[Workout] Response received:', {
-    success: data?.success,
-    workoutName: data?.workout?.name,
-    exerciseCount: data?.workout?.exercises?.length,
-    hasError: !!data?.error,
-    errorMsg: data?.error,
-  });
 
   if (!data.success) {
     console.error('[Workout] Generation failed:', data.error);
     throw new Error(data.error || 'Workout generation failed');
   }
 
-  console.log('[Workout] === SUCCESS - Returning workout ===');
+  console.log('[Workout] === SUCCESS ===');
+  console.log('[Workout] Workout name:', data.workout?.name);
+  console.log('[Workout] Exercise count:', data.workout?.exercises?.length);
+
   return data.workout;
 }
 
