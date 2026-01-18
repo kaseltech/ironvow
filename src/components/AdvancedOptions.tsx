@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
+import { ChevronDownIcon, SparklesIcon, StretchIcon } from '@/components/Icons';
 import type { WorkoutStyle } from '@/lib/generateWorkout';
 
 interface AdvancedOptionsProps {
@@ -18,7 +19,7 @@ interface AdvancedOptionsProps {
 const moreStyles: { id: WorkoutStyle; name: string; description: string }[] = [
   { id: 'yoga', name: 'Yoga', description: 'Poses, flows & breathwork' },
   { id: 'mobility', name: 'Mobility', description: 'Stretching & recovery' },
-  { id: 'rehab', name: 'Rehab/Prehab', description: 'Injury prevention & recovery' },
+  { id: 'rehab', name: 'Rehab', description: 'Injury prevention' },
 ];
 
 const goalModalities = [
@@ -38,9 +39,8 @@ export function AdvancedOptions({
   toggleMuscle,
 }: AdvancedOptionsProps) {
   const { colors } = useTheme();
-  const [isExpanded, setIsExpanded] = useState(freeformMode); // Auto-expand if freeform is on
+  const [isExpanded, setIsExpanded] = useState(freeformMode);
 
-  // Check if any advanced options are active
   const hasActiveAdvancedOptions =
     freeformMode ||
     moreStyles.some(s => s.id === selectedWorkoutStyle) ||
@@ -50,18 +50,18 @@ export function AdvancedOptions({
     <div
       style={{
         background: colors.cardBg,
-        border: `1px solid ${colors.borderSubtle}`,
-        borderRadius: '1rem',
-        marginBottom: '1rem',
+        border: `1.5px solid ${colors.borderSubtle}`,
+        borderRadius: '1.25rem',
+        marginBottom: '1.25rem',
         overflow: 'hidden',
       }}
     >
-      {/* Header - Always visible */}
+      {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         style={{
           width: '100%',
-          padding: '0.875rem 1rem',
+          padding: '1rem 1.25rem',
           background: 'transparent',
           border: 'none',
           display: 'flex',
@@ -70,44 +70,46 @@ export function AdvancedOptions({
           cursor: 'pointer',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '0.875rem', color: colors.textMuted }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <span style={{ fontSize: '1rem', color: colors.text, fontWeight: 600 }}>
             Advanced Options
           </span>
           {hasActiveAdvancedOptions && (
             <span
               style={{
-                width: '6px',
-                height: '6px',
+                width: '8px',
+                height: '8px',
                 borderRadius: '50%',
-                background: colors.accent,
+                background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`,
+                boxShadow: `0 0 8px ${colors.accent}`,
               }}
             />
           )}
         </div>
-        <span
+        <div
           style={{
-            fontSize: '0.75rem',
-            color: colors.textMuted,
             transition: 'transform 0.2s ease',
             transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
           }}
         >
-          ▼
-        </span>
+          <ChevronDownIcon size={20} color={colors.textMuted} />
+        </div>
       </button>
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div style={{ padding: '0 1rem 1rem' }}>
+        <div style={{ padding: '0 1.25rem 1.25rem' }}>
           {/* Freeform Mode */}
           <div
             style={{
-              background: colors.inputBg,
-              borderRadius: '0.75rem',
-              padding: '0.875rem',
-              marginBottom: '1rem',
-              border: freeformMode ? `1px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+              background: freeformMode
+                ? `linear-gradient(135deg, ${colors.accentMuted} 0%, rgba(201, 167, 90, 0.1) 100%)`
+                : colors.inputBg,
+              borderRadius: '1rem',
+              padding: '1rem',
+              marginBottom: '1.25rem',
+              border: freeformMode ? `2px solid ${colors.accent}` : `1.5px solid ${colors.borderSubtle}`,
+              transition: 'all 0.2s ease',
             }}
           >
             <div
@@ -115,17 +117,29 @@ export function AdvancedOptions({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: freeformMode ? '0.75rem' : 0,
+                marginBottom: freeformMode ? '1rem' : 0,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1rem' }}>✨</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '0.75rem',
+                    background: freeformMode ? colors.accent : colors.accentMuted,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <SparklesIcon size={20} color={freeformMode ? colors.bg : colors.accent} />
+                </div>
                 <div>
-                  <div style={{ color: colors.text, fontSize: '0.875rem', fontWeight: 600 }}>
-                    Freeform Mode
+                  <div style={{ color: colors.text, fontSize: '0.9375rem', fontWeight: 600 }}>
+                    AI Freeform Mode
                   </div>
-                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>
-                    Describe your ideal workout in plain text
+                  <div style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.125rem' }}>
+                    Describe your ideal workout
                   </div>
                 </div>
               </div>
@@ -135,26 +149,30 @@ export function AdvancedOptions({
                   setFreeformMode(!freeformMode);
                 }}
                 style={{
-                  width: '44px',
-                  height: '26px',
-                  borderRadius: '13px',
-                  background: freeformMode ? colors.accent : 'rgba(245, 241, 234, 0.2)',
+                  width: '52px',
+                  height: '30px',
+                  borderRadius: '15px',
+                  background: freeformMode
+                    ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`
+                    : 'rgba(245, 241, 234, 0.15)',
                   border: 'none',
                   position: 'relative',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
+                  boxShadow: freeformMode ? '0 2px 8px rgba(201, 167, 90, 0.3)' : 'none',
                 }}
               >
                 <div
                   style={{
                     position: 'absolute',
-                    top: '2px',
-                    left: freeformMode ? '20px' : '2px',
-                    width: '22px',
-                    height: '22px',
-                    borderRadius: '11px',
+                    top: '3px',
+                    left: freeformMode ? '25px' : '3px',
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '12px',
                     background: colors.text,
                     transition: 'left 0.2s ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                   }}
                 />
               </button>
@@ -165,52 +183,61 @@ export function AdvancedOptions({
                 <textarea
                   value={freeformPrompt}
                   onChange={(e) => setFreeformPrompt(e.target.value)}
-                  placeholder='e.g. "Heavy push day with short rest"'
+                  placeholder='e.g. "Heavy push day focusing on chest with short rest periods"'
                   style={{
                     width: '100%',
-                    minHeight: '70px',
-                    padding: '0.625rem',
-                    borderRadius: '0.5rem',
+                    minHeight: '80px',
+                    padding: '0.875rem',
+                    borderRadius: '0.75rem',
                     background: colors.bg,
-                    border: `1px solid ${colors.border}`,
+                    border: `1.5px solid ${colors.border}`,
                     color: colors.text,
-                    fontSize: '0.875rem',
+                    fontSize: '0.9375rem',
                     resize: 'vertical',
                     fontFamily: 'inherit',
+                    lineHeight: 1.5,
                   }}
                 />
-                <p
+                <div
                   style={{
-                    color: colors.textMuted,
-                    fontSize: '0.6875rem',
-                    marginTop: '0.5rem',
+                    marginTop: '0.625rem',
+                    padding: '0.5rem 0.75rem',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '0.5rem',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.375rem',
+                    gap: '0.5rem',
                   }}
                 >
-                  <span style={{ color: '#F59E0B' }}>!</span>
-                  Overrides muscle and style selections
-                </p>
+                  <span style={{ color: colors.warning, fontSize: '0.875rem' }}>⚡</span>
+                  <span style={{ color: colors.warning, fontSize: '0.75rem', fontWeight: 500 }}>
+                    This overrides muscle and style selections
+                  </span>
+                </div>
               </div>
             )}
           </div>
 
           {/* More Workout Styles */}
-          <div style={{ marginBottom: '1rem' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
             <div
               style={{
                 color: colors.textMuted,
-                fontSize: '0.6875rem',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
-                marginBottom: '0.5rem',
+                marginBottom: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
               }}
             >
+              <StretchIcon size={14} color={colors.textMuted} />
               More Styles
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
               {moreStyles.map(style => {
                 const isSelected = selectedWorkoutStyle === style.id;
                 return (
@@ -218,15 +245,17 @@ export function AdvancedOptions({
                     key={style.id}
                     onClick={() => setSelectedWorkoutStyle(style.id)}
                     style={{
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '0.5rem',
-                      background: isSelected ? colors.accentMuted : colors.inputBg,
+                      padding: '0.625rem 1rem',
+                      borderRadius: '0.75rem',
+                      background: isSelected
+                        ? `linear-gradient(135deg, ${colors.accentMuted} 0%, rgba(201, 167, 90, 0.15) 100%)`
+                        : colors.inputBg,
                       border: isSelected
-                        ? `1px solid ${colors.accent}`
-                        : `1px solid ${colors.borderSubtle}`,
+                        ? `2px solid ${colors.accent}`
+                        : `1.5px solid ${colors.borderSubtle}`,
                       color: isSelected ? colors.accent : colors.text,
-                      fontSize: '0.8125rem',
-                      fontWeight: isSelected ? 600 : 400,
+                      fontSize: '0.875rem',
+                      fontWeight: isSelected ? 600 : 500,
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                     }}
@@ -244,16 +273,16 @@ export function AdvancedOptions({
             <div
               style={{
                 color: colors.textMuted,
-                fontSize: '0.6875rem',
+                fontSize: '0.75rem',
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
-                marginBottom: '0.5rem',
+                marginBottom: '0.75rem',
               }}
             >
               Add Focus
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
               {goalModalities.map(goal => {
                 const isSelected = selectedMuscles.includes(goal.id);
                 return (
@@ -261,15 +290,17 @@ export function AdvancedOptions({
                     key={goal.id}
                     onClick={() => toggleMuscle(goal.id)}
                     style={{
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '0.5rem',
-                      background: isSelected ? colors.accentMuted : colors.inputBg,
+                      padding: '0.625rem 1rem',
+                      borderRadius: '0.75rem',
+                      background: isSelected
+                        ? `linear-gradient(135deg, ${colors.accentMuted} 0%, rgba(201, 167, 90, 0.15) 100%)`
+                        : colors.inputBg,
                       border: isSelected
-                        ? `1px solid ${colors.accent}`
-                        : `1px solid ${colors.borderSubtle}`,
+                        ? `2px solid ${colors.accent}`
+                        : `1.5px solid ${colors.borderSubtle}`,
                       color: isSelected ? colors.accent : colors.text,
-                      fontSize: '0.8125rem',
-                      fontWeight: isSelected ? 600 : 400,
+                      fontSize: '0.875rem',
+                      fontWeight: isSelected ? 600 : 500,
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                     }}

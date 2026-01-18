@@ -922,38 +922,67 @@ export default function Home() {
         <div
           className="fixed left-0 right-0"
           style={{
-            bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))',
-            padding: '0 1rem 0.75rem',
-            background: `linear-gradient(180deg, transparent 0%, ${colors.bg} 30%)`,
+            bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
+            padding: '0 1rem 1rem',
+            background: `linear-gradient(180deg, transparent 0%, ${colors.bg} 40%)`,
             zIndex: 40,
           }}
         >
           <button
             onClick={handleGenerate}
             disabled={!canGenerate || generating}
-            className="btn-primary w-full"
             style={{
-              opacity: canGenerate ? 1 : 0.5,
-              cursor: canGenerate ? 'pointer' : 'not-allowed',
-              fontSize: '1rem',
-              padding: '1rem',
-              boxShadow: '0 -4px 12px rgba(0,0,0,0.1)',
+              width: '100%',
+              padding: '1.125rem 1.5rem',
+              borderRadius: '1rem',
+              background: canGenerate
+                ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`
+                : colors.cardBg,
+              border: canGenerate ? 'none' : `1.5px solid ${colors.borderSubtle}`,
+              color: canGenerate ? colors.bg : colors.textMuted,
+              fontSize: '1.0625rem',
+              fontWeight: 700,
+              cursor: canGenerate && !generating ? 'pointer' : 'not-allowed',
+              boxShadow: canGenerate ? '0 8px 24px rgba(201, 167, 90, 0.4)' : 'none',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.625rem',
             }}
           >
             {generating ? (
-              <span className="animate-pulse">Generating your workout...</span>
+              <>
+                <span
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    border: `2px solid ${colors.bg}`,
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
+                <span>Creating Your Workout...</span>
+              </>
             ) : (
-              'Generate Workout'
+              <>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z" />
+                  <path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5L5 18z" />
+                </svg>
+                <span>Generate Workout</span>
+              </>
             )}
           </button>
         </div>
       )}
 
-      {/* Bottom Nav - Polished (Phase 7) */}
+      {/* Bottom Nav */}
       <nav
         className="fixed bottom-0 left-0 right-0"
         style={{
-          background: colors.cardBg,
+          background: `linear-gradient(180deg, ${colors.cardBg} 0%, ${colors.cardBg} 100%)`,
           borderTop: `1px solid ${colors.borderSubtle}`,
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           zIndex: 50,
@@ -963,59 +992,83 @@ export default function Home() {
           style={{
             display: 'flex',
             justifyContent: 'space-around',
-            padding: '0.625rem 0 0.5rem',
+            padding: '0.75rem 0 0.625rem',
           }}
         >
           {[
-            { icon: '🏋️', label: 'Workout', href: '/', active: true },
-            { icon: '📊', label: 'Progress', href: '/progress', active: false },
-            { icon: '📚', label: 'Library', href: '/library', active: false },
-            { icon: '👤', label: 'Profile', href: '/profile', active: false },
+            {
+              label: 'Workout',
+              href: '/',
+              active: true,
+              icon: (color: string) => (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="9" width="4" height="6" rx="1" />
+                  <rect x="19" y="9" width="4" height="6" rx="1" />
+                  <path d="M6 7v10" />
+                  <path d="M18 7v10" />
+                  <path d="M6 12h12" />
+                </svg>
+              ),
+            },
+            {
+              label: 'Progress',
+              href: '/progress',
+              active: false,
+              icon: (color: string) => (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 3v18h18" />
+                  <path d="M18 9l-5 5-4-4-6 6" />
+                </svg>
+              ),
+            },
+            {
+              label: 'Library',
+              href: '/library',
+              active: false,
+              icon: (color: string) => (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                  <path d="M8 7h8" />
+                  <path d="M8 11h6" />
+                </svg>
+              ),
+            },
+            {
+              label: 'Profile',
+              href: '/profile',
+              active: false,
+              icon: (color: string) => (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              ),
+            },
           ].map(item => (
             <button
               key={item.label}
               onClick={() => router.push(item.href)}
               style={{
-                background: 'transparent',
+                background: item.active ? colors.accentMuted : 'transparent',
                 border: 'none',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '0.1875rem',
+                gap: '0.375rem',
                 cursor: 'pointer',
-                padding: '0.25rem 1rem',
-                borderRadius: '0.5rem',
+                padding: '0.5rem 1.25rem',
+                borderRadius: '0.75rem',
                 position: 'relative',
+                transition: 'all 0.2s ease',
               }}
             >
-              {/* Active indicator bar */}
-              {item.active && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '-0.625rem',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '1.5rem',
-                    height: '3px',
-                    background: colors.accent,
-                    borderRadius: '0 0 2px 2px',
-                  }}
-                />
-              )}
-              <span style={{
-                fontSize: '1.5rem',
-                opacity: item.active ? 1 : 0.6,
-                filter: item.active ? 'none' : 'grayscale(30%)',
-              }}>
-                {item.icon}
-              </span>
+              {item.icon(item.active ? colors.accent : colors.textMuted)}
               <span
                 style={{
-                  fontSize: '0.6875rem',
+                  fontSize: '0.75rem',
                   color: item.active ? colors.accent : colors.textMuted,
-                  fontWeight: item.active ? 600 : 400,
-                  letterSpacing: item.active ? '0.01em' : 0,
+                  fontWeight: item.active ? 600 : 500,
                 }}
               >
                 {item.label}

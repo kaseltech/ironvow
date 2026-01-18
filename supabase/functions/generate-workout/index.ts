@@ -1058,11 +1058,39 @@ Return ONLY valid JSON:
   ]
 }`;
   } else {
-    // Calculate time per exercise based on style
-    const restPerSet = workoutStyle === 'strength' ? 180 : workoutStyle === 'hiit' || workoutStyle === 'circuit' ? 30 : 90;
-    const setsPerExercise = workoutStyle === 'strength' ? 5 : 3;
-    const timePerExercise = Math.ceil((setsPerExercise * 40 + (setsPerExercise - 1) * restPerSet) / 60); // in minutes
-    const maxExercises = Math.max(1, Math.floor(duration / timePerExercise));
+    // Calculate REALISTIC time per exercise based on style
+    // Include: working time, rest between sets, transition time, warm-up sets for compounds
+    // Traditional: 3 sets × 45s work + 2 rest periods × 90s + 2 min transition = ~6-7 min per exercise
+    // Strength: 5 sets × 30s work + 4 rest periods × 180s + 3 min transition = ~15 min per exercise
+    // HIIT/Circuit: 3 sets × 30s work + minimal rest + 1 min transition = ~3 min per exercise
+    const timePerExercise = workoutStyle === 'strength' ? 12
+      : (workoutStyle === 'hiit' || workoutStyle === 'circuit') ? 4
+      : 8; // Traditional/default - more realistic 8 min per exercise
+    const restPerSet = workoutStyle === 'strength' ? 180
+      : (workoutStyle === 'hiit' || workoutStyle === 'circuit') ? 30
+      : 90; // Traditional rest
+    const maxExercises = Math.max(2, Math.floor(duration / timePerExercise));
+
+    // Hard caps to prevent excessive exercises
+    const exerciseCaps: Record<number, number> = {
+      15: 2,
+      30: 4,
+      45: 5,
+      60: 6,
+      75: 7,
+      90: 8,
+    };
+    const cappedMax = exerciseCaps[duration] || Math.min(maxExercises, Math.ceil(duration / 10));
+    const finalMaxExercises = Math.min(maxExercises, cappedMax);
+
+    console.log('[GenerateWorkout] Time calculation:', {
+      duration,
+      workoutStyle,
+      timePerExercise,
+      calculatedMax: maxExercises,
+      cappedMax,
+      finalMaxExercises,
+    });
 
     // STRUCTURED PROMPT - Standard workout generation
     prompt = `You are a certified personal trainer. Create a ${duration}-minute ${experienceLevel}-level workout.
@@ -1081,8 +1109,8 @@ ${locationContext}${equipmentContext}${injuryContext}
 TIME BUDGET (${workoutStyle === 'strength' ? '5x5 STRENGTH' : 'STANDARD'}):
 - Total workout time: ${duration} minutes
 - Rest per set: ${restPerSet}s (${workoutStyle === 'strength' ? 'heavy strength work needs longer rest' : 'standard rest'})
-- Each exercise takes ~${timePerExercise} minutes
-- MAXIMUM EXERCISES: ${maxExercises} - DO NOT EXCEED
+- Each exercise takes ~${timePerExercise} minutes (includes sets, rest, transitions)
+- MAXIMUM EXERCISES: ${finalMaxExercises} - DO NOT EXCEED THIS LIMIT
 
 Generate a complete workout using your knowledge of fitness exercises. Use common, well-known exercise names.
 The exercises will be matched to our database automatically.
@@ -1095,7 +1123,7 @@ RULES:
 2. Follow the WORKOUT STYLE and FITNESS GOAL guidelines above
 3. STRICT: ONLY exercises targeting ${targetMuscles.join(', ')} - NO OTHER MUSCLE GROUPS
 4. For outdoor: ONLY bodyweight exercises
-5. HARD LIMIT: Maximum ${maxExercises} exercises for ${duration} minutes
+5. HARD LIMIT: Maximum ${finalMaxExercises} exercises for ${duration} minutes
 6. For cardio style: include running intervals, sprints, or cardio machine work
 7. For mobility style: ONLY stretches, foam rolling, yoga poses - NO weight training
 8. For rehab style: ONLY band work, light bodyweight, corrective exercises - NO barbell exercises, NO bench press, NO squats, NO deadlifts, NO overhead press

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
+import { MuscleIcon, LegIcon, BodyIcon, HeartPulseIcon, ChevronDownIcon, XIcon } from '@/components/Icons';
 import type { WorkoutStyle } from '@/lib/generateWorkout';
 
 interface MuscleSelectorProps {
@@ -50,25 +51,20 @@ export function MuscleSelector({
   const { colors } = useTheme();
   const [expandedCategory, setExpandedCategory] = useState<CategoryType>(null);
 
-  // Determine which category is active based on selected muscles
   const getActiveCategory = (): CategoryType => {
     if (selectedWorkoutStyle === 'cardio') return 'cardio';
     if (selectedMuscles.length === 0) return null;
 
     const upperIds = muscleGroups.upper.map(m => m.id);
     const lowerIds = muscleGroups.lower.map(m => m.id);
-    const allIds = allMuscleIds;
 
     const hasUpper = selectedMuscles.some(m => upperIds.includes(m));
     const hasLower = selectedMuscles.some(m => lowerIds.includes(m));
 
-    // If has both upper and lower, it's full body
     if (hasUpper && hasLower) return 'full';
-    // If all muscles are from upper
     if (hasUpper && !hasLower && selectedMuscles.every(m => upperIds.includes(m) || muscleGroups.core.map(c => c.id).includes(m))) {
       return 'upper';
     }
-    // If all muscles are from lower
     if (hasLower && !hasUpper && selectedMuscles.every(m => lowerIds.includes(m) || muscleGroups.core.map(c => c.id).includes(m))) {
       return 'lower';
     }
@@ -80,33 +76,26 @@ export function MuscleSelector({
 
   const handleCategoryClick = (category: CategoryType) => {
     if (category === 'full') {
-      // Full body - select all muscles, collapse
       setSelectedMuscles(allMuscleIds);
       setExpandedCategory(null);
       if (selectedWorkoutStyle === 'cardio') {
         setSelectedWorkoutStyle('traditional');
       }
     } else if (category === 'cardio') {
-      // Cardio - set style and clear muscles
       setSelectedWorkoutStyle('cardio');
       setSelectedMuscles([]);
       setExpandedCategory(null);
     } else if (category === 'upper' || category === 'lower') {
-      // Toggle expansion for upper/lower
       if (expandedCategory === category) {
-        // Clicking again collapses
         setExpandedCategory(null);
       } else {
-        // Expand and select default muscles for this category
         setExpandedCategory(category);
         if (selectedWorkoutStyle === 'cardio') {
           setSelectedWorkoutStyle('traditional');
         }
-        // Auto-select main muscles for the category if nothing from that category selected
         const categoryMuscles = muscleGroups[category].map(m => m.id);
         const hasFromCategory = selectedMuscles.some(m => categoryMuscles.includes(m));
         if (!hasFromCategory) {
-          // Select first 3-4 muscles from category
           const defaultMuscles = category === 'upper'
             ? ['chest', 'back', 'shoulders']
             : ['quads', 'hamstrings', 'glutes'];
@@ -138,78 +127,80 @@ export function MuscleSelector({
     return false;
   };
 
-  const categories: { id: CategoryType; label: string; icon: string }[] = [
-    { id: 'upper', label: 'Upper Body', icon: '💪' },
-    { id: 'lower', label: 'Lower Body', icon: '🦵' },
-    { id: 'full', label: 'Full Body', icon: '🏋️' },
-    { id: 'cardio', label: 'Cardio', icon: '🏃' },
+  const categories: { id: CategoryType; label: string; Icon: typeof MuscleIcon }[] = [
+    { id: 'upper', label: 'Upper Body', Icon: MuscleIcon },
+    { id: 'lower', label: 'Lower Body', Icon: LegIcon },
+    { id: 'full', label: 'Full Body', Icon: BodyIcon },
+    { id: 'cardio', label: 'Cardio', Icon: HeartPulseIcon },
   ];
 
   return (
     <div
       style={{
         background: colors.cardBg,
-        border: `1px solid ${colors.borderSubtle}`,
-        borderRadius: '1rem',
-        padding: '1rem',
-        marginBottom: '1rem',
+        border: `1.5px solid ${colors.borderSubtle}`,
+        borderRadius: '1.25rem',
+        padding: '1.25rem',
+        marginBottom: '1.25rem',
       }}
     >
       <h2
         style={{
           color: colors.text,
-          fontSize: '1rem',
-          fontWeight: 600,
-          marginBottom: '0.875rem',
+          fontSize: '1.125rem',
+          fontWeight: 700,
+          marginBottom: '1rem',
+          fontFamily: 'var(--font-libre-baskerville)',
         }}
       >
         What do you want to train?
       </h2>
 
-      {/* Category Buttons */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      {/* Category Buttons - 2x2 Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
         {categories.map(cat => {
           const isActive = isCategoryActive(cat.id);
           const isExpanded = expandedCategory === cat.id;
+          const IconComponent = cat.Icon;
 
           return (
             <button
               key={cat.id}
               onClick={() => handleCategoryClick(cat.id)}
               style={{
-                flex: '1 1 calc(50% - 0.25rem)',
-                minWidth: '120px',
-                padding: '0.875rem 1rem',
-                borderRadius: '0.75rem',
-                background: isActive ? colors.accentMuted : colors.inputBg,
+                padding: '1rem',
+                borderRadius: '1rem',
+                background: isActive
+                  ? `linear-gradient(135deg, ${colors.accentMuted} 0%, rgba(201, 167, 90, 0.15) 100%)`
+                  : colors.inputBg,
                 border: isActive
                   ? `2px solid ${colors.accent}`
-                  : `1px solid ${colors.borderSubtle}`,
+                  : `1.5px solid ${colors.borderSubtle}`,
                 color: isActive ? colors.accent : colors.text,
                 fontWeight: 600,
-                fontSize: '0.875rem',
+                fontSize: '0.9375rem',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '0.5rem',
+                gap: '0.625rem',
+                position: 'relative',
               }}
             >
-              <span style={{ fontSize: '1.125rem' }}>{cat.icon}</span>
+              <IconComponent size={22} color={isActive ? colors.accent : colors.textMuted} strokeWidth={2} />
               <span>{cat.label}</span>
               {(cat.id === 'upper' || cat.id === 'lower') && (
-                <span
+                <div
                   style={{
-                    fontSize: '0.625rem',
-                    color: colors.textMuted,
-                    marginLeft: '0.25rem',
+                    position: 'absolute',
+                    right: '0.75rem',
                     transition: 'transform 0.2s ease',
                     transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                   }}
                 >
-                  ▼
-                </span>
+                  <ChevronDownIcon size={16} color={isActive ? colors.accent : colors.textMuted} />
+                </div>
               )}
             </button>
           );
@@ -220,12 +211,12 @@ export function MuscleSelector({
       {expandedCategory && (expandedCategory === 'upper' || expandedCategory === 'lower') && (
         <div
           style={{
-            marginTop: '0.875rem',
-            paddingTop: '0.875rem',
+            marginTop: '1.25rem',
+            paddingTop: '1.25rem',
             borderTop: `1px solid ${colors.borderSubtle}`,
           }}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.625rem' }}>
             {muscleGroups[expandedCategory].map(muscle => {
               const isSelected = selectedMuscles.includes(muscle.id);
               return (
@@ -233,15 +224,65 @@ export function MuscleSelector({
                   key={muscle.id}
                   onClick={() => toggleMuscle(muscle.id)}
                   style={{
-                    padding: '0.5rem 0.875rem',
-                    borderRadius: '999px',
-                    background: isSelected ? colors.accentMuted : colors.inputBg,
+                    padding: '0.625rem 1rem',
+                    borderRadius: '2rem',
+                    background: isSelected
+                      ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`
+                      : colors.inputBg,
                     border: isSelected
-                      ? `1px solid ${colors.accent}`
-                      : `1px solid ${colors.border}`,
-                    color: isSelected ? colors.accent : colors.text,
+                      ? 'none'
+                      : `1.5px solid ${colors.border}`,
+                    color: isSelected ? colors.bg : colors.text,
+                    fontSize: '0.875rem',
+                    fontWeight: isSelected ? 600 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isSelected ? '0 2px 8px rgba(201, 167, 90, 0.25)' : 'none',
+                  }}
+                >
+                  {muscle.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Core Options */}
+          <div
+            style={{
+              marginTop: '1rem',
+              paddingTop: '0.875rem',
+              borderTop: `1px dashed ${colors.borderSubtle}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.75rem',
+                color: colors.textMuted,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                fontWeight: 600,
+              }}
+            >
+              Add Core
+            </span>
+            {muscleGroups.core.map(muscle => {
+              const isSelected = selectedMuscles.includes(muscle.id);
+              return (
+                <button
+                  key={muscle.id}
+                  onClick={() => toggleMuscle(muscle.id)}
+                  style={{
+                    padding: '0.5rem 0.875rem',
+                    borderRadius: '2rem',
+                    background: isSelected ? colors.accentMuted : 'transparent',
+                    border: `1.5px solid ${isSelected ? colors.accent : colors.border}`,
+                    color: isSelected ? colors.accent : colors.textMuted,
                     fontSize: '0.8125rem',
-                    fontWeight: isSelected ? 600 : 400,
+                    fontWeight: isSelected ? 600 : 500,
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
@@ -250,53 +291,6 @@ export function MuscleSelector({
                 </button>
               );
             })}
-
-            {/* Add core options when in upper or lower */}
-            <div
-              style={{
-                width: '100%',
-                marginTop: '0.5rem',
-                paddingTop: '0.5rem',
-                borderTop: `1px dashed ${colors.borderSubtle}`,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '0.6875rem',
-                  color: colors.textMuted,
-                  marginRight: '0.5rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                }}
-              >
-                Add Core:
-              </span>
-              {muscleGroups.core.map(muscle => {
-                const isSelected = selectedMuscles.includes(muscle.id);
-                return (
-                  <button
-                    key={muscle.id}
-                    onClick={() => toggleMuscle(muscle.id)}
-                    style={{
-                      padding: '0.375rem 0.625rem',
-                      borderRadius: '999px',
-                      background: isSelected ? colors.accentMuted : 'transparent',
-                      border: isSelected
-                        ? `1px solid ${colors.accent}`
-                        : `1px solid ${colors.border}`,
-                      color: isSelected ? colors.accent : colors.textMuted,
-                      fontSize: '0.75rem',
-                      fontWeight: isSelected ? 600 : 400,
-                      cursor: 'pointer',
-                      marginRight: '0.375rem',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    {muscle.name}
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
       )}
@@ -305,17 +299,20 @@ export function MuscleSelector({
       {selectedMuscles.length > 0 && selectedWorkoutStyle !== 'cardio' && (
         <div
           style={{
-            marginTop: '0.75rem',
+            marginTop: '1rem',
+            padding: '0.75rem 1rem',
+            background: colors.accentMuted,
+            borderRadius: '0.75rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
             flexWrap: 'wrap',
           }}
         >
-          <span style={{ fontSize: '0.75rem', color: colors.textMuted }}>
-            Selected:
+          <span style={{ fontSize: '0.75rem', color: colors.accent, fontWeight: 600 }}>
+            Training:
           </span>
-          {selectedMuscles.slice(0, 5).map(muscleId => {
+          {selectedMuscles.slice(0, 4).map(muscleId => {
             const muscle = [...muscleGroups.upper, ...muscleGroups.lower, ...muscleGroups.core].find(
               m => m.id === muscleId
             );
@@ -323,37 +320,39 @@ export function MuscleSelector({
               <span
                 key={muscleId}
                 style={{
-                  padding: '0.1875rem 0.5rem',
-                  borderRadius: '999px',
-                  background: colors.accentMuted,
-                  color: colors.accent,
-                  fontSize: '0.6875rem',
-                  fontWeight: 500,
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: '1rem',
+                  background: colors.accent,
+                  color: colors.bg,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
                 }}
               >
                 {muscle?.name || muscleId}
               </span>
             );
           })}
-          {selectedMuscles.length > 5 && (
-            <span style={{ fontSize: '0.6875rem', color: colors.textMuted }}>
-              +{selectedMuscles.length - 5} more
+          {selectedMuscles.length > 4 && (
+            <span style={{ fontSize: '0.75rem', color: colors.accent, fontWeight: 500 }}>
+              +{selectedMuscles.length - 4} more
             </span>
           )}
           <button
             onClick={() => setSelectedMuscles([])}
             style={{
               marginLeft: 'auto',
-              padding: '0.25rem 0.5rem',
+              padding: '0.375rem',
               background: 'transparent',
-              border: `1px solid ${colors.borderSubtle}`,
-              borderRadius: '0.375rem',
-              color: colors.textMuted,
-              fontSize: '0.6875rem',
+              border: `1px solid ${colors.accent}`,
+              borderRadius: '50%',
+              color: colors.accent,
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            Clear
+            <XIcon size={14} color={colors.accent} strokeWidth={2.5} />
           </button>
         </div>
       )}
