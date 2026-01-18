@@ -1316,6 +1316,10 @@ export default function Home() {
           onClose={handleClosePlanReview}
           onRegenerate={handleRegenerateWeeklyPlan}
           regenerating={generating}
+          location={selectedLocation as 'gym' | 'home' | 'outdoor'}
+          experienceLevel={(profile?.experience_level as 'beginner' | 'intermediate' | 'advanced') || 'intermediate'}
+          equipment={selectedGym?.equipment_ids || []}
+          customEquipment={selectedGym?.custom_equipment || []}
         />
       )}
 
