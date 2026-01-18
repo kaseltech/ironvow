@@ -85,6 +85,7 @@ export function WeeklyPlanReview({
   const [swappingExerciseIndex, setSwappingExerciseIndex] = useState<number | null>(null);
   const [swapAlternatives, setSwapAlternatives] = useState<ExerciseAlternative[]>([]);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Regenerate day state
   const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null);
@@ -134,6 +135,61 @@ export function WeeklyPlanReview({
       setSwapAlternatives([]);
     } finally {
       setLoadingAlternatives(false);
+    }
+  };
+
+  // Load more alternatives using AI
+  const handleLoadMoreAlternatives = async () => {
+    if (swappingDayIndex === null || swappingExerciseIndex === null) return;
+
+    const day = plan.days[swappingDayIndex];
+    const exercise = day.workout.exercises[swappingExerciseIndex];
+
+    setLoadingMore(true);
+
+    try {
+      let targetMuscles: string[] = [];
+
+      if (exercise.primaryMuscles?.length) {
+        targetMuscles = [...exercise.primaryMuscles];
+      }
+      if (exercise.secondaryMuscles?.length) {
+        targetMuscles = [...targetMuscles, ...exercise.secondaryMuscles];
+      }
+      if (targetMuscles.length === 0 && day.workout.targetMuscles?.length) {
+        targetMuscles = [...day.workout.targetMuscles];
+      }
+      if (targetMuscles.length === 0) {
+        targetMuscles = inferMusclesFromName(exercise.name);
+      }
+
+      // Get IDs of already shown alternatives
+      const excludeIds = [
+        exercise.exerciseId || '',
+        ...swapAlternatives.map(a => a.id),
+      ].filter(Boolean);
+
+      const moreAlternatives = await getSwapAlternatives({
+        userId: user!.id,
+        location,
+        experienceLevel,
+        equipment,
+        customEquipment,
+        swapExerciseId: exercise.exerciseId || '',
+        swapTargetMuscles: targetMuscles,
+        workoutStyle: day.workout.workoutStyle,
+        swapRequestAI: true,
+        swapExcludeIds: excludeIds,
+      });
+
+      // Append new alternatives (avoid duplicates by ID)
+      const existingIds = new Set(swapAlternatives.map(a => a.id));
+      const newAlternatives = (moreAlternatives || []).filter(a => !existingIds.has(a.id));
+      setSwapAlternatives([...swapAlternatives, ...newAlternatives]);
+    } catch (err) {
+      console.error('[Swap] Failed to load more alternatives:', err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -769,8 +825,24 @@ export function WeeklyPlanReview({
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      <div style={{ color: colors.text, fontSize: '0.9375rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                        {alt.name}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <span style={{ color: colors.text, fontSize: '0.9375rem', fontWeight: 600 }}>
+                          {alt.name}
+                        </span>
+                        {(alt as any).source === 'ai_pending' && (
+                          <span
+                            style={{
+                              background: 'rgba(147, 51, 234, 0.15)',
+                              color: '#a855f7',
+                              padding: '0.125rem 0.375rem',
+                              borderRadius: '999px',
+                              fontSize: '0.625rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            AI
+                          </span>
+                        )}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
                         {alt.primaryMuscles.map(m => (
@@ -805,6 +877,49 @@ export function WeeklyPlanReview({
                       </div>
                     </button>
                   ))}
+
+                  {/* Load More Button */}
+                  <button
+                    onClick={handleLoadMoreAlternatives}
+                    disabled={loadingMore}
+                    style={{
+                      marginTop: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      background: 'transparent',
+                      border: `1.5px dashed ${colors.border}`,
+                      borderRadius: '0.75rem',
+                      color: colors.textMuted,
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      cursor: loadingMore ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      opacity: loadingMore ? 0.6 : 1,
+                    }}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <div
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            border: `2px solid ${colors.accent}`,
+                            borderTopColor: 'transparent',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite',
+                          }}
+                        />
+                        Finding more...
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: '1rem' }}>+</span>
+                        Load More (AI)
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
             </div>

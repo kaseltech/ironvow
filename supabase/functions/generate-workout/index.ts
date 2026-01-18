@@ -378,6 +378,8 @@ interface WorkoutRequest {
   excludeExerciseIds?: string[]; // For regenerating - exclude previous exercises
   swapExerciseId?: string; // For swapping - find alternatives for this exercise
   swapTargetMuscles?: string[]; // Muscles the swapped exercise should target
+  swapRequestAI?: boolean; // Force AI suggestions (for "Load More" button)
+  swapExcludeIds?: string[]; // Exercise IDs already shown (to avoid duplicates)
   // NEW: Freeform AI request
   freeformPrompt?: string; // User's custom description of what they want
   // NEW: Weekly plan generation
@@ -1717,8 +1719,11 @@ async function handleSwapRequest(
   allEquipment: string[],
   expandedSwapMuscles: string[]
 ): Promise<Response> {
-  const { location, swapExerciseId, injuries, experienceLevel, workoutStyle = 'traditional' } = body;
+  const { location, swapExerciseId, injuries, experienceLevel, workoutStyle = 'traditional', swapRequestAI, swapExcludeIds } = body;
   let swapTargetMuscles = expandedSwapMuscles;
+
+  // If requesting AI suggestions only (Load More button)
+  const forceAI = swapRequestAI === true;
 
   // Fetch all exercises
   const { data: exercises, error } = await supabase.from('exercises').select('*');
@@ -1766,6 +1771,9 @@ async function handleSwapRequest(
   const alternatives = exercises.filter((ex: any) => {
     // Don't include the exercise we're swapping
     if (ex.id === swapExerciseId) return false;
+
+    // Don't include exercises already shown (for Load More)
+    if (swapExcludeIds && swapExcludeIds.includes(ex.id)) return false;
 
     // Must target at least one of the same muscles (if we have target muscles)
     if (swapTargetMuscles && swapTargetMuscles.length > 0) {
@@ -1891,8 +1899,8 @@ async function handleSwapRequest(
     muscles: ex.primary_muscles,
   })));
 
-  // Format DB alternatives
-  let topAlternatives = alternatives.slice(0, 10).map((ex: any) => ({
+  // Format DB alternatives (skip if forcing AI-only request)
+  let topAlternatives = forceAI ? [] : alternatives.slice(0, 10).map((ex: any) => ({
     id: ex.id,
     name: ex.name,
     primaryMuscles: ex.primary_muscles,
@@ -1905,10 +1913,11 @@ async function handleSwapRequest(
     source: 'database',
   }));
 
-  // If we have fewer than 5 alternatives, use AI to suggest more
+  // Request AI suggestions if: 1) fewer than 5 DB alternatives, or 2) force AI mode (Load More)
   const MIN_ALTERNATIVES = 5;
-  if (topAlternatives.length < MIN_ALTERNATIVES) {
-    console.log(`Swap: Only ${topAlternatives.length} DB alternatives, requesting AI suggestions...`);
+  const AI_REQUEST_COUNT = forceAI ? 5 : MIN_ALTERNATIVES - topAlternatives.length;
+  if (forceAI || topAlternatives.length < MIN_ALTERNATIVES) {
+    console.log(`Swap: ${forceAI ? 'Force AI mode' : `Only ${topAlternatives.length} DB alternatives`}, requesting ${AI_REQUEST_COUNT} AI suggestions...`);
 
     try {
       const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
@@ -1932,7 +1941,7 @@ async function handleSwapRequest(
           workoutStyle,
           experienceLevel,
           excludeNames: Array.from(existingNames),
-          count: MIN_ALTERNATIVES - topAlternatives.length,
+          count: AI_REQUEST_COUNT,
         });
 
         console.log(`Swap: AI returned ${aiAlternatives.length} suggestions`);

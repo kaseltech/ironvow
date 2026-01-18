@@ -68,6 +68,8 @@ export interface SwapRequest {
   swapExerciseId: string;
   swapTargetMuscles: string[];
   workoutStyle?: WorkoutStyle;
+  swapRequestAI?: boolean; // Force AI suggestions (for "Load More" button)
+  swapExcludeIds?: string[]; // Exercise IDs already shown (to avoid duplicates)
 }
 
 export interface ExerciseAlternative {
