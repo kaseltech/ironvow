@@ -93,10 +93,9 @@ export function WeeklyPlanReview({ plan, onClose, onRegenerate, regenerating }: 
         const exerciseInserts = day.workout.exercises.map((ex, idx) => ({
           workout_id: workoutData.id,
           exercise_id: ex.exerciseId || null,
-          exercise_name: ex.name,
-          sets: ex.sets || 3,
+          target_sets: ex.sets || 3,
           target_reps: parseInt(ex.reps) || 10,
-          target_weight: ex.weight ? parseInt(ex.weight) : null,
+          target_weight: ex.weight ? parseFloat(ex.weight) : null,
           order_index: idx,
           notes: ex.notes || null,
         }));
@@ -122,9 +121,10 @@ export function WeeklyPlanReview({ plan, onClose, onRegenerate, regenerating }: 
       }
 
       setSaved(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save plan:', err);
-      setError('Failed to save plan. Please try again.');
+      console.error('Error details:', err?.message, err?.details, err?.hint);
+      setError(`Failed to save plan: ${err?.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
