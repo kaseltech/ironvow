@@ -40,7 +40,15 @@ const allMuscleIds = [
   ...muscleGroups.core.map(m => m.id),
 ];
 
+// Quick select presets
+const quickSelects = {
+  push: ['chest', 'shoulders', 'triceps'],
+  pull: ['back', 'biceps', 'traps'],
+  legs: ['quads', 'hamstrings', 'glutes', 'calves'],
+};
+
 type CategoryType = 'upper' | 'lower' | 'full' | 'cardio' | null;
+type QuickSelectType = 'push' | 'pull' | 'legs' | null;
 
 export function MuscleSelector({
   selectedMuscles,
@@ -113,6 +121,34 @@ export function MuscleSelector({
     );
   };
 
+  const handleQuickSelect = (preset: QuickSelectType) => {
+    if (!preset) return;
+    const muscles = quickSelects[preset];
+    setSelectedMuscles(muscles);
+    setExpandedCategory(null);
+    if (selectedWorkoutStyle === 'cardio') {
+      setSelectedWorkoutStyle('traditional');
+    }
+  };
+
+  const getActiveQuickSelect = (): QuickSelectType => {
+    if (selectedMuscles.length === 0) return null;
+
+    // Check if current selection matches a quick select exactly
+    const sortedSelected = [...selectedMuscles].sort();
+
+    for (const [key, muscles] of Object.entries(quickSelects)) {
+      const sortedPreset = [...muscles].sort();
+      if (sortedSelected.length === sortedPreset.length &&
+          sortedSelected.every((m, i) => m === sortedPreset[i])) {
+        return key as QuickSelectType;
+      }
+    }
+    return null;
+  };
+
+  const activeQuickSelect = getActiveQuickSelect();
+
   const isCategoryActive = (category: CategoryType): boolean => {
     if (category === 'cardio') return selectedWorkoutStyle === 'cardio';
     if (category === 'full') return activeCategory === 'full';
@@ -155,6 +191,45 @@ export function MuscleSelector({
       >
         What do you want to train?
       </h2>
+
+      {/* Quick Select - Push/Pull/Legs */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          marginBottom: '1rem',
+        }}
+      >
+        {(['push', 'pull', 'legs'] as const).map(preset => {
+          const isActive = activeQuickSelect === preset;
+          return (
+            <button
+              key={preset}
+              onClick={() => handleQuickSelect(preset)}
+              style={{
+                flex: 1,
+                padding: '0.625rem 0.75rem',
+                borderRadius: '0.75rem',
+                background: isActive
+                  ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`
+                  : 'transparent',
+                border: isActive
+                  ? 'none'
+                  : `1.5px solid ${colors.border}`,
+                color: isActive ? colors.bg : colors.text,
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                textTransform: 'capitalize',
+                boxShadow: isActive ? '0 2px 8px rgba(201, 167, 90, 0.3)' : 'none',
+              }}
+            >
+              {preset}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Category Buttons - 2x2 Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
