@@ -4,8 +4,8 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
-import type { GeneratedWeeklyPlan, GeneratedWorkout, GeneratedExercise, ExerciseAlternative } from '@/lib/generateWorkout';
-import { getSwapAlternatives } from '@/lib/generateWorkout';
+import type { GeneratedWeeklyPlan, GeneratedWorkout, GeneratedExercise, ExerciseAlternative, EquipmentType, WarmupExercise } from '@/lib/generateWorkout';
+import { getSwapAlternatives, getEquipmentFromName, getBaseMovement, getAvailableEquipmentVariants, findEquipmentVariant } from '@/lib/generateWorkout';
 import { getSupabase } from '@/lib/supabase/client';
 import { RefreshIcon, ChevronDownIcon, XIcon } from '@/components/Icons';
 
@@ -87,6 +87,11 @@ export function WeeklyPlanReview({
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  // Equipment variant state
+  const [availableEquipment, setAvailableEquipment] = useState<Map<EquipmentType, string>>(new Map());
+  const [currentEquipment, setCurrentEquipment] = useState<EquipmentType | null>(null);
+  const [loadingEquipmentSwap, setLoadingEquipmentSwap] = useState<EquipmentType | null>(null);
+
   // Regenerate day state
   const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null);
 
@@ -101,6 +106,16 @@ export function WeeklyPlanReview({
     setSwappingExerciseIndex(exerciseIndex);
     setLoadingAlternatives(true);
     setSwapAlternatives([]);
+
+    // Detect current equipment and fetch available variants
+    const detectedEquipment = getEquipmentFromName(exercise.name);
+    setCurrentEquipment(detectedEquipment);
+    setAvailableEquipment(new Map());
+
+    // Fetch equipment variants in parallel
+    getAvailableEquipmentVariants(exercise.name).then(variants => {
+      setAvailableEquipment(variants);
+    });
 
     try {
       let targetMuscles: string[] = [];
@@ -190,6 +205,66 @@ export function WeeklyPlanReview({
       console.error('[Swap] Failed to load more alternatives:', err);
     } finally {
       setLoadingMore(false);
+    }
+  };
+
+  // Swap to a different equipment variant
+  const handleEquipmentSwap = async (targetEquipment: EquipmentType) => {
+    if (swappingDayIndex === null || swappingExerciseIndex === null) return;
+
+    const day = plan.days[swappingDayIndex];
+    const exercise = day.workout.exercises[swappingExerciseIndex];
+    const baseMovement = getBaseMovement(exercise.name);
+
+    setLoadingEquipmentSwap(targetEquipment);
+
+    try {
+      const variant = await findEquipmentVariant({
+        userId: user!.id,
+        exerciseName: exercise.name,
+        baseMovement,
+        currentEquipment,
+        targetEquipment,
+        location,
+        generateIfMissing: true,
+      });
+
+      if (variant) {
+        const newExercise: GeneratedExercise = {
+          exerciseId: variant.id,
+          name: variant.name,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          restSeconds: exercise.restSeconds,
+          notes: exercise.notes,
+          primaryMuscles: variant.primaryMuscles || [],
+          secondaryMuscles: variant.secondaryMuscles || [],
+        };
+
+        const updatedExercises = [...day.workout.exercises];
+        updatedExercises[swappingExerciseIndex] = newExercise;
+
+        const updatedDays = [...plan.days];
+        updatedDays[swappingDayIndex] = {
+          ...day,
+          workout: {
+            ...day.workout,
+            exercises: updatedExercises,
+          },
+        };
+
+        setPlan({ ...plan, days: updatedDays });
+        setCurrentEquipment(targetEquipment);
+
+        // Refresh available variants
+        getAvailableEquipmentVariants(variant.name).then(variants => {
+          setAvailableEquipment(variants);
+        });
+      }
+    } catch (err) {
+      console.error('[EquipmentSwap] Failed:', err);
+    } finally {
+      setLoadingEquipmentSwap(null);
     }
   };
 
@@ -549,6 +624,50 @@ export function WeeklyPlanReview({
                       </div>
                     )}
 
+                    {/* Warm-up Section */}
+                    {workout.warmup && workout.warmup.length > 0 && (
+                      <div style={{ padding: '0.75rem 1.25rem', borderBottom: `1px solid ${colors.borderSubtle}` }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginBottom: '0.5rem',
+                        }}>
+                          <span
+                            style={{
+                              background: 'rgba(34, 197, 94, 0.15)',
+                              color: '#22c55e',
+                              padding: '0.125rem 0.375rem',
+                              borderRadius: '0.25rem',
+                              fontSize: '0.5625rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            WARM-UP
+                          </span>
+                          <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                            {workout.warmup.length} stretches · ~{Math.round(workout.warmup.reduce((acc, w) => acc + w.duration, 0) / 60)} min
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                          {workout.warmup.map((stretch, sIdx) => (
+                            <span
+                              key={sIdx}
+                              style={{
+                                background: colors.inputBg,
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '0.375rem',
+                                fontSize: '0.6875rem',
+                                color: colors.text,
+                              }}
+                            >
+                              {stretch.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Exercises */}
                     <div style={{ padding: '0.75rem 1.25rem 1.25rem' }}>
                       {workout.exercises.map((ex, exIdx) => (
@@ -790,6 +909,71 @@ export function WeeklyPlanReview({
               overflow: 'auto',
               flex: 1,
             }}>
+              {/* Equipment Toggle Section */}
+              {currentEquipment && availableEquipment.size > 1 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.5rem', fontWeight: 500 }}>
+                    Equipment Variant
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                    {Array.from(availableEquipment.keys()).map(eq => {
+                      const isActive = eq === currentEquipment;
+                      const isLoading = loadingEquipmentSwap === eq;
+                      return (
+                        <button
+                          key={eq}
+                          onClick={() => !isActive && handleEquipmentSwap(eq)}
+                          disabled={isActive || loadingEquipmentSwap !== null}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: isActive || loadingEquipmentSwap !== null ? 'default' : 'pointer',
+                            border: isActive ? `1.5px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+                            background: isActive ? colors.accentMuted : colors.inputBg,
+                            color: isActive ? colors.accent : colors.text,
+                            opacity: loadingEquipmentSwap !== null && !isLoading ? 0.5 : 1,
+                            transition: 'all 0.15s ease',
+                            textTransform: 'capitalize',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                          }}
+                        >
+                          {isLoading && (
+                            <div
+                              style={{
+                                width: '12px',
+                                height: '12px',
+                                border: `2px solid ${colors.accent}`,
+                                borderTopColor: 'transparent',
+                                borderRadius: '50%',
+                                animation: 'spin 0.8s linear infinite',
+                              }}
+                            />
+                          )}
+                          {eq}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Divider if equipment section shown */}
+              {currentEquipment && availableEquipment.size > 1 && !loadingAlternatives && swapAlternatives.length > 0 && (
+                <div style={{
+                  borderTop: `1px solid ${colors.borderSubtle}`,
+                  marginBottom: '1rem',
+                  paddingTop: '0.75rem',
+                }}>
+                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem', fontWeight: 500 }}>
+                    Other Exercises
+                  </div>
+                </div>
+              )}
+
               {loadingAlternatives ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
                   <div

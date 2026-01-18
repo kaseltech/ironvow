@@ -31,6 +31,7 @@ export interface WeeklyPlanRequest {
     planName: string;
     days: WeeklyPlanDay[];
   };
+  includeWarmup?: boolean; // Include warm-up stretches (default true)
 }
 
 export interface GeneratedWeeklyPlan {
@@ -56,6 +57,7 @@ export interface WorkoutRequest {
   gymName?: string;
   excludeExerciseIds?: string[]; // For regenerating - exclude previous exercises
   freeformPrompt?: string; // User's custom description for AI-powered generation
+  includeWarmup?: boolean; // Include warm-up stretches (default true)
 }
 
 export interface SwapRequest {
@@ -80,6 +82,179 @@ export interface ExerciseAlternative {
   equipmentRequired: string[];
   isCompound: boolean;
   difficulty: string;
+  source?: 'database' | 'ai_pending';
+}
+
+// Equipment types for swap toggle
+export type EquipmentType = 'barbell' | 'dumbbell' | 'cable' | 'machine' | 'smith machine' | 'kettlebell' | 'bodyweight' | 'band';
+
+// Detect equipment type from exercise name
+export function getEquipmentFromName(name: string): EquipmentType | null {
+  const lowerName = name.toLowerCase();
+
+  if (lowerName.includes('smith machine')) return 'smith machine';
+  if (lowerName.includes('barbell') || lowerName.includes('bar ')) return 'barbell';
+  if (lowerName.includes('dumbbell') || lowerName.startsWith('db ') || lowerName.includes(' db ')) return 'dumbbell';
+  if (lowerName.includes('cable')) return 'cable';
+  if (lowerName.includes('machine')) return 'machine';
+  if (lowerName.includes('kettlebell') || lowerName.includes('kb ')) return 'kettlebell';
+  if (lowerName.includes('band') || lowerName.includes('resistance')) return 'band';
+  if (lowerName.includes('bodyweight') || lowerName.includes('body weight')) return 'bodyweight';
+
+  return null;
+}
+
+// Extract base movement from exercise name (remove equipment prefix)
+export function getBaseMovement(name: string): string {
+  const equipmentPrefixes = [
+    'smith machine',
+    'barbell',
+    'dumbbell',
+    'db',
+    'cable',
+    'machine',
+    'kettlebell',
+    'kb',
+    'band',
+    'resistance band',
+    'bodyweight',
+  ];
+
+  let base = name;
+  const lowerBase = base.toLowerCase();
+
+  for (const prefix of equipmentPrefixes) {
+    if (lowerBase.startsWith(prefix + ' ')) {
+      base = base.substring(prefix.length + 1);
+      break;
+    }
+  }
+
+  return base.trim();
+}
+
+// Build exercise name with equipment
+export function buildExerciseName(baseMovement: string, equipment: EquipmentType): string {
+  if (equipment === 'bodyweight') return baseMovement;
+  if (equipment === 'smith machine') return `Smith Machine ${baseMovement}`;
+
+  // Capitalize equipment
+  const equipCapitalized = equipment.charAt(0).toUpperCase() + equipment.slice(1);
+  return `${equipCapitalized} ${baseMovement}`;
+}
+
+// Request to find equipment variants
+export interface EquipmentVariantRequest {
+  userId: string;
+  exerciseName: string;
+  baseMovement: string;
+  currentEquipment: EquipmentType | null;
+  targetEquipment: EquipmentType;
+  location: 'gym' | 'home' | 'outdoor';
+  generateIfMissing?: boolean; // Use AI to generate if not in DB
+}
+
+export interface EquipmentVariant {
+  equipment: EquipmentType;
+  exerciseId: string | null; // null if needs to be generated
+  exerciseName: string;
+  inDatabase: boolean;
+}
+
+// Find equipment variant of an exercise
+export async function findEquipmentVariant(request: EquipmentVariantRequest): Promise<ExerciseAlternative | null> {
+  const supabase = getSupabase();
+
+  const targetName = buildExerciseName(request.baseMovement, request.targetEquipment);
+
+  // Search for the variant in database
+  const { data: exercises } = await supabase
+    .from('exercises')
+    .select('*')
+    .or(`name.ilike.%${targetName}%,name.ilike.%${request.targetEquipment}%${request.baseMovement}%`)
+    .limit(10);
+
+  if (exercises && exercises.length > 0) {
+    // Find best match
+    const exactMatch = exercises.find(
+      (ex: any) => ex.name.toLowerCase() === targetName.toLowerCase()
+    );
+    const partialMatch = exercises.find((ex: any) =>
+      ex.name.toLowerCase().includes(request.baseMovement.toLowerCase()) &&
+      ex.name.toLowerCase().includes(request.targetEquipment.toLowerCase())
+    );
+
+    const match = exactMatch || partialMatch;
+    if (match) {
+      return {
+        id: match.id,
+        name: match.name,
+        primaryMuscles: match.primary_muscles || [],
+        secondaryMuscles: match.secondary_muscles || [],
+        equipmentRequired: match.equipment_required || [],
+        isCompound: match.is_compound || false,
+        difficulty: match.difficulty || 'intermediate',
+        source: 'database',
+      };
+    }
+  }
+
+  // Not found - generate with AI if requested
+  if (request.generateIfMissing) {
+    // Call edge function to generate and add to pending
+    const { data, error } = await supabase.functions.invoke('generate-workout', {
+      body: {
+        generateEquipmentVariant: true,
+        exerciseName: request.exerciseName,
+        baseMovement: request.baseMovement,
+        targetEquipment: request.targetEquipment,
+        location: request.location,
+        userId: request.userId,
+      },
+    });
+
+    if (!error && data?.success && data?.exercise) {
+      return {
+        id: data.exercise.id,
+        name: data.exercise.name,
+        primaryMuscles: data.exercise.primary_muscles || [],
+        secondaryMuscles: data.exercise.secondary_muscles || [],
+        equipmentRequired: data.exercise.equipment_required || [],
+        isCompound: data.exercise.is_compound || false,
+        difficulty: data.exercise.difficulty || 'intermediate',
+        source: 'ai_pending',
+      };
+    }
+  }
+
+  return null;
+}
+
+// Get available equipment variants for an exercise
+export async function getAvailableEquipmentVariants(
+  exerciseName: string
+): Promise<Map<EquipmentType, string>> {
+  const supabase = getSupabase();
+  const baseMovement = getBaseMovement(exerciseName);
+  const variants = new Map<EquipmentType, string>();
+
+  // Search for all variants of this base movement
+  const { data: exercises } = await supabase
+    .from('exercises')
+    .select('id, name')
+    .ilike('name', `%${baseMovement}%`)
+    .limit(50);
+
+  if (exercises) {
+    for (const ex of exercises) {
+      const equipment = getEquipmentFromName(ex.name);
+      if (equipment && !variants.has(equipment)) {
+        variants.set(equipment, ex.id);
+      }
+    }
+  }
+
+  return variants;
 }
 
 export interface GeneratedExercise {
@@ -96,12 +271,21 @@ export interface GeneratedExercise {
   rehabFor?: string[];
 }
 
+export interface WarmupExercise {
+  exerciseId: string;
+  name: string;
+  duration: number; // seconds to hold/perform
+  notes?: string;
+  primaryMuscles?: string[];
+}
+
 export interface GeneratedWorkout {
   id?: string;
   name: string;
   description: string;
   duration: number;
   exercises: GeneratedExercise[];
+  warmup?: WarmupExercise[]; // Optional warm-up stretches
   workoutType: string;
   workoutStyle?: WorkoutStyle;
   targetMuscles: string[];

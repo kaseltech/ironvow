@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Equipment Toggle for Exercise Swaps
+- Quick equipment variant switching in swap modal (Barbell ↔ Dumbbell ↔ Cable ↔ Machine)
+- Equipment detection from exercise names
+- Base movement extraction (e.g., "Barbell Bench Press" → "Bench Press")
+- If variant not in database, AI generates it automatically
+
+#### AI-Enhanced Exercise Swaps
+- When database has fewer than 5 alternatives, AI generates more suggestions
+- Fuzzy matching to existing exercises prevents duplicates
+- New exercises stored in `exercises_pending` table for review
+- Purple "AI" badge on AI-generated alternatives
+- "Load More (AI)" button for on-demand AI suggestions
+- Muscle validation ensures AI alternatives target correct muscle groups
+
+#### Weekly Plan Improvements
+- Individual day regeneration without regenerating entire plan
+- "Regenerate Day" button in expanded day view
+- Swap exercises within weekly plan before saving
+
+#### UI/UX Overhaul
+- Replaced emojis with custom SVG icons throughout
+- Progressive disclosure design pattern
+- PrimaryContext sticky header component
+- MuscleSelector with category-based selection
+- TrainingStyleSelector with de-emphasized cards
+- AdvancedOptions collapsible section
+- Push/Pull/Legs quick select buttons restored
+- Cleaner visual hierarchy with reduced gradients
+
+### Fixed
+
+- Muscle naming inconsistency ("upper back" vs "upper_back") - normalized to use spaces
+- AI suggesting wrong muscle group exercises (e.g., calf in push workout)
+- Edge function 401 errors from JWT verification - deploy with `--no-verify-jwt`
+- Weekly plan save using wrong column names
+- Swap alternatives not working for unmatched AI exercises
+
+---
+
 ## [0.1.1] - 2025-01-11
 
 ### Added

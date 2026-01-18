@@ -68,7 +68,52 @@ npm run build && npx cap sync && npx cap open ios
 /opt/homebrew/bin/supabase status
 ```
 
+## Recent Features (January 2025)
+
+### Equipment Toggle for Swap Modal
+- When swapping an exercise, users can quickly toggle between equipment variants (barbell ↔ dumbbell ↔ cable ↔ machine)
+- Equipment detection from exercise names via `getEquipmentFromName()`
+- Base movement extraction via `getBaseMovement()` (e.g., "Barbell Bench Press" → "Bench Press")
+- Available variants fetched from database via `getAvailableEquipmentVariants()`
+- If variant not in DB, AI generates it and stores in `exercises_pending` table
+- **Files**: `src/lib/generateWorkout.ts`, `src/app/page.tsx`, `src/components/WeeklyPlanReview.tsx`
+
+### AI-Enhanced Swap with Review Table
+- When < 5 alternatives found in database, AI generates more suggestions
+- AI suggestions are fuzzy-matched to existing exercises to avoid duplicates
+- Muscle validation ensures AI alternatives target correct muscle groups
+- New exercises stored in `exercises_pending` table for human review before promotion
+- Purple "AI" badge displayed on AI-generated alternatives
+- **Database**: `exercises_pending` table (migration: `20260117_create_exercises_pending.sql`)
+
+### Load More (AI) Button
+- Swap modals now have "Load More (AI)" button for on-demand AI alternatives
+- Uses `swapRequestAI` and `swapExcludeIds` parameters to force AI generation
+- Works in both single workout and weekly plan swap modals
+
+### Weekly Plan Day Regeneration
+- Individual days in weekly plans can be regenerated without regenerating the entire plan
+- Uses `onRegenerateDay` callback in `WeeklyPlanReview` component
+- Excludes current exercises to ensure variety
+
+### Push/Pull/Legs Quick Selects
+- Restored Push/Pull/Legs quick select buttons in muscle selector
+- Quick selects: Push (chest, shoulders, triceps), Pull (back, biceps, traps), Legs (quads, hamstrings, glutes, calves)
+- **File**: `src/components/MuscleSelector.tsx`
+
 ## Recent Bug Fixes (January 2025)
+
+### Muscle Naming Normalization
+- Database muscle names were inconsistent ("upper back" vs "upper_back")
+- Normalized all 471 exercises to use spaces instead of underscores
+- Edge function now uses `normalizeMuscle()` helper to ensure consistency
+- **Preference**: Use spaces in muscle names, not underscores
+
+### Muscle Validation in AI Swap
+- AI would suggest exercises that fuzzy-matched to wrong muscle groups (e.g., "Calf Raise" in push workout)
+- Added muscle validation after fuzzy matching to block incorrect suggestions
+- If matched exercise doesn't target any of the requested muscles, it's blocked
+- **File**: `supabase/functions/generate-workout/index.ts`
 
 ### Variable Scope Bug (CRITICAL)
 In `generate-workout/index.ts`, the `generateWithAI` function was using:
@@ -121,7 +166,7 @@ Fixed to use the actual parameter names:
 verify_jwt = false
 ```
 
-## Pending Features (from plan file)
+## Pending Features
 
 ### Enhanced Workout History
 - Expandable workout cards in profile history
@@ -129,12 +174,10 @@ verify_jwt = false
 - Bookmark functionality
 - "Do Again" button to reload past workouts
 
-### Weekly Workout Planner
-- Multi-day AI-generated balanced programs
-- Database tables: `workout_plans`, `workout_plan_days`
-- Auto-splits based on day count (2-3 days = full body, 4 days = upper/lower, 5-6 days = PPL)
-
-See `/Users/charleskasel/.claude/plans/purrfect-petting-fog.md` for full plan details.
+### Exercises Pending Review UI
+- Admin interface to review AI-generated exercises in `exercises_pending` table
+- Approve, reject, or merge with existing exercises
+- Currently exercises are stored but no review UI exists
 
 ## Supabase Project
 

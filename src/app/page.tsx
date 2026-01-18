@@ -13,7 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
 import { useWorkoutPlans, DAY_NAMES_FULL } from '@/hooks/useWorkoutPlans';
-import { generateWorkout, getSwapAlternatives, generateWeeklyPlan, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan } from '@/lib/generateWorkout';
+import { generateWorkout, getSwapAlternatives, generateWeeklyPlan, findEquipmentVariant, getAvailableEquipmentVariants, getEquipmentFromName, getBaseMovement, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan, type EquipmentType } from '@/lib/generateWorkout';
 import { WeeklyPlanner } from '@/components/WeeklyPlanner';
 import { WeeklyPlanReview } from '@/components/WeeklyPlanReview';
 import { ExerciseDetailModal } from '@/components/ExerciseDetailModal';
@@ -71,6 +71,10 @@ export default function Home() {
   const [swapAlternatives, setSwapAlternatives] = useState<ExerciseAlternative[]>([]);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [loadingMoreAlternatives, setLoadingMoreAlternatives] = useState(false);
+  // Equipment variant state for swap modal
+  const [availableEquipment, setAvailableEquipment] = useState<Map<EquipmentType, string>>(new Map());
+  const [currentEquipment, setCurrentEquipment] = useState<EquipmentType | null>(null);
+  const [loadingEquipmentSwap, setLoadingEquipmentSwap] = useState<EquipmentType | null>(null);
   const [lastWorkoutRequest, setLastWorkoutRequest] = useState<object | null>(null);
   // Track recently generated exercises to avoid duplicates on fresh generates
   const [recentExerciseIds, setRecentExerciseIds] = useState<string[]>([]);
@@ -84,6 +88,9 @@ export default function Home() {
   const [lastWeeklyRequest, setLastWeeklyRequest] = useState<{ days: WeeklyPlanDay[]; planName: string } | null>(null);
   // Exercise detail modal
   const [showExerciseDetail, setShowExerciseDetail] = useState<string | null>(null);
+  // Warm-up settings
+  const [includeWarmup, setIncludeWarmup] = useState(true); // On by default
+  const [warmupExpanded, setWarmupExpanded] = useState(false); // Collapsed by default in display
 
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
@@ -141,6 +148,7 @@ export default function Home() {
         gymName: selectedGym?.name,
         freeformPrompt: freeformMode ? freeformPrompt : undefined, // Add freeform prompt
         excludeExerciseIds: recentExerciseIds.length > 0 ? recentExerciseIds : undefined,
+        includeWarmup, // Include warm-up stretches
       };
 
       // Save request for potential regeneration
@@ -245,6 +253,7 @@ export default function Home() {
           planName,
           days,
         },
+        includeWarmup, // Include warm-up stretches
       });
 
       console.log('[WeeklyPlan] Plan generated successfully:', plan?.name);
@@ -393,6 +402,16 @@ export default function Home() {
     setLoadingAlternatives(true);
     setSwapAlternatives([]);
 
+    // Detect current equipment and fetch available variants
+    const detectedEquipment = getEquipmentFromName(exercise.name);
+    setCurrentEquipment(detectedEquipment);
+    setAvailableEquipment(new Map());
+
+    // Fetch equipment variants in parallel
+    getAvailableEquipmentVariants(exercise.name).then(variants => {
+      setAvailableEquipment(variants);
+    });
+
     try {
       // Build target muscles from multiple sources, ensuring we always have something
       let targetMuscles: string[] = [];
@@ -526,6 +545,64 @@ export default function Home() {
       console.error('[Swap] Failed to load more:', err);
     } finally {
       setLoadingMoreAlternatives(false);
+    }
+  };
+
+  // Swap to a different equipment variant
+  const handleEquipmentSwap = async (targetEquipment: EquipmentType) => {
+    if (swappingExerciseIndex === null || !generatedWorkout || !lastWorkoutRequest) return;
+
+    const exercise = generatedWorkout.exercises[swappingExerciseIndex];
+    const baseMovement = getBaseMovement(exercise.name);
+
+    setLoadingEquipmentSwap(targetEquipment);
+
+    try {
+      const variant = await findEquipmentVariant({
+        userId: user!.id,
+        exerciseName: exercise.name,
+        baseMovement,
+        currentEquipment,
+        targetEquipment,
+        location: (lastWorkoutRequest as any).location,
+        generateIfMissing: true, // Use AI if not in DB
+      });
+
+      if (variant) {
+        // Create the swapped exercise
+        const newExercise: GeneratedExercise = {
+          exerciseId: variant.id,
+          name: variant.name,
+          sets: exercise.sets,
+          reps: exercise.reps,
+          restSeconds: exercise.restSeconds,
+          notes: exercise.notes,
+          primaryMuscles: variant.primaryMuscles || [],
+          secondaryMuscles: variant.secondaryMuscles || [],
+        };
+
+        const updatedExercises = [...generatedWorkout.exercises];
+        updatedExercises[swappingExerciseIndex] = newExercise;
+
+        setGeneratedWorkout({
+          ...generatedWorkout,
+          exercises: updatedExercises,
+        });
+
+        // Update current equipment state
+        setCurrentEquipment(targetEquipment);
+
+        // Refresh available variants for new exercise
+        getAvailableEquipmentVariants(variant.name).then(variants => {
+          setAvailableEquipment(variants);
+        });
+      } else {
+        console.error('[EquipmentSwap] No variant found for:', targetEquipment);
+      }
+    } catch (err) {
+      console.error('[EquipmentSwap] Failed:', err);
+    } finally {
+      setLoadingEquipmentSwap(null);
     }
   };
 
@@ -715,6 +792,58 @@ export default function Home() {
                   selectedMuscles={selectedMuscles}
                   toggleMuscle={toggleMuscle}
                 />
+
+                {/* Warm-up Toggle */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.875rem 1rem',
+                    background: colors.cardBg,
+                    borderRadius: '0.75rem',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    marginTop: '0.75rem',
+                  }}
+                >
+                  <div>
+                    <div style={{ color: colors.text, fontSize: '0.875rem', fontWeight: 500 }}>
+                      Include Warm-up
+                    </div>
+                    <div style={{ color: colors.textMuted, fontSize: '0.6875rem', marginTop: '0.125rem' }}>
+                      5-10 min stretching routine for target muscles
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIncludeWarmup(!includeWarmup)}
+                    style={{
+                      width: '44px',
+                      height: '26px',
+                      borderRadius: '13px',
+                      background: includeWarmup
+                        ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`
+                        : colors.inputBg,
+                      border: includeWarmup ? 'none' : `1px solid ${colors.borderSubtle}`,
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: includeWarmup ? colors.bg : colors.textMuted,
+                        position: 'absolute',
+                        top: '3px',
+                        left: includeWarmup ? '21px' : '3px',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      }}
+                    />
+                  </button>
+                </div>
               </>
             )}
 
@@ -874,6 +1003,155 @@ export default function Home() {
                 )}
               </div>
             </div>
+
+            {/* Collapsible Warm-up Section */}
+            {generatedWorkout.warmup && generatedWorkout.warmup.length > 0 && (
+              <div
+                className="mb-4"
+                style={{
+                  background: colors.cardBg,
+                  borderRadius: '0.75rem',
+                  border: `1px solid ${colors.borderSubtle}`,
+                  overflow: 'hidden',
+                }}
+              >
+                <button
+                  onClick={() => setWarmupExpanded(!warmupExpanded)}
+                  style={{
+                    width: '100%',
+                    padding: '0.875rem 1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span
+                      style={{
+                        background: 'rgba(34, 197, 94, 0.15)',
+                        color: '#22c55e',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      WARM-UP
+                    </span>
+                    <span style={{ color: colors.text, fontSize: '0.875rem', fontWeight: 500 }}>
+                      {generatedWorkout.warmup.length} stretches
+                    </span>
+                    <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                      ~{Math.round(generatedWorkout.warmup.reduce((acc, w) => acc + w.duration, 0) / 60)} min
+                    </span>
+                  </div>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={colors.textMuted}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{
+                      transform: warmupExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  >
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </button>
+
+                {warmupExpanded && (
+                  <div style={{ padding: '0 1rem 1rem', borderTop: `1px solid ${colors.borderSubtle}` }}>
+                    {generatedWorkout.warmup.map((stretch, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '0.75rem 0',
+                          borderBottom: i < generatedWorkout.warmup!.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: 'rgba(34, 197, 94, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.75rem',
+                            color: '#22c55e',
+                            fontWeight: 600,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {i + 1}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                            <span style={{ color: colors.text, fontSize: '0.875rem', fontWeight: 500 }}>
+                              {stretch.name}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowExerciseDetail(stretch.name);
+                              }}
+                              style={{
+                                width: '18px',
+                                height: '18px',
+                                borderRadius: '50%',
+                                background: 'rgba(34, 197, 94, 0.1)',
+                                border: '1px solid rgba(34, 197, 94, 0.3)',
+                                color: '#22c55e',
+                                fontSize: '0.625rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              ?
+                            </button>
+                          </div>
+                          {stretch.primaryMuscles && stretch.primaryMuscles.length > 0 && (
+                            <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem' }}>
+                              {stretch.primaryMuscles.map(m => (
+                                <span
+                                  key={m}
+                                  style={{
+                                    fontSize: '0.5625rem',
+                                    color: colors.textMuted,
+                                    background: colors.inputBg,
+                                    padding: '0.0625rem 0.375rem',
+                                    borderRadius: '999px',
+                                  }}
+                                >
+                                  {m}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: 500 }}>
+                          {stretch.duration}s
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-3">
               {generatedWorkout.exercises.map((exercise, i) => (
@@ -1374,6 +1652,71 @@ export default function Home() {
               overflow: 'auto',
               flex: 1,
             }}>
+              {/* Equipment Toggle Section */}
+              {currentEquipment && availableEquipment.size > 1 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.5rem', fontWeight: 500 }}>
+                    Equipment Variant
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                    {Array.from(availableEquipment.keys()).map(equipment => {
+                      const isActive = equipment === currentEquipment;
+                      const isLoading = loadingEquipmentSwap === equipment;
+                      return (
+                        <button
+                          key={equipment}
+                          onClick={() => !isActive && handleEquipmentSwap(equipment)}
+                          disabled={isActive || loadingEquipmentSwap !== null}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            cursor: isActive || loadingEquipmentSwap !== null ? 'default' : 'pointer',
+                            border: isActive ? `1.5px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+                            background: isActive ? colors.accentMuted : colors.inputBg,
+                            color: isActive ? colors.accent : colors.text,
+                            opacity: loadingEquipmentSwap !== null && !isLoading ? 0.5 : 1,
+                            transition: 'all 0.15s ease',
+                            textTransform: 'capitalize',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                          }}
+                        >
+                          {isLoading && (
+                            <div
+                              style={{
+                                width: '12px',
+                                height: '12px',
+                                border: `2px solid ${colors.accent}`,
+                                borderTopColor: 'transparent',
+                                borderRadius: '50%',
+                                animation: 'spin 0.8s linear infinite',
+                              }}
+                            />
+                          )}
+                          {equipment}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Divider if equipment section shown */}
+              {currentEquipment && availableEquipment.size > 1 && !loadingAlternatives && swapAlternatives.length > 0 && (
+                <div style={{
+                  borderTop: `1px solid ${colors.borderSubtle}`,
+                  marginBottom: '1rem',
+                  paddingTop: '0.75rem',
+                }}>
+                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem', fontWeight: 500 }}>
+                    Other Exercises
+                  </div>
+                </div>
+              )}
+
               {loadingAlternatives ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
                   <div className="animate-pulse">Finding alternatives...</div>

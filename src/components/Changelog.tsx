@@ -26,6 +26,50 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.9.0',
+    date: 'January 17, 2026',
+    title: 'Warm-up Stretches',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Optional warm-up stretches before workouts - 4-6 stretches targeting your workout muscles' },
+      { type: 'added', description: 'Warm-up toggle (on by default) in workout generation' },
+      { type: 'added', description: 'Collapsible warm-up section shows stretches with duration and instructions' },
+      { type: 'added', description: 'Warm-ups work for both single workouts and weekly plans' },
+      { type: 'improved', description: 'Each weekly plan day gets stretches tailored to that day\'s muscle focus' },
+    ],
+  },
+  {
+    version: '1.8.0',
+    date: 'January 17, 2026',
+    title: 'Smart Exercise Swaps',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Equipment toggle in swap modal - quickly switch between barbell, dumbbell, cable, machine variants' },
+      { type: 'added', description: 'AI-enhanced swaps - when database lacks alternatives, AI generates more suggestions' },
+      { type: 'added', description: 'Load More (AI) button for on-demand alternative exercises' },
+      { type: 'added', description: 'Purple "AI" badge on AI-generated alternatives' },
+      { type: 'added', description: 'New exercises staging table for human review before adding to main database' },
+      { type: 'fixed', description: 'AI no longer suggests exercises from wrong muscle groups' },
+    ],
+  },
+  {
+    version: '1.7.0',
+    date: 'January 11, 2026',
+    title: 'Weekly Workout Plans',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Weekly mode toggle - plan multiple days at once' },
+      { type: 'added', description: 'Smart muscle splits - AI auto-balances based on training frequency' },
+      { type: 'added', description: 'Per-day customization with preset splits (Push/Pull/Legs, Upper/Lower, Full Body)' },
+      { type: 'added', description: 'Today\'s Workout card when you have an active plan' },
+      { type: 'added', description: 'Regenerate individual days without regenerating entire plan' },
+      { type: 'added', description: 'Swap exercises within weekly plan before saving' },
+      { type: 'added', description: 'Exercise info buttons with images, instructions, and YouTube links' },
+      { type: 'improved', description: 'SVG icons throughout app (replaced emojis)' },
+      { type: 'improved', description: 'Cleaner UI with progressive disclosure design' },
+    ],
+  },
+  {
     version: '1.6.0',
     date: 'January 10, 2026',
     title: 'Flex Timer',

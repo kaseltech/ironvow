@@ -151,6 +151,161 @@ type WorkoutStyle = 'traditional' | 'strength' | 'hiit' | 'circuit' | 'wod' | 'c
 type FitnessGoal = 'cut' | 'bulk' | 'maintain' | 'endurance' | 'general';
 
 // =============================================================================
+// WARM-UP STRETCH GENERATION
+// =============================================================================
+
+// Map target muscles to related stretches
+const stretchMuscleMapping: Record<string, string[]> = {
+  // Upper body
+  'chest': ['chest', 'pectorals'],
+  'back': ['back', 'lats', 'upper back', 'lower back'],
+  'shoulders': ['shoulders', 'deltoids', 'delts'],
+  'biceps': ['biceps'],
+  'triceps': ['triceps'],
+  'arms': ['biceps', 'triceps', 'forearms'],
+  // Lower body
+  'quads': ['quads', 'quadriceps', 'hip flexors'],
+  'hamstrings': ['hamstrings'],
+  'glutes': ['glutes', 'hips'],
+  'calves': ['calves'],
+  'legs': ['quads', 'hamstrings', 'glutes', 'calves', 'hips', 'hip flexors', 'adductors'],
+  // Core
+  'core': ['abs', 'obliques', 'lower back'],
+  'abs': ['abs', 'obliques'],
+};
+
+// Compound stretches good for full body warmups
+const compoundStretches = [
+  'World\'s Greatest Stretch',
+  'Cat-Cow Stretch',
+  'Hip Flexor Stretch',
+  'Chest Stretch',
+  'Upper Back Stretch',
+  'Hamstring Stretch',
+];
+
+async function generateWarmupStretches(
+  supabase: any,
+  targetMuscles: string[],
+  maxStretches: number = 5
+): Promise<WarmupExercise[]> {
+  console.log('[Warmup] Generating stretches for muscles:', targetMuscles);
+
+  // Build list of muscles to target for stretches
+  const stretchMuscles = new Set<string>();
+  for (const muscle of targetMuscles) {
+    const mappedMuscles = stretchMuscleMapping[muscle.toLowerCase()] || [muscle];
+    mappedMuscles.forEach(m => stretchMuscles.add(m.toLowerCase()));
+  }
+
+  console.log('[Warmup] Searching for stretches targeting:', Array.from(stretchMuscles));
+
+  // Query stretching exercises from database
+  const { data: stretches, error } = await supabase
+    .from('exercises')
+    .select('id, name, primary_muscles, equipment_required')
+    .eq('category', 'stretching')
+    .limit(100);
+
+  if (error) {
+    console.error('[Warmup] Database error:', error);
+    return [];
+  }
+
+  if (!stretches || stretches.length === 0) {
+    console.log('[Warmup] No stretching exercises found in database');
+    return [];
+  }
+
+  console.log('[Warmup] Found', stretches.length, 'stretching exercises');
+
+  // Score stretches by relevance to target muscles
+  const scoredStretches: { stretch: any; score: number }[] = [];
+
+  for (const stretch of stretches) {
+    // Skip if requires equipment (we want bodyweight-only stretches)
+    const equipment = stretch.equipment_required || [];
+    const needsEquipment = equipment.length > 0 &&
+      !equipment.every((e: string) => ['none', 'bodyweight', 'body only', 'other'].includes(e?.toLowerCase()));
+    if (needsEquipment) continue;
+
+    let score = 0;
+    const stretchMusclesList = stretch.primary_muscles || [];
+
+    // Score based on muscle match - ONLY include stretches that target workout muscles
+    for (const muscle of stretchMusclesList) {
+      if (stretchMuscles.has(muscle.toLowerCase())) {
+        score += 2; // Direct match
+      }
+    }
+
+    // Only proceed if this stretch targets at least one of our muscles
+    if (score === 0) continue;
+
+    // Bonus for compound stretches (good for any warmup) - only if already matched
+    if (compoundStretches.some(cs => stretch.name.toLowerCase().includes(cs.toLowerCase()))) {
+      score += 1;
+    }
+
+    // Small bonus for stretches targeting multiple muscles (compound)
+    if (stretchMusclesList.length > 1) {
+      score += 0.5;
+    }
+
+    scoredStretches.push({ stretch, score });
+  }
+
+  // Sort by score descending
+  scoredStretches.sort((a, b) => b.score - a.score);
+
+  // Take top stretches, ensuring variety (no duplicate muscle groups)
+  const selectedStretches: WarmupExercise[] = [];
+  const usedMuscles = new Set<string>();
+
+  for (const { stretch } of scoredStretches) {
+    if (selectedStretches.length >= maxStretches) break;
+
+    // Check if this stretch adds variety
+    const stretchMusclesList = stretch.primary_muscles || [];
+    const primaryMuscle = stretchMusclesList[0]?.toLowerCase();
+
+    // Allow some overlap but prefer variety
+    if (primaryMuscle && usedMuscles.has(primaryMuscle) && selectedStretches.length >= 3) {
+      continue; // Skip if we already have stretches and this muscle is covered
+    }
+
+    selectedStretches.push({
+      exerciseId: stretch.id,
+      name: stretch.name,
+      duration: 30, // 30 seconds per stretch
+      primaryMuscles: stretchMusclesList,
+    });
+
+    stretchMusclesList.forEach((m: string) => usedMuscles.add(m.toLowerCase()));
+  }
+
+  // If we didn't find enough targeted stretches, add some general ones
+  if (selectedStretches.length < 3) {
+    for (const { stretch } of scoredStretches) {
+      if (selectedStretches.length >= maxStretches) break;
+      if (selectedStretches.some(s => s.exerciseId === stretch.id)) continue;
+
+      selectedStretches.push({
+        exerciseId: stretch.id,
+        name: stretch.name,
+        duration: 30,
+        primaryMuscles: stretch.primary_muscles || [],
+      });
+    }
+  }
+
+  console.log('[Warmup] Selected', selectedStretches.length, 'stretches');
+  selectedStretches.forEach(s => console.log(`  - ${s.name} (${s.primaryMuscles?.join(', ')})`));
+
+  return selectedStretches;
+}
+
+// =============================================================================
 // RX WEIGHT SUGGESTION SYSTEM
 // =============================================================================
 
@@ -403,11 +558,20 @@ interface GeneratedExercise {
   rehabFor?: string[];
 }
 
+interface WarmupExercise {
+  exerciseId: string;
+  name: string;
+  duration: number; // seconds
+  notes?: string;
+  primaryMuscles?: string[];
+}
+
 interface GeneratedWorkout {
   name: string;
   description: string;
   duration: number;
   exercises: GeneratedExercise[];
+  warmup?: WarmupExercise[];
   workoutType: string;
   workoutStyle?: WorkoutStyle;
   targetMuscles: string[];
@@ -427,7 +591,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: WorkoutRequest = await req.json();
-    const { userId, location, targetMuscles: rawTargetMuscles, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles: rawSwapMuscles, freeformPrompt } = body;
+    const { userId, location, targetMuscles: rawTargetMuscles, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles: rawSwapMuscles, freeformPrompt, includeWarmup = true } = body;
 
     console.log('=== GENERATE WORKOUT REQUEST ===');
     console.log('Location:', location);
@@ -657,6 +821,21 @@ serve(async (req) => {
         workoutStyle,
         userWeightContext // NEW: Pass user context for weight suggestions
       );
+    }
+
+    // Generate warm-up stretches if requested
+    if (includeWarmup && workout) {
+      console.log('[Warmup] Generating warm-up stretches...');
+      const warmupStretches = await generateWarmupStretches(
+        supabase,
+        workout.targetMuscles || targetMuscles,
+        5 // max 5 stretches
+      );
+
+      if (warmupStretches.length > 0) {
+        workout.warmup = warmupStretches;
+        console.log('[Warmup] Added', warmupStretches.length, 'stretches to workout');
+      }
     }
 
     const generationTime = Date.now() - startTime;
@@ -2214,7 +2393,7 @@ async function handleWeeklyPlanRequest(
   userWeightContext: UserWeightContext,
   fitnessGoal: FitnessGoal
 ): Promise<Response> {
-  const { userId, weeklyPlan, location, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment } = body;
+  const { userId, weeklyPlan, location, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment, includeWarmup = true } = body;
 
   if (!weeklyPlan || !weeklyPlan.days || weeklyPlan.days.length === 0) {
     return new Response(
@@ -2322,6 +2501,18 @@ async function handleWeeklyPlanRequest(
           userWeightContext
         );
         dayWorkout.name = `${dayName}: ${dayWorkout.name}`;
+      }
+
+      // Generate warm-up stretches for this day if requested
+      if (includeWarmup && dayWorkout) {
+        const warmupStretches = await generateWarmupStretches(
+          supabase,
+          dayWorkout.targetMuscles || dayMuscles,
+          5
+        );
+        if (warmupStretches.length > 0) {
+          dayWorkout.warmup = warmupStretches;
+        }
       }
 
       // Track used exercises
