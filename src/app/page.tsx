@@ -265,6 +265,72 @@ export default function Home() {
     }
   };
 
+  // Regenerate a single day's workout
+  const handleRegenerateDayWorkout = async (dayIndex: number): Promise<GeneratedWorkout | null> => {
+    if (!generatedPlan || !user || !selectedLocation) return null;
+
+    const day = generatedPlan.days[dayIndex];
+    if (!day) return null;
+
+    try {
+      // Get equipment based on location
+      let locationEquipment: string[] = [];
+      let customEquipmentList: string[] = profile?.custom_equipment || [];
+
+      if (selectedLocation === 'gym' && selectedGym) {
+        locationEquipment = selectedGym.equipment_ids
+          .map(id => allEquipment.find(eq => eq.id === id)?.name || '')
+          .filter(Boolean);
+        customEquipmentList = [...customEquipmentList, ...(selectedGym.custom_equipment || [])];
+      } else if (selectedLocation === 'home') {
+        locationEquipment = userEquipment
+          .filter(e => e.location === 'home')
+          .map(e => {
+            const eq = allEquipment.find(a => a.id === e.equipment_id);
+            return eq?.name || '';
+          })
+          .filter(Boolean);
+      }
+
+      // Format injuries
+      const formattedInjuries = injuries.map(i => ({
+        bodyPart: i.body_part,
+        movementsToAvoid: i.movements_to_avoid || [],
+      }));
+
+      // Get current exercise IDs to exclude (for variety)
+      const currentExerciseIds = day.workout.exercises
+        .map(ex => ex.exerciseId)
+        .filter(Boolean);
+
+      // Generate a new workout for this day using its muscle focus
+      const workoutRequest = {
+        userId: user.id,
+        location: selectedLocation as 'gym' | 'home' | 'outdoor',
+        targetMuscles: day.workout.targetMuscles || [],
+        duration: day.workout.duration || duration,
+        experienceLevel: profile?.experience_level || 'intermediate',
+        workoutStyle: day.workout.workoutStyle || selectedWorkoutStyle,
+        injuries: formattedInjuries,
+        equipment: locationEquipment,
+        customEquipment: customEquipmentList,
+        gymName: selectedGym?.name,
+        excludeExerciseIds: currentExerciseIds.length > 0 ? currentExerciseIds : undefined,
+      };
+
+      console.log('[RegenerateDay] Generating new workout for day:', day.day_name, workoutRequest);
+
+      const newWorkout = await generateWorkout(workoutRequest);
+
+      console.log('[RegenerateDay] New workout generated:', newWorkout.name);
+
+      return newWorkout;
+    } catch (err) {
+      console.error('[RegenerateDay] Failed to regenerate day workout:', err);
+      throw err;
+    }
+  };
+
   // Close plan review
   const handleClosePlanReview = () => {
     setShowPlanReview(false);
@@ -1315,6 +1381,7 @@ export default function Home() {
           plan={generatedPlan}
           onClose={handleClosePlanReview}
           onRegenerate={handleRegenerateWeeklyPlan}
+          onRegenerateDay={handleRegenerateDayWorkout}
           regenerating={generating}
           location={selectedLocation as 'gym' | 'home' | 'outdoor'}
           experienceLevel={(profile?.experience_level as 'beginner' | 'intermediate' | 'advanced') || 'intermediate'}
