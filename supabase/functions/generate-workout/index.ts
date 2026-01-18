@@ -481,27 +481,32 @@ serve(async (req) => {
     });
 
     // Map broad muscle groups to specific muscles in database
+    // Note: Database uses spaces in muscle names (e.g., "upper back" not "upper_back")
     const muscleMapping: Record<string, string[]> = {
-      'chest': ['chest', 'upper_chest', 'lower_chest'],
-      'back': ['back', 'lats', 'upper_back', 'lower_back', 'rhomboids', 'traps'],
-      'shoulders': ['shoulders', 'front_delts', 'lateral_delts', 'rear_delts', 'delts'],
+      'chest': ['chest', 'upper chest', 'lower chest'],
+      'back': ['back', 'lats', 'upper back', 'lower back', 'rhomboids', 'traps'],
+      'shoulders': ['shoulders', 'front delts', 'side delts', 'rear delts', 'delts'],
       'arms': ['biceps', 'triceps', 'forearms', 'brachialis'],
-      'legs': ['quads', 'hamstrings', 'glutes', 'calves', 'hip_flexors', 'adductors'],
-      'core': ['core', 'abs', 'obliques', 'lower_back', 'transverse_abdominis'],
+      'legs': ['quads', 'hamstrings', 'glutes', 'calves', 'hip flexors', 'adductors'],
+      'core': ['core', 'abs', 'obliques', 'lower back', 'transverse abdominis'],
       // Non-muscle goals - these map to full body for filtering purposes
       'flexibility': ['flexibility', 'hips', 'hamstrings', 'back', 'shoulders'],
       'balance': ['balance', 'core', 'legs', 'glutes'],
       'endurance': ['endurance', 'cardio', 'fullbody'],
     };
 
+    // Normalize muscle name: convert underscores to spaces for DB matching
+    const normalizeMuscle = (m: string): string => m.replace(/_/g, ' ');
+
     // Expand muscle groups to specific muscles
     const expandMuscles = (muscles: string[]): string[] => {
       const expanded = new Set<string>();
-      for (const muscle of muscles) {
+      for (const rawMuscle of muscles) {
+        const muscle = normalizeMuscle(rawMuscle);
         if (muscleMapping[muscle]) {
           muscleMapping[muscle].forEach(m => expanded.add(m));
         } else {
-          expanded.add(muscle); // Keep as-is if not in mapping
+          expanded.add(muscle); // Keep normalized version if not in mapping
         }
       }
       return Array.from(expanded);
@@ -1868,8 +1873,8 @@ async function handleSwapRequest(
     muscles: ex.primary_muscles,
   })));
 
-  // Return top 10 alternatives
-  const topAlternatives = alternatives.slice(0, 10).map((ex: any) => ({
+  // Format DB alternatives
+  let topAlternatives = alternatives.slice(0, 10).map((ex: any) => ({
     id: ex.id,
     name: ex.name,
     primaryMuscles: ex.primary_muscles,
@@ -1879,7 +1884,116 @@ async function handleSwapRequest(
     difficulty: ex.difficulty,
     movementPatterns: ex.movement_patterns || [],
     rehabFor: ex.rehab_for || [],
+    source: 'database',
   }));
+
+  // If we have fewer than 5 alternatives, use AI to suggest more
+  const MIN_ALTERNATIVES = 5;
+  if (topAlternatives.length < MIN_ALTERNATIVES) {
+    console.log(`Swap: Only ${topAlternatives.length} DB alternatives, requesting AI suggestions...`);
+
+    try {
+      const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY');
+      if (anthropicKey) {
+        // Get the original exercise name
+        const originalExercise = exercises.find((ex: any) => ex.id === swapExerciseId);
+        const originalName = originalExercise?.name || 'the exercise';
+
+        // Existing exercise names to exclude
+        const existingNames = new Set([
+          originalName.toLowerCase(),
+          ...topAlternatives.map((a: any) => a.name.toLowerCase()),
+        ]);
+
+        const aiAlternatives = await getAISwapAlternatives({
+          anthropicKey,
+          originalExerciseName: originalName,
+          targetMuscles: swapTargetMuscles || [],
+          location,
+          equipment: allEquipment,
+          workoutStyle,
+          experienceLevel,
+          excludeNames: Array.from(existingNames),
+          count: MIN_ALTERNATIVES - topAlternatives.length,
+        });
+
+        console.log(`Swap: AI returned ${aiAlternatives.length} suggestions`);
+
+        // Process each AI suggestion
+        for (const aiEx of aiAlternatives) {
+          // Fuzzy match against existing exercises
+          const fuzzyMatch = findFuzzyExerciseMatch(aiEx.name, exercises);
+
+          if (fuzzyMatch) {
+            // Use existing exercise if found
+            console.log(`Swap: AI suggestion "${aiEx.name}" matched existing "${fuzzyMatch.name}"`);
+            if (!existingNames.has(fuzzyMatch.name.toLowerCase())) {
+              topAlternatives.push({
+                id: fuzzyMatch.id,
+                name: fuzzyMatch.name,
+                primaryMuscles: fuzzyMatch.primary_muscles,
+                secondaryMuscles: fuzzyMatch.secondary_muscles,
+                equipmentRequired: fuzzyMatch.equipment_required,
+                isCompound: fuzzyMatch.is_compound,
+                difficulty: fuzzyMatch.difficulty,
+                movementPatterns: fuzzyMatch.movement_patterns || [],
+                rehabFor: fuzzyMatch.rehab_for || [],
+                source: 'database',
+              });
+              existingNames.add(fuzzyMatch.name.toLowerCase());
+            }
+          } else {
+            // Insert into exercises_pending for review
+            console.log(`Swap: Inserting AI suggestion "${aiEx.name}" into pending table`);
+            const { data: pending, error: pendingError } = await supabase
+              .from('exercises_pending')
+              .insert({
+                name: aiEx.name,
+                slug: aiEx.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                instructions: aiEx.instructions,
+                primary_muscles: aiEx.primaryMuscles,
+                secondary_muscles: aiEx.secondaryMuscles,
+                equipment_required: aiEx.equipmentRequired,
+                movement_pattern: aiEx.movementPattern,
+                difficulty: aiEx.difficulty || experienceLevel,
+                is_compound: aiEx.isCompound,
+                source: 'ai_swap',
+                source_context: {
+                  targetMuscles: swapTargetMuscles,
+                  location,
+                  equipment: allEquipment,
+                  workoutStyle,
+                },
+                swapped_for: originalName,
+              })
+              .select()
+              .single();
+
+            if (!pendingError && pending) {
+              topAlternatives.push({
+                id: pending.id,
+                name: pending.name,
+                primaryMuscles: pending.primary_muscles,
+                secondaryMuscles: pending.secondary_muscles,
+                equipmentRequired: pending.equipment_required,
+                isCompound: pending.is_compound,
+                difficulty: pending.difficulty,
+                movementPatterns: [],
+                rehabFor: [],
+                source: 'ai_pending',
+              });
+              existingNames.add(pending.name.toLowerCase());
+            } else if (pendingError) {
+              console.error(`Swap: Failed to insert pending exercise:`, pendingError);
+            }
+          }
+        }
+      }
+    } catch (aiError) {
+      console.error('Swap: AI fallback failed:', aiError);
+      // Continue with DB-only results
+    }
+  }
 
   return new Response(
     JSON.stringify({
@@ -1888,6 +2002,119 @@ async function handleSwapRequest(
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
+}
+
+// Fuzzy match exercise name against existing exercises
+function findFuzzyExerciseMatch(name: string, exercises: any[]): any | null {
+  const normalize = (s: string) => s.toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .replace(/s$/, ''); // Remove trailing 's' for plurals
+
+  const targetNorm = normalize(name);
+
+  // Exact match after normalization
+  for (const ex of exercises) {
+    if (normalize(ex.name) === targetNorm) {
+      return ex;
+    }
+  }
+
+  // Partial match (one contains the other)
+  for (const ex of exercises) {
+    const exNorm = normalize(ex.name);
+    if (exNorm.includes(targetNorm) || targetNorm.includes(exNorm)) {
+      // Only match if significant overlap (at least 80% of shorter string)
+      const shorter = Math.min(exNorm.length, targetNorm.length);
+      const overlap = exNorm.includes(targetNorm) ? targetNorm.length : exNorm.length;
+      if (overlap / shorter >= 0.8) {
+        return ex;
+      }
+    }
+  }
+
+  return null;
+}
+
+// Get AI-generated swap alternatives
+async function getAISwapAlternatives(params: {
+  anthropicKey: string;
+  originalExerciseName: string;
+  targetMuscles: string[];
+  location: string;
+  equipment: string[];
+  workoutStyle: string;
+  experienceLevel: string;
+  excludeNames: string[];
+  count: number;
+}): Promise<any[]> {
+  const { anthropicKey, originalExerciseName, targetMuscles, location, equipment, workoutStyle, experienceLevel, excludeNames, count } = params;
+
+  const equipmentContext = location === 'gym'
+    ? (equipment.length > 0 ? `Available equipment: ${equipment.join(', ')}` : 'Full gym with all standard equipment')
+    : location === 'home'
+    ? (equipment.length > 0 ? `Home equipment: ${equipment.join(', ')}` : 'Bodyweight only, no equipment')
+    : 'Outdoor, bodyweight exercises only';
+
+  const prompt = `I need ${count} alternative exercises to replace "${originalExerciseName}".
+
+Target muscles: ${targetMuscles.join(', ')}
+Location: ${location}
+${equipmentContext}
+Workout style: ${workoutStyle}
+Experience level: ${experienceLevel}
+
+DO NOT suggest these exercises (already shown): ${excludeNames.join(', ')}
+
+Return ONLY valid JSON array with exercises. Each exercise must have:
+- name: string (standard exercise name)
+- primaryMuscles: string[] (use: lats, upper back, lower back, chest, shoulders, biceps, triceps, quads, hamstrings, glutes, calves, core, abs)
+- secondaryMuscles: string[]
+- equipmentRequired: string[] (use: barbell, dumbbell, cable, machine, pull-up bar, bench, kettlebell, resistance band, or empty array for bodyweight)
+- movementPattern: string (push, pull, squat, hinge, carry, rotation)
+- isCompound: boolean
+- difficulty: string (beginner, intermediate, advanced)
+- instructions: string[] (3-5 clear steps)
+
+Example format:
+[{"name": "Chest-Supported Row", "primaryMuscles": ["lats", "upper back"], "secondaryMuscles": ["biceps", "rear delts"], "equipmentRequired": ["dumbbell", "bench"], "movementPattern": "pull", "isCompound": true, "difficulty": "intermediate", "instructions": ["Lie chest-down on incline bench", "Let arms hang with dumbbells", "Row to sides of chest", "Lower with control"]}]`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('AI swap request failed:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.content?.[0]?.text || '';
+
+    // Extract JSON from response
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      console.error('AI swap: No JSON array found in response');
+      return [];
+    }
+
+    const exercises = JSON.parse(jsonMatch[0]);
+    console.log(`AI swap: Parsed ${exercises.length} exercises from response`);
+    return exercises;
+  } catch (error) {
+    console.error('AI swap parsing error:', error);
+    return [];
+  }
 }
 
 // =============================================================================
