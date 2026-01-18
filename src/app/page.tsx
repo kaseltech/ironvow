@@ -70,6 +70,7 @@ export default function Home() {
   const [swappingExerciseIndex, setSwappingExerciseIndex] = useState<number | null>(null);
   const [swapAlternatives, setSwapAlternatives] = useState<ExerciseAlternative[]>([]);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
+  const [loadingMoreAlternatives, setLoadingMoreAlternatives] = useState(false);
   const [lastWorkoutRequest, setLastWorkoutRequest] = useState<object | null>(null);
   // Track recently generated exercises to avoid duplicates on fresh generates
   const [recentExerciseIds, setRecentExerciseIds] = useState<string[]>([]);
@@ -464,6 +465,67 @@ export default function Home() {
       setSwapAlternatives([]);
     } finally {
       setLoadingAlternatives(false);
+    }
+  };
+
+  // Load more swap alternatives using AI
+  const handleLoadMoreAlternatives = async () => {
+    if (swappingExerciseIndex === null || !generatedWorkout || !lastWorkoutRequest) return;
+
+    const exercise = generatedWorkout.exercises[swappingExerciseIndex];
+    setLoadingMoreAlternatives(true);
+
+    try {
+      // Build target muscles (same logic as handleOpenSwap)
+      let targetMuscles: string[] = [];
+      if (exercise.primaryMuscles?.length) {
+        targetMuscles = [...exercise.primaryMuscles];
+      }
+      if (exercise.secondaryMuscles?.length) {
+        targetMuscles = [...targetMuscles, ...exercise.secondaryMuscles];
+      }
+      if (targetMuscles.length === 0 && generatedWorkout.targetMuscles?.length) {
+        targetMuscles = [...generatedWorkout.targetMuscles];
+      }
+      if (targetMuscles.length === 0) {
+        const name = exercise.name.toLowerCase();
+        if (name.includes('bench') || name.includes('chest') || name.includes('push')) {
+          targetMuscles = ['chest', 'triceps', 'shoulders'];
+        } else if (name.includes('row') || name.includes('pull') || name.includes('lat')) {
+          targetMuscles = ['back', 'biceps'];
+        } else {
+          targetMuscles = ['chest', 'back', 'shoulders'];
+        }
+      }
+
+      // Get IDs of already shown alternatives
+      const excludeIds = [
+        exercise.exerciseId || '',
+        ...swapAlternatives.map(a => a.id),
+      ].filter(Boolean);
+
+      const moreAlternatives = await getSwapAlternatives({
+        userId: user!.id,
+        location: (lastWorkoutRequest as any).location,
+        experienceLevel: (lastWorkoutRequest as any).experienceLevel,
+        injuries: (lastWorkoutRequest as any).injuries,
+        equipment: (lastWorkoutRequest as any).equipment,
+        customEquipment: (lastWorkoutRequest as any).customEquipment,
+        swapExerciseId: exercise.exerciseId || '',
+        swapTargetMuscles: targetMuscles,
+        workoutStyle: generatedWorkout.workoutStyle,
+        swapRequestAI: true,
+        swapExcludeIds: excludeIds,
+      });
+
+      // Append new alternatives (avoid duplicates)
+      const existingIds = new Set(swapAlternatives.map(a => a.id));
+      const newAlternatives = (moreAlternatives || []).filter(a => !existingIds.has(a.id));
+      setSwapAlternatives([...swapAlternatives, ...newAlternatives]);
+    } catch (err) {
+      console.error('[Swap] Failed to load more:', err);
+    } finally {
+      setLoadingMoreAlternatives(false);
     }
   };
 
@@ -1336,8 +1398,24 @@ export default function Home() {
                         transition: 'all 0.15s ease',
                       }}
                     >
-                      <div style={{ color: colors.text, fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.25rem' }}>
-                        {alt.name}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <span style={{ color: colors.text, fontSize: '0.9rem', fontWeight: 500 }}>
+                          {alt.name}
+                        </span>
+                        {(alt as any).source === 'ai_pending' && (
+                          <span
+                            style={{
+                              background: 'rgba(147, 51, 234, 0.15)',
+                              color: '#a855f7',
+                              padding: '0.125rem 0.375rem',
+                              borderRadius: '999px',
+                              fontSize: '0.5625rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            AI
+                          </span>
+                        )}
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         {alt.primaryMuscles?.map((muscle: string) => (
@@ -1368,6 +1446,49 @@ export default function Home() {
                       </div>
                     </button>
                   ))}
+
+                  {/* Load More Button */}
+                  <button
+                    onClick={handleLoadMoreAlternatives}
+                    disabled={loadingMoreAlternatives}
+                    style={{
+                      marginTop: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      background: 'transparent',
+                      border: `1.5px dashed ${colors.border}`,
+                      borderRadius: '0.75rem',
+                      color: colors.textMuted,
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      cursor: loadingMoreAlternatives ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      opacity: loadingMoreAlternatives ? 0.6 : 1,
+                    }}
+                  >
+                    {loadingMoreAlternatives ? (
+                      <>
+                        <div
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            border: `2px solid ${colors.accent}`,
+                            borderTopColor: 'transparent',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite',
+                          }}
+                        />
+                        Finding more...
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: '1rem' }}>+</span>
+                        Load More (AI)
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
