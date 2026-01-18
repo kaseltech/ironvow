@@ -26,6 +26,30 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.0.0',
+    date: 'January 17, 2026',
+    title: 'Workout Session Overhaul',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Warm-up phase at workout start - checklist of stretches with skip option' },
+      { type: 'added', description: 'Screen wake lock - phone stays on during workouts (iOS)' },
+      { type: 'added', description: 'Audio countdown beeps at 3, 2, 1 seconds during rest timer' },
+      { type: 'added', description: '"Up Next" preview during rest showing next exercise details' },
+      { type: 'added', description: 'Rest timer adjustment buttons (+30s, +15s, -15s, -30s)' },
+      { type: 'added', description: 'Swap exercises mid-workout if equipment is taken' },
+      { type: 'added', description: 'Weight goal editor in Profile settings - change goal type and targets anytime' },
+      { type: 'added', description: 'Workout completion screen with stats - duration, sets, exercises, total volume' },
+      { type: 'improved', description: 'Rest timer now survives app backgrounding (timestamp-based)' },
+      { type: 'improved', description: 'Larger touch targets (48px+) for weight/rep adjustment buttons' },
+      { type: 'improved', description: 'Better set progress visibility with visual progress bar' },
+      { type: 'improved', description: 'Cancel button added to weight adjustment flow' },
+      { type: 'improved', description: 'Profile page now mobile responsive (single column on small screens)' },
+      { type: 'improved', description: 'Consistent SVG icons in bottom navigation across all pages' },
+      { type: 'fixed', description: 'Equipment variant lookup now works for incline/decline exercises' },
+      { type: 'fixed', description: 'Added RX weights for incline and seated exercise variants' },
+    ],
+  },
+  {
     version: '1.9.0',
     date: 'January 17, 2026',
     title: 'Warm-up Stretches',

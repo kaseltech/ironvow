@@ -327,6 +327,8 @@ const RX_WEIGHTS: Record<string, { male: number; female: number; isBodyweightPer
   'conventional-deadlift': { male: 0.85, female: 0.55, isBodyweightPercent: true },
   'sumo-deadlift': { male: 0.85, female: 0.55, isBodyweightPercent: true },
   'barbell-bench-press': { male: 0.65, female: 0.35, isBodyweightPercent: true },
+  'incline-barbell-bench-press': { male: 0.55, female: 0.3, isBodyweightPercent: true },
+  'decline-barbell-bench-press': { male: 0.65, female: 0.35, isBodyweightPercent: true },
   'barbell-overhead-press': { male: 0.45, female: 0.25, isBodyweightPercent: true },
   'barbell-row': { male: 0.55, female: 0.35, isBodyweightPercent: true },
   'bent-over-row': { male: 0.55, female: 0.35, isBodyweightPercent: true },
@@ -341,7 +343,11 @@ const RX_WEIGHTS: Record<string, { male: number; female: number; isBodyweightPer
 
   // Dumbbell exercises - per dumbbell
   'dumbbell-bench-press': { male: 50, female: 25 },
+  'incline-dumbbell-bench-press': { male: 40, female: 20 },
+  'incline-dumbbell-press': { male: 40, female: 20 },
+  'decline-dumbbell-bench-press': { male: 50, female: 25 },
   'dumbbell-shoulder-press': { male: 40, female: 20 },
+  'seated-dumbbell-shoulder-press': { male: 40, female: 20 },
   'dumbbell-row': { male: 50, female: 25 },
   'dumbbell-curl': { male: 25, female: 12 },
   'hammer-curl': { male: 25, female: 12 },

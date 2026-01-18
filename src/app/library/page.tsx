@@ -7,6 +7,7 @@ import { useExerciseHistory } from '@/hooks/useExerciseHistory';
 import { useTheme } from '@/context/ThemeContext';
 import { Header } from '@/components/Header';
 import { Settings } from '@/components/Settings';
+import { BottomNav } from '@/components/BottomNav';
 
 // Format muscle name for display (e.g., "upper_back" → "Upper Back")
 function formatMuscleName(muscle: string): string {
@@ -485,42 +486,7 @@ export default function LibraryPage() {
         )}
       </main>
 
-      {/* Bottom Nav */}
-      <nav
-        className="fixed bottom-0 left-0 right-0"
-        style={{
-          background: colors.cardBg,
-          borderTop: `1px solid ${colors.borderSubtle}`,
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        }}
-      >
-        <div className="flex justify-around py-3">
-          {[
-            { icon: '🏋️', label: 'Workout', href: '/' },
-            { icon: '📊', label: 'Progress', href: '/progress' },
-            { icon: '📚', label: 'Library', href: '/library', active: true },
-            { icon: '👤', label: 'Profile', href: '/profile' },
-          ].map(item => (
-            <button
-              key={item.label}
-              onClick={() => window.location.href = item.href}
-              style={{
-                background: 'none',
-                border: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.25rem',
-              }}
-            >
-              <span style={{ fontSize: '1.25rem', opacity: item.active ? 1 : 0.5 }}>{item.icon}</span>
-              <span style={{ fontSize: '0.625rem', color: item.active ? colors.accent : colors.textMuted }}>
-                {item.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </nav>
+      <BottomNav />
 
       {/* Settings Modal */}
       <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />

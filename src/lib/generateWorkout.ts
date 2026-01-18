@@ -104,33 +104,41 @@ export function getEquipmentFromName(name: string): EquipmentType | null {
   return null;
 }
 
-// Extract base movement from exercise name (remove equipment prefix)
+// Extract base movement from exercise name (remove equipment from anywhere in name)
+// Handles: "Barbell Bench Press" -> "Bench Press"
+// Handles: "Incline Barbell Bench Press" -> "Incline Bench Press"
+// Handles: "Seated Dumbbell Shoulder Press" -> "Seated Shoulder Press"
 export function getBaseMovement(name: string): string {
-  const equipmentPrefixes = [
+  const equipmentWords = [
     'smith machine',
     'barbell',
     'dumbbell',
+    'dumbbells',
     'db',
     'cable',
     'machine',
     'kettlebell',
+    'kettlebells',
     'kb',
     'band',
     'resistance band',
     'bodyweight',
+    'ez-bar',
+    'ez bar',
   ];
 
   let base = name;
-  const lowerBase = base.toLowerCase();
 
-  for (const prefix of equipmentPrefixes) {
-    if (lowerBase.startsWith(prefix + ' ')) {
-      base = base.substring(prefix.length + 1);
-      break;
-    }
+  // Remove equipment words from anywhere in the name
+  for (const equip of equipmentWords) {
+    // Create regex to match the equipment word with word boundaries
+    // Case insensitive, matches whole words only
+    const regex = new RegExp(`\\b${equip}\\b\\s*`, 'gi');
+    base = base.replace(regex, '');
   }
 
-  return base.trim();
+  // Clean up any double spaces and trim
+  return base.replace(/\s+/g, ' ').trim();
 }
 
 // Build exercise name with equipment

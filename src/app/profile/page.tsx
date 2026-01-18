@@ -6,6 +6,7 @@ import { ExpandableWorkoutCard } from '@/components/ExpandableWorkoutCard';
 import { GymManager } from '@/components/GymManager';
 import { Header } from '@/components/Header';
 import { Settings } from '@/components/Settings';
+import { BottomNav } from '@/components/BottomNav';
 import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions } from '@/hooks/useSupabase';
 import { useStrengthData, convertToMuscleStrength, formatVolume, formatDate, formatDaysAgo, ExercisePR, MuscleVolume } from '@/hooks/useStrengthData';
 import { useWorkoutPlans, DAY_NAMES } from '@/hooks/useWorkoutPlans';
@@ -142,7 +143,7 @@ export default function ProfilePage() {
   const { profiles: gymProfiles } = useGymProfiles();
   const { userEquipment, allEquipment } = useEquipment();
   const { logs: weightLogs } = useWeightLogs(1);
-  const { goal: weightGoal } = useWeightGoal();
+  const { goal: weightGoal, setWeightGoal, refetch: refetchWeightGoal } = useWeightGoal();
   const { sessions } = useWorkoutSessions(10);
   const { muscleVolume, exercisePRs, sessions: strengthSessions, loading: strengthLoading } = useStrengthData();
   const { plans, activePlan, setActivePlanById, deletePlan, loading: plansLoading } = useWorkoutPlans();
@@ -151,6 +152,13 @@ export default function ProfilePage() {
   const [gender, setGender] = useState<'male' | 'female'>((profile?.gender as 'male' | 'female') || 'male');
   const [savingGoal, setSavingGoal] = useState(false);
   const [gymManagerOpen, setGymManagerOpen] = useState(false);
+
+  // Weight goal editor state
+  const [showWeightGoalEditor, setShowWeightGoalEditor] = useState(false);
+  const [editGoalType, setEditGoalType] = useState<'cut' | 'bulk' | 'maintain' | 'recomp'>('maintain');
+  const [editStartWeight, setEditStartWeight] = useState('');
+  const [editTargetWeight, setEditTargetWeight] = useState('');
+  const [savingWeightGoal, setSavingWeightGoal] = useState(false);
   const [selectedMuscleId, setSelectedMuscleId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [exercisesExpanded, setExercisesExpanded] = useState(true);
@@ -337,15 +345,7 @@ export default function ProfilePage() {
         {activeTab === 'body' && (
           <div>
             {/* Responsive Three-Column Layout */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr minmax(200px, 320px) 1fr',
-                gap: '1rem',
-                alignItems: 'start',
-                minHeight: '60vh',
-              }}
-            >
+            <div className="profile-body-grid">
               {/* Left Panel - Muscle Menu */}
               <div
                 style={{
@@ -826,49 +826,89 @@ export default function ProfilePage() {
             </div>
 
             {/* Weight Goal */}
-            {weightGoal && (
-              <div className="card">
-                <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div className="card">
+              <div className="flex items-center justify-between mb-3">
+                <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Weight Goal
                 </h2>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-center flex-1">
-                    <p style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Start</p>
-                    <span style={{ color: colors.text, fontSize: '1.25rem', fontWeight: 600 }}>{weightGoal.start_weight}</span>
-                    <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> lbs</span>
-                  </div>
-                  <div style={{ color: colors.accent, fontSize: '1.5rem' }}>→</div>
-                  <div className="text-center flex-1">
-                    <p style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Current</p>
-                    <span style={{ color: colors.accent, fontSize: '1.25rem', fontWeight: 600 }}>{currentWeight || '—'}</span>
-                    <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> lbs</span>
-                  </div>
-                  <div style={{ color: colors.accent, fontSize: '1.5rem' }}>→</div>
-                  <div className="text-center flex-1">
-                    <p style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Target</p>
-                    <span style={{ color: colors.text, fontSize: '1.25rem', fontWeight: 600 }}>{weightGoal.target_weight || '—'}</span>
-                    <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> lbs</span>
-                  </div>
-                </div>
-                <div
+                <button
+                  onClick={() => {
+                    // Pre-fill with current values if editing
+                    if (weightGoal) {
+                      setEditGoalType(weightGoal.goal_type as 'cut' | 'bulk' | 'maintain' | 'recomp');
+                      setEditStartWeight(weightGoal.start_weight?.toString() || '');
+                      setEditTargetWeight(weightGoal.target_weight?.toString() || '');
+                    } else {
+                      setEditGoalType('maintain');
+                      setEditStartWeight(currentWeight?.toString() || '');
+                      setEditTargetWeight('');
+                    }
+                    setShowWeightGoalEditor(true);
+                  }}
                   style={{
-                    background: 'rgba(201, 167, 90, 0.1)',
+                    background: 'rgba(201, 167, 90, 0.2)',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
                     borderRadius: '0.5rem',
-                    padding: '0.5rem 0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
+                    padding: '0.375rem 0.75rem',
+                    color: colors.accent,
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
                   }}
                 >
-                  <span style={{ fontSize: '1rem' }}>
-                    {weightGoal.goal_type === 'cut' ? '📉' : weightGoal.goal_type === 'bulk' ? '📈' : '⚖️'}
-                  </span>
-                  <span style={{ color: colors.textMuted, fontSize: '0.8125rem', textTransform: 'capitalize' }}>
-                    {weightGoal.goal_type} — AI will factor recovery needs
-                  </span>
-                </div>
+                  {weightGoal ? 'Edit' : 'Set Goal'}
+                </button>
               </div>
-            )}
+              {weightGoal ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-center flex-1">
+                      <p style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Start</p>
+                      <span style={{ color: colors.text, fontSize: '1.25rem', fontWeight: 600 }}>{weightGoal.start_weight}</span>
+                      <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> lbs</span>
+                    </div>
+                    <div style={{ color: colors.accent, fontSize: '1.5rem' }}>→</div>
+                    <div className="text-center flex-1">
+                      <p style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Current</p>
+                      <span style={{ color: colors.accent, fontSize: '1.25rem', fontWeight: 600 }}>{currentWeight || '—'}</span>
+                      <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> lbs</span>
+                    </div>
+                    <div style={{ color: colors.accent, fontSize: '1.5rem' }}>→</div>
+                    <div className="text-center flex-1">
+                      <p style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.25rem' }}>Target</p>
+                      <span style={{ color: colors.text, fontSize: '1.25rem', fontWeight: 600 }}>{weightGoal.target_weight || '—'}</span>
+                      <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}> lbs</span>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      background: 'rgba(201, 167, 90, 0.1)',
+                      borderRadius: '0.5rem',
+                      padding: '0.5rem 0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <span style={{ fontSize: '1rem' }}>
+                      {weightGoal.goal_type === 'cut' ? '📉' : weightGoal.goal_type === 'bulk' ? '📈' : '⚖️'}
+                    </span>
+                    <span style={{ color: colors.textMuted, fontSize: '0.8125rem', textTransform: 'capitalize' }}>
+                      {weightGoal.goal_type} — AI will factor recovery needs
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
+                    No weight goal set
+                  </p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    Set a goal to track your progress
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Fitness Goal */}
             <div className="card">
@@ -1106,48 +1146,210 @@ export default function ProfilePage() {
         )}
       </main>
 
-      {/* Bottom Nav */}
-      <nav
-        className="fixed bottom-0 left-0 right-0"
-        style={{
-          background: colors.cardBg,
-          borderTop: `1px solid ${colors.borderSubtle}`,
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        }}
-      >
-        <div className="flex justify-around py-3">
-          {[
-            { icon: '🏋️', label: 'Workout', href: '/' },
-            { icon: '📊', label: 'Progress', href: '/progress' },
-            { icon: '📚', label: 'Library', href: '/library' },
-            { icon: '👤', label: 'Profile', href: '/profile', active: true },
-          ].map(item => (
-            <button
-              key={item.label}
-              onClick={() => window.location.href = item.href}
-              style={{
-                background: 'none',
-                border: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.25rem',
-              }}
-            >
-              <span style={{ fontSize: '1.25rem', opacity: item.active ? 1 : 0.5 }}>{item.icon}</span>
-              <span style={{ fontSize: '0.625rem', color: item.active ? '#C9A75A' : 'rgba(245, 241, 234, 0.5)' }}>
-                {item.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </nav>
+      <BottomNav />
 
       {/* Gym Manager Modal */}
       <GymManager isOpen={gymManagerOpen} onClose={() => setGymManagerOpen(false)} />
 
       {/* Settings Modal */}
       <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
+      {/* Weight Goal Editor Modal */}
+      {showWeightGoalEditor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.8)' }}
+          onClick={() => setShowWeightGoalEditor(false)}
+        >
+          <div
+            className="w-full max-w-sm"
+            style={{
+              background: colors.cardBg,
+              borderRadius: '1rem',
+              border: `1px solid ${colors.borderSubtle}`,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '1rem',
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <h3 style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>
+                {weightGoal ? 'Edit Weight Goal' : 'Set Weight Goal'}
+              </h3>
+              <button
+                onClick={() => setShowWeightGoalEditor(false)}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: 'none',
+                  color: colors.textMuted,
+                  fontSize: '1.25rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: '1rem' }}>
+              {/* Goal Type */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ color: colors.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Goal Type
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'cut', label: 'Cut', icon: '📉', desc: 'Lose weight' },
+                    { id: 'bulk', label: 'Bulk', icon: '📈', desc: 'Gain muscle' },
+                    { id: 'maintain', label: 'Maintain', icon: '⚖️', desc: 'Stay steady' },
+                    { id: 'recomp', label: 'Recomp', icon: '🔄', desc: 'Lose fat, gain muscle' },
+                  ].map(type => (
+                    <button
+                      key={type.id}
+                      onClick={() => setEditGoalType(type.id as 'cut' | 'bulk' | 'maintain' | 'recomp')}
+                      style={{
+                        padding: '0.75rem',
+                        background: editGoalType === type.id ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                        border: editGoalType === type.id ? `2px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+                        borderRadius: '0.5rem',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>{type.icon}</span>
+                        <span style={{ color: editGoalType === type.id ? colors.accent : colors.text, fontWeight: 500 }}>
+                          {type.label}
+                        </span>
+                      </div>
+                      <p style={{ color: colors.textMuted, fontSize: '0.625rem', marginTop: '0.25rem' }}>
+                        {type.desc}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Start Weight */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ color: colors.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Start Weight (lbs)
+                </label>
+                <input
+                  type="number"
+                  value={editStartWeight}
+                  onChange={e => setEditStartWeight(e.target.value)}
+                  placeholder={currentWeight?.toString() || '180'}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(15, 34, 51, 0.5)',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: '0.5rem',
+                    color: colors.text,
+                    fontSize: '1rem',
+                  }}
+                />
+                {currentWeight && (
+                  <button
+                    onClick={() => setEditStartWeight(currentWeight.toString())}
+                    style={{
+                      marginTop: '0.25rem',
+                      background: 'none',
+                      border: 'none',
+                      color: colors.accent,
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    Use current weight ({currentWeight} lbs)
+                  </button>
+                )}
+              </div>
+
+              {/* Target Weight */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ color: colors.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Target Weight (lbs) {editGoalType === 'maintain' && '(optional)'}
+                </label>
+                <input
+                  type="number"
+                  value={editTargetWeight}
+                  onChange={e => setEditTargetWeight(e.target.value)}
+                  placeholder={editGoalType === 'maintain' ? 'Same as start' : '160'}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(15, 34, 51, 0.5)',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: '0.5rem',
+                    color: colors.text,
+                    fontSize: '1rem',
+                  }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowWeightGoalEditor(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.875rem',
+                    background: 'transparent',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: '0.75rem',
+                    color: colors.textMuted,
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const startWeight = parseFloat(editStartWeight);
+                    if (isNaN(startWeight) || startWeight <= 0) return;
+
+                    const targetWeight = editTargetWeight ? parseFloat(editTargetWeight) : undefined;
+
+                    setSavingWeightGoal(true);
+                    try {
+                      await setWeightGoal(editGoalType, startWeight, targetWeight);
+                      await refetchWeightGoal();
+                      setShowWeightGoalEditor(false);
+                    } catch (err) {
+                      console.error('Failed to save weight goal:', err);
+                    } finally {
+                      setSavingWeightGoal(false);
+                    }
+                  }}
+                  disabled={savingWeightGoal || !editStartWeight}
+                  className="btn-primary"
+                  style={{
+                    flex: 2,
+                    opacity: savingWeightGoal || !editStartWeight ? 0.6 : 1,
+                  }}
+                >
+                  {savingWeightGoal ? 'Saving...' : 'Save Goal'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
