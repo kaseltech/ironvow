@@ -1339,6 +1339,24 @@ Return ONLY valid JSON:
         }
       }
 
+      // CRITICAL: Verify matched exercise targets the correct muscles
+      // AI sometimes suggests exercises outside the target muscle group
+      const exMuscles = [
+        ...(match.exercise.primary_muscles || []),
+        ...(match.exercise.secondary_muscles || []),
+      ];
+      const targetsCorrectMuscle = targetMuscles.some(target =>
+        exMuscles.some(muscle =>
+          muscle.toLowerCase().includes(target.toLowerCase()) ||
+          target.toLowerCase().includes(muscle.toLowerCase())
+        )
+      );
+
+      if (!targetsCorrectMuscle) {
+        console.log(`✗ BLOCKED wrong muscle group: "${match.exercise.name}" (muscles: ${exMuscles.join(', ')}) - target was: ${targetMuscles.join(', ')}`);
+        continue;
+      }
+
       // Found a match - use the database exercise ID and muscle data
       console.log(`✓ Matched "${aiExercise.name}" → "${match.exercise.name}" (score: ${match.score.toFixed(2)})`);
 
