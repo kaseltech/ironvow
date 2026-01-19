@@ -8,7 +8,7 @@ import { GymManager } from '@/components/GymManager';
 import { Header } from '@/components/Header';
 import { Settings } from '@/components/Settings';
 import { BottomNav } from '@/components/BottomNav';
-import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions, useInjuries } from '@/hooks/useSupabase';
+import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions, useInjuries, useBookmarkedWorkouts } from '@/hooks/useSupabase';
 import { useStrengthData, convertToMuscleStrength, formatVolume, formatDate, formatDaysAgo, ExercisePR, MuscleVolume } from '@/hooks/useStrengthData';
 import { useWorkoutPlans, DAY_NAMES } from '@/hooks/useWorkoutPlans';
 import { useTheme } from '@/context/ThemeContext';
@@ -147,8 +147,9 @@ export default function ProfilePage() {
   const { goal: weightGoal, setWeightGoal, refetch: refetchWeightGoal } = useWeightGoal();
   const { sessions } = useWorkoutSessions(10);
   const { muscleVolume, exercisePRs, sessions: strengthSessions, loading: strengthLoading } = useStrengthData();
-  const { plans, activePlan, setActivePlanById, deletePlan, loading: plansLoading } = useWorkoutPlans();
+  const { plans, activePlan, setActivePlanById, deletePlan, loading: plansLoading, getAdherenceStats } = useWorkoutPlans();
   const { injuries, addInjury, removeInjury } = useInjuries();
+  const { savedWorkouts, loading: savedWorkoutsLoading, unsaveWorkout } = useBookmarkedWorkouts();
 
   const [activeTab, setActiveTab] = useState<'body' | 'saved' | 'history' | 'settings'>('body');
   const [gender, setGender] = useState<'male' | 'female'>((profile?.gender as 'male' | 'female') || 'male');
@@ -175,6 +176,8 @@ export default function ProfilePage() {
   const [injuryDescription, setInjuryDescription] = useState('');
   const [injuryMovements, setInjuryMovements] = useState('');
   const [savingInjury, setSavingInjury] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   // Convert muscle volume to strength data for BodyMap
   const muscleStrengthData = useMemo(() => {
@@ -679,6 +682,37 @@ export default function ProfilePage() {
                           <div style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.25rem' }}>
                             {plan.days.length} days • {plan.description || 'Custom plan'}
                           </div>
+                          {/* Completion Progress for Active Plan */}
+                          {plan.is_active && (() => {
+                            const stats = getAdherenceStats();
+                            if (stats.totalDays === 0) return null;
+                            return (
+                              <div style={{ marginTop: '0.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <div style={{
+                                    flex: 1,
+                                    height: '4px',
+                                    background: colors.inputBg,
+                                    borderRadius: '2px',
+                                    overflow: 'hidden',
+                                  }}>
+                                    <div
+                                      style={{
+                                        width: `${stats.adherencePercent}%`,
+                                        height: '100%',
+                                        background: stats.adherencePercent >= 80 ? '#22c55e' : stats.adherencePercent >= 50 ? colors.accent : '#f59e0b',
+                                        borderRadius: '2px',
+                                        transition: 'width 0.3s ease',
+                                      }}
+                                    />
+                                  </div>
+                                  <span style={{ color: colors.textMuted, fontSize: '0.6875rem', fontWeight: 500 }}>
+                                    {stats.completedDays}/{stats.totalDays}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div className="flex gap-2">
                           {!plan.is_active && (
@@ -766,22 +800,137 @@ export default function ProfilePage() {
               <h2 style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
                 Bookmarked Workouts
               </h2>
-              <div
-                style={{
-                  background: colors.cardBg,
-                  borderRadius: '0.75rem',
-                  padding: '1.5rem',
-                  textAlign: 'center',
-                  border: `1px solid ${colors.borderSubtle}`,
-                }}
-              >
-                <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
-                  No bookmarked workouts yet
-                </p>
-                <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                  Bookmark workouts from your history to save them here
-                </p>
-              </div>
+
+              {savedWorkoutsLoading ? (
+                <div className="text-center py-4">
+                  <div
+                    className="animate-spin rounded-full h-6 w-6 border-2 mx-auto"
+                    style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: '#C9A75A' }}
+                  />
+                </div>
+              ) : savedWorkouts.length > 0 ? (
+                <div className="space-y-3">
+                  {savedWorkouts.map((workout) => (
+                    <div
+                      key={workout.id}
+                      style={{
+                        background: colors.cardBg,
+                        borderRadius: '0.75rem',
+                        padding: '1rem',
+                        border: `1px solid ${colors.borderSubtle}`,
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div style={{ flex: 1 }}>
+                          <div style={{ color: colors.text, fontSize: '1rem', fontWeight: 600 }}>
+                            {workout.name}
+                          </div>
+                          {workout.description && (
+                            <div style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                              {workout.description}
+                            </div>
+                          )}
+                          <div style={{ color: colors.textMuted, fontSize: '0.6875rem', marginTop: '0.375rem' }}>
+                            {workout.exercises?.length || 0} exercises • {workout.estimated_duration || 45} min
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            if (confirm('Remove this workout from bookmarks?')) {
+                              const success = await unsaveWorkout(workout.id);
+                              if (success) {
+                                setSaveSuccess('Workout removed from bookmarks');
+                                setTimeout(() => setSaveSuccess(null), 3000);
+                              } else {
+                                setSaveError('Failed to remove workout');
+                                setTimeout(() => setSaveError(null), 4000);
+                              }
+                            }
+                          }}
+                          style={{
+                            background: 'rgba(248, 113, 113, 0.1)',
+                            color: '#F87171',
+                            border: 'none',
+                            borderRadius: '0.375rem',
+                            padding: '0.375rem 0.625rem',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            minHeight: '32px',
+                          }}
+                          aria-label={`Remove ${workout.name} from bookmarks`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      {/* Target Muscles Tags */}
+                      {workout.target_muscles && workout.target_muscles.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {workout.target_muscles.slice(0, 4).map((muscle) => (
+                            <span
+                              key={muscle}
+                              style={{
+                                background: colors.accentMuted,
+                                borderRadius: '999px',
+                                padding: '0.125rem 0.375rem',
+                                fontSize: '0.5625rem',
+                                color: colors.accent,
+                                textTransform: 'capitalize',
+                              }}
+                            >
+                              {muscle.replace('_', ' ')}
+                            </span>
+                          ))}
+                          {workout.target_muscles.length > 4 && (
+                            <span style={{ fontSize: '0.5625rem', color: colors.textMuted }}>
+                              +{workout.target_muscles.length - 4}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Use This Workout Button */}
+                      <Link
+                        href={`/workout?bookmarkId=${workout.id}`}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          marginTop: '0.75rem',
+                          padding: '0.625rem',
+                          borderRadius: '0.5rem',
+                          background: 'rgba(201, 167, 90, 0.1)',
+                          border: `1px solid ${colors.accent}`,
+                          color: colors.accent,
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          textAlign: 'center',
+                          textDecoration: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Use This Workout
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: colors.cardBg,
+                    borderRadius: '0.75rem',
+                    padding: '1.5rem',
+                    textAlign: 'center',
+                    border: `1px solid ${colors.borderSubtle}`,
+                  }}
+                >
+                  <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
+                    No bookmarked workouts yet
+                  </p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    Save workouts after generating them to access them here
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1290,6 +1439,62 @@ export default function ProfilePage() {
 
       <BottomNav />
 
+      {/* Success Toast */}
+      {saveSuccess && (
+        <div
+          className="fixed z-50 animate-fade-in"
+          style={{
+            bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(34, 197, 94, 0.95)',
+            color: '#fff',
+            padding: '0.75rem 1.25rem',
+            borderRadius: '0.75rem',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+          {saveSuccess}
+        </div>
+      )}
+
+      {/* Error Toast */}
+      {saveError && (
+        <div
+          className="fixed z-50 animate-fade-in"
+          style={{
+            bottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(239, 68, 68, 0.95)',
+            color: '#fff',
+            padding: '0.75rem 1.25rem',
+            borderRadius: '0.75rem',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+          </svg>
+          {saveError}
+        </div>
+      )}
+
       {/* Gym Manager Modal */}
       <GymManager isOpen={gymManagerOpen} onClose={() => setGymManagerOpen(false)} />
 
@@ -1302,6 +1507,9 @@ export default function ProfilePage() {
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0, 0, 0, 0.8)' }}
           onClick={() => setShowWeightGoalEditor(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="weight-goal-modal-title"
         >
           <div
             className="w-full max-w-sm"
@@ -1321,7 +1529,7 @@ export default function ProfilePage() {
                 alignItems: 'center',
               }}
             >
-              <h3 style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>
+              <h3 id="weight-goal-modal-title" style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>
                 {weightGoal ? 'Edit Weight Goal' : 'Set Weight Goal'}
               </h3>
               <button
@@ -1470,12 +1678,17 @@ export default function ProfilePage() {
                     const targetWeight = editTargetWeight ? parseFloat(editTargetWeight) : undefined;
 
                     setSavingWeightGoal(true);
+                    setSaveError(null);
                     try {
                       await setWeightGoal(editGoalType, startWeight, targetWeight);
                       await refetchWeightGoal();
                       setShowWeightGoalEditor(false);
+                      setSaveSuccess('Weight goal saved');
+                      setTimeout(() => setSaveSuccess(null), 3000);
                     } catch (err) {
                       console.error('Failed to save weight goal:', err);
+                      setSaveError('Failed to save weight goal. Please try again.');
+                      setTimeout(() => setSaveError(null), 4000);
                     } finally {
                       setSavingWeightGoal(false);
                     }
@@ -1501,6 +1714,9 @@ export default function ProfilePage() {
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0, 0, 0, 0.8)' }}
           onClick={() => setShowInjuryEditor(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="injury-modal-title"
         >
           <div
             className="w-full max-w-sm"
@@ -1520,7 +1736,7 @@ export default function ProfilePage() {
                 alignItems: 'center',
               }}
             >
-              <h3 style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>
+              <h3 id="injury-modal-title" style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>
                 Add Injury
               </h3>
               <button
@@ -1682,6 +1898,7 @@ export default function ProfilePage() {
                     if (!injuryBodyPart) return;
 
                     setSavingInjury(true);
+                    setSaveError(null);
                     try {
                       const movements = injuryMovements
                         .split(',')
@@ -1695,8 +1912,12 @@ export default function ProfilePage() {
                         movements.length > 0 ? movements : undefined
                       );
                       setShowInjuryEditor(false);
+                      setSaveSuccess('Injury added successfully');
+                      setTimeout(() => setSaveSuccess(null), 3000);
                     } catch (err) {
                       console.error('Failed to add injury:', err);
+                      setSaveError('Failed to add injury. Please try again.');
+                      setTimeout(() => setSaveError(null), 4000);
                     } finally {
                       setSavingInjury(false);
                     }

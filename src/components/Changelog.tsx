@@ -26,6 +26,24 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.3.0',
+    date: 'January 19, 2026',
+    title: 'Bookmarks & Stability',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Unsave workouts - click saved button to remove from bookmarks' },
+      { type: 'added', description: 'Bookmarked workouts management in Profile > Saved tab' },
+      { type: 'added', description: 'Weekly plan progress bar showing completion percentage' },
+      { type: 'added', description: 'Swap button in workout header now opens swap modal' },
+      { type: 'added', description: 'Success/error toasts for profile saves (injuries, goals)' },
+      { type: 'fixed', description: 'Race condition when switching exercises in swap modal' },
+      { type: 'fixed', description: 'Double-tap on Generate button could fire twice' },
+      { type: 'improved', description: 'Modal accessibility with proper ARIA labels' },
+      { type: 'improved', description: 'Performance with memoized exercise lists' },
+      { type: 'improved', description: 'Code quality - extracted duplicate muscle validation logic' },
+    ],
+  },
+  {
     version: '2.2.0',
     date: 'January 18, 2026',
     title: 'UX Polish & Accessibility',

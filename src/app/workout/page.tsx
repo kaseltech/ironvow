@@ -923,7 +923,11 @@ export default function WorkoutPage() {
                 {currentExerciseIndex + 1} / {exercises.length}
               </span>
             </div>
-            <button style={{ color: '#C9A75A', fontSize: '1rem', background: 'none', border: 'none' }}>
+            <button
+              onClick={openSwapModal}
+              aria-label="Swap current exercise"
+              style={{ color: '#C9A75A', fontSize: '1rem', background: 'none', border: 'none', minHeight: '44px', cursor: 'pointer' }}
+            >
               ↻ Swap
             </button>
           </div>

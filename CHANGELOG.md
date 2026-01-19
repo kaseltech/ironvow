@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Deep Dive #2 Improvements (January 2025)
+- **Unsave workout functionality** - Click saved button to remove from bookmarks
+- **Bookmarked workouts UI** - Full management in Profile > Saved tab with remove and use actions
+- **Weekly plan progress display** - Visual progress bar showing completion percentage
+- **Swap button in workout header** - Now functional, opens swap modal during active session
+- **Error/success toasts on profile saves** - Visual feedback for injury and goal saves
+- **Race condition fix for swap modal** - Prevents wrong alternatives when switching exercises quickly
+
+#### Accessibility (January 2025)
+- Modal `role="dialog"` and `aria-modal` attributes
+- `aria-labelledby` for modal titles
+- ARIA labels on save/unsave buttons
+
+#### Performance (January 2025)
+- Memoized exercise list rendering with `useMemo`
+- Debounce on Generate button (prevents double-tap within 1 second)
+- Extracted duplicate muscle validation to `buildTargetMuscles()` helper
+
+#### Code Quality (January 2025)
+- Shared `buildTargetMuscles()` helper eliminates ~40 lines of duplicated code
+- Consistent error handling pattern with toast notifications
+
 #### UI/UX Deep Dive Improvements (January 2025)
 - Undo toast for completed sets - 4-second undo window after logging a set
 - Rest timer completion notification when app resumes from background

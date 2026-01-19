@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { AuthGuard } from '@/components/AuthGuard';
@@ -15,6 +15,7 @@ import { useProfile, useInjuries, useEquipment, useGymProfiles, useWorkoutSessio
 import { useWorkoutPlans, DAY_NAMES_FULL } from '@/hooks/useWorkoutPlans';
 import { useStrengthData } from '@/hooks/useStrengthData';
 import { generateWorkout, getSwapAlternatives, generateWeeklyPlan, findEquipmentVariant, getAvailableEquipmentVariants, getEquipmentFromName, getBaseMovement, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan, type EquipmentType } from '@/lib/generateWorkout';
+import { buildTargetMuscles } from '@/lib/muscleInference';
 import { WeeklyPlanner } from '@/components/WeeklyPlanner';
 import { WeeklyPlanReview } from '@/components/WeeklyPlanReview';
 import { ExerciseDetailModal } from '@/components/ExerciseDetailModal';
@@ -56,7 +57,7 @@ export default function Home() {
   const { activePlan, getTodaysWorkout, fetchPlans: refetchPlans } = useWorkoutPlans();
   const { exercisePRs, muscleVolume, sessions: recentSessions } = useStrengthData();
   const { activeSession, startSession } = useWorkoutSessions();
-  const { saveWorkout, isWorkoutSaved } = useBookmarkedWorkouts();
+  const { saveWorkout, unsaveWorkout, isWorkoutSaved, savedWorkouts } = useBookmarkedWorkouts();
 
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedGym, setSelectedGym] = useState<GymProfile | null>(null);
@@ -78,6 +79,8 @@ export default function Home() {
   const [swapAlternatives, setSwapAlternatives] = useState<ExerciseAlternative[]>([]);
   const [loadingAlternatives, setLoadingAlternatives] = useState(false);
   const [loadingMoreAlternatives, setLoadingMoreAlternatives] = useState(false);
+  // Track which exercise is being loaded to prevent race conditions
+  const [loadingExerciseIndex, setLoadingExerciseIndex] = useState<number | null>(null);
   // Equipment variant state for swap modal
   const [availableEquipment, setAvailableEquipment] = useState<Map<EquipmentType, string>>(new Map());
   const [currentEquipment, setCurrentEquipment] = useState<EquipmentType | null>(null);
@@ -102,6 +105,9 @@ export default function Home() {
   const [savedWorkoutId, setSavedWorkoutId] = useState<string | null>(null);
   const [warmupExpanded, setWarmupExpanded] = useState(false); // Collapsed by default in display
 
+  // Debounce ref to prevent double-tap on generate
+  const lastGenerateTime = useRef<number>(0);
+
   const toggleMuscle = (id: string) => {
     setSelectedMuscles(prev =>
       prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
@@ -110,6 +116,14 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (!user || !selectedLocation) return;
+
+    // Debounce: prevent double-tap within 1 second
+    const now = Date.now();
+    if (now - lastGenerateTime.current < 1000) {
+      console.log('[Generate] Debounced - too soon after last request');
+      return;
+    }
+    lastGenerateTime.current = now;
 
     setGenerating(true);
     setError(null);
@@ -253,9 +267,22 @@ export default function Home() {
   const handleSaveWorkout = async () => {
     if (!generatedWorkout || isSaving) return;
 
-    // Check if already saved
+    // If already saved, unsave it
     if (savedWorkoutId) {
-      // TODO: Could implement unsave here
+      setIsSaving(true);
+      try {
+        const success = await unsaveWorkout(savedWorkoutId);
+        if (success) {
+          setSavedWorkoutId(null);
+        } else {
+          setError('Failed to remove from saved');
+        }
+      } catch (err) {
+        console.error('Failed to unsave workout:', err);
+        setError('Failed to remove from saved');
+      } finally {
+        setIsSaving(false);
+      }
       return;
     }
 
@@ -494,6 +521,7 @@ export default function Home() {
 
     const exercise = generatedWorkout.exercises[exerciseIndex];
     setSwappingExerciseIndex(exerciseIndex);
+    setLoadingExerciseIndex(exerciseIndex); // Track which exercise is loading
     setLoadingAlternatives(true);
     setSwapAlternatives([]);
 
@@ -508,48 +536,8 @@ export default function Home() {
     });
 
     try {
-      // Build target muscles from multiple sources, ensuring we always have something
-      let targetMuscles: string[] = [];
-
-      // First try exercise's primary muscles
-      if (exercise.primaryMuscles?.length) {
-        targetMuscles = [...exercise.primaryMuscles];
-      }
-
-      // Add secondary muscles if available
-      if (exercise.secondaryMuscles?.length) {
-        targetMuscles = [...targetMuscles, ...exercise.secondaryMuscles];
-      }
-
-      // Fallback to workout's target muscles if still empty
-      if (targetMuscles.length === 0 && generatedWorkout.targetMuscles?.length) {
-        targetMuscles = [...generatedWorkout.targetMuscles];
-      }
-
-      // Final fallback - infer from exercise name for common patterns
-      if (targetMuscles.length === 0) {
-        const name = exercise.name.toLowerCase();
-        if (name.includes('bench') || name.includes('chest') || name.includes('push')) {
-          targetMuscles = ['chest', 'triceps', 'shoulders'];
-        } else if (name.includes('row') || name.includes('pull') || name.includes('lat')) {
-          targetMuscles = ['back', 'biceps'];
-        } else if (name.includes('squat') || name.includes('leg') || name.includes('lunge')) {
-          targetMuscles = ['quads', 'glutes', 'hamstrings'];
-        } else if (name.includes('deadlift') || name.includes('hip')) {
-          targetMuscles = ['hamstrings', 'glutes', 'back'];
-        } else if (name.includes('shoulder') || name.includes('press') || name.includes('delt')) {
-          targetMuscles = ['shoulders', 'triceps'];
-        } else if (name.includes('curl') || name.includes('bicep')) {
-          targetMuscles = ['biceps'];
-        } else if (name.includes('tricep') || name.includes('extension')) {
-          targetMuscles = ['triceps'];
-        } else if (name.includes('core') || name.includes('ab') || name.includes('plank')) {
-          targetMuscles = ['abs', 'core'];
-        } else {
-          // Generic fallback
-          targetMuscles = ['chest', 'back', 'shoulders'];
-        }
-      }
+      // Build target muscles using shared helper (eliminates ~40 lines of duplicated code)
+      const targetMuscles = buildTargetMuscles(exercise, generatedWorkout.targetMuscles);
 
       console.log('[Swap] Request:', {
         exercise: exercise.name,
@@ -573,12 +561,20 @@ export default function Home() {
       });
 
       console.log('[Swap] Got alternatives:', alternatives?.length || 0);
-      setSwapAlternatives(alternatives || []);
+      // Only set alternatives if this is still the exercise we're loading for (prevents race condition)
+      if (loadingExerciseIndex === exerciseIndex) {
+        setSwapAlternatives(alternatives || []);
+      }
     } catch (err) {
       console.error('[Swap] Failed to get alternatives:', err);
-      setSwapAlternatives([]);
+      if (loadingExerciseIndex === exerciseIndex) {
+        setSwapAlternatives([]);
+      }
     } finally {
-      setLoadingAlternatives(false);
+      if (loadingExerciseIndex === exerciseIndex) {
+        setLoadingAlternatives(false);
+        setLoadingExerciseIndex(null);
+      }
     }
   };
 
@@ -590,27 +586,8 @@ export default function Home() {
     setLoadingMoreAlternatives(true);
 
     try {
-      // Build target muscles (same logic as handleOpenSwap)
-      let targetMuscles: string[] = [];
-      if (exercise.primaryMuscles?.length) {
-        targetMuscles = [...exercise.primaryMuscles];
-      }
-      if (exercise.secondaryMuscles?.length) {
-        targetMuscles = [...targetMuscles, ...exercise.secondaryMuscles];
-      }
-      if (targetMuscles.length === 0 && generatedWorkout.targetMuscles?.length) {
-        targetMuscles = [...generatedWorkout.targetMuscles];
-      }
-      if (targetMuscles.length === 0) {
-        const name = exercise.name.toLowerCase();
-        if (name.includes('bench') || name.includes('chest') || name.includes('push')) {
-          targetMuscles = ['chest', 'triceps', 'shoulders'];
-        } else if (name.includes('row') || name.includes('pull') || name.includes('lat')) {
-          targetMuscles = ['back', 'biceps'];
-        } else {
-          targetMuscles = ['chest', 'back', 'shoulders'];
-        }
-      }
+      // Build target muscles using shared helper
+      const targetMuscles = buildTargetMuscles(exercise, generatedWorkout.targetMuscles);
 
       // Get IDs of already shown alternatives
       const excludeIds = [
@@ -742,6 +719,15 @@ export default function Home() {
   // - Location selected
   // - Either freeform mode with text, OR structured mode with muscles selected, OR cardio style
   // - If gym selected, must have a gym profile
+  // Memoize exercise list rendering for performance
+  const exerciseList = useMemo(() => {
+    if (!generatedWorkout) return null;
+    return generatedWorkout.exercises.map((exercise, i) => ({
+      ...exercise,
+      index: i,
+    }));
+  }, [generatedWorkout]);
+
   const canGenerate = selectedLocation &&
     (freeformMode ? freeformPrompt.trim().length > 0 : (selectedMuscles.length > 0 || selectedWorkoutStyle === 'cardio')) &&
     (selectedLocation !== 'gym' || selectedGym !== null);
@@ -1201,7 +1187,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={handleSaveWorkout}
-                  disabled={isSaving || savedWorkoutId !== null}
+                  disabled={isSaving}
                   style={{
                     background: savedWorkoutId ? colors.accent : 'transparent',
                     border: `1px solid ${savedWorkoutId ? colors.accent : colors.border}`,
@@ -1209,10 +1195,12 @@ export default function Home() {
                     fontSize: '0.75rem',
                     padding: '0.5rem 1rem',
                     borderRadius: '0.5rem',
-                    cursor: isSaving || savedWorkoutId ? 'default' : 'pointer',
+                    cursor: isSaving ? 'not-allowed' : 'pointer',
                     opacity: isSaving ? 0.5 : 1,
+                    minHeight: '36px',
                   }}
-                  title={savedWorkoutId ? 'Workout saved' : 'Save workout to library'}
+                  title={savedWorkoutId ? 'Click to unsave' : 'Save workout to library'}
+                  aria-label={savedWorkoutId ? 'Unsave workout' : 'Save workout'}
                 >
                   {isSaving ? '...' : savedWorkoutId ? '✓ Saved' : 'Save'}
                 </button>
@@ -1773,6 +1761,9 @@ export default function Home() {
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0, 0, 0, 0.85)' }}
           onClick={() => setShowGenerateConfirm(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="generate-modal-title"
         >
           <div
             onClick={e => e.stopPropagation()}
@@ -1786,13 +1777,16 @@ export default function Home() {
               border: `1px solid ${colors.borderSubtle}`,
             }}
           >
-            <h3 style={{
-              color: colors.text,
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              marginBottom: '1rem',
-              fontFamily: 'var(--font-libre-baskerville)',
-            }}>
+            <h3
+              id="generate-modal-title"
+              style={{
+                color: colors.text,
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                marginBottom: '1rem',
+                fontFamily: 'var(--font-libre-baskerville)',
+              }}
+            >
               Generate Workout?
             </h3>
 
