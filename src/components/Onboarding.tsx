@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Logo } from './Logo';
 import { useProfile, useWeightGoal, useWeightLogs, useEquipment } from '@/hooks/useSupabase';
+import { useTheme } from '@/context/ThemeContext';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -11,6 +12,7 @@ interface OnboardingProps {
 type Step = 'welcome' | 'gender' | 'experience' | 'body' | 'goal' | 'equipment' | 'complete';
 
 export function Onboarding({ onComplete }: OnboardingProps) {
+  const { colors } = useTheme();
   const { profile, updateProfile } = useProfile();
   const { setWeightGoal } = useWeightGoal();
   const { addWeightLog } = useWeightLogs();
@@ -141,7 +143,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0F2233' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: colors.bg }}>
       {/* Progress indicator */}
       {step !== 'welcome' && step !== 'complete' && (
         <div className="px-6 pt-4">

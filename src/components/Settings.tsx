@@ -170,7 +170,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
     >
       <div
         style={{
-          backgroundColor: '#1A3550',
+          backgroundColor: colors.cardBg,
           borderTopLeftRadius: '1.5rem',
           borderTopRightRadius: '1.5rem',
           width: '100%',
@@ -481,7 +481,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
             style={{
               position: 'fixed',
               inset: 0,
-              backgroundColor: '#0F2233',
+              backgroundColor: colors.bg,
               zIndex: 100,
               display: 'flex',
               flexDirection: 'column',
@@ -496,7 +496,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
               justifyContent: 'space-between',
               padding: '1rem 1.5rem',
               borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
-              backgroundColor: '#1A3550',
+              backgroundColor: colors.cardBg,
             }}>
               <button
                 onClick={() => setShowEquipmentEditor(false)}
@@ -528,7 +528,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
             </div>
 
             {/* Search */}
-            <div style={{ padding: '1rem 1.5rem', backgroundColor: '#1A3550' }}>
+            <div style={{ padding: '1rem 1.5rem', backgroundColor: colors.cardBg }}>
               <input
                 type="text"
                 placeholder="Search equipment..."
@@ -596,7 +596,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                         flexShrink: 0,
                       }}>
                         {hasEquipment(eq.id) && (
-                          <svg style={{ width: '1rem', height: '1rem', color: '#0F2233' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg style={{ width: '1rem', height: '1rem', color: colors.bg }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                           </svg>
                         )}
@@ -695,7 +695,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                               flexShrink: 0,
                             }}>
                               {hasEquipment(eq.id) && (
-                                <svg style={{ width: '0.875rem', height: '0.875rem', color: '#0F2233' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg style={{ width: '0.875rem', height: '0.875rem', color: colors.bg }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
                               )}
@@ -797,7 +797,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
             {/* Save Button */}
             <div style={{
               padding: '1rem 1.5rem',
-              backgroundColor: '#1A3550',
+              backgroundColor: colors.cardBg,
               borderTop: '1px solid rgba(201, 167, 90, 0.1)',
             }}>
               <button
@@ -809,7 +809,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                   borderRadius: '0.75rem',
                   border: 'none',
                   backgroundColor: '#C9A75A',
-                  color: '#0F2233',
+                  color: colors.bg,
                   fontSize: '1rem',
                   fontWeight: 600,
                   cursor: saving ? 'default' : 'pointer',

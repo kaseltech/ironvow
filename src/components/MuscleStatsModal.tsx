@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ExercisePR, MuscleVolume } from '@/hooks/useStrengthData';
+import { useTheme } from '@/context/ThemeContext';
 
 interface MuscleStatsModalProps {
   isOpen: boolean;
@@ -66,6 +67,7 @@ export function MuscleStatsModal({
   exercisePRs,
   muscleVolume,
 }: MuscleStatsModalProps) {
+  const { colors } = useTheme();
   const [isClosing, setIsClosing] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [exercisesExpanded, setExercisesExpanded] = useState(true);
@@ -178,7 +180,7 @@ export function MuscleStatsModal({
     >
       <div
         style={{
-          backgroundColor: '#1F3A5A',
+          backgroundColor: colors.cardBg,
           borderRadius: '1.5rem',
           width: '100%',
           maxWidth: '28rem',
