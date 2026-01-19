@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme, COLOR_THEMES, ColorTheme } from '@/context/ThemeContext';
 import { useProfile, useEquipment } from '@/hooks/useSupabase';
 import { Changelog } from './Changelog';
+import { ProfileEditor } from './ProfileEditor';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
 
   const [showChangelog, setShowChangelog] = useState(false);
   const [showEquipmentEditor, setShowEquipmentEditor] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [customEquipment, setCustomEquipment] = useState<string[]>([]);
   const [customInput, setCustomInput] = useState('');
   const [equipmentLocation, setEquipmentLocation] = useState<'home' | 'gym'>('home');
@@ -59,6 +61,8 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
           setShowChangelog(false);
         } else if (showEquipmentEditor) {
           setShowEquipmentEditor(false);
+        } else if (showProfileEditor) {
+          setShowProfileEditor(false);
         } else {
           onClose();
         }
@@ -66,7 +70,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [isOpen, showChangelog, showEquipmentEditor, onClose]);
+  }, [isOpen, showChangelog, showEquipmentEditor, showProfileEditor, onClose]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -252,7 +256,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                   overflow: 'hidden',
                 }}>
                   <button
-                    onClick={() => router.push('/profile')}
+                    onClick={() => setShowProfileEditor(true)}
                     style={{
                       width: '100%',
                       padding: '1rem',
@@ -474,6 +478,9 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
 
         {/* Changelog Modal */}
         <Changelog isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
+
+        {/* Profile Editor Modal */}
+        <ProfileEditor isOpen={showProfileEditor} onClose={() => setShowProfileEditor(false)} />
 
         {/* Equipment Editor Modal - Full Screen Portal */}
         {showEquipmentEditor && typeof document !== 'undefined' && createPortal(
