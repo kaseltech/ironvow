@@ -1126,7 +1126,7 @@ export default function Home() {
             )}
 
             {/* Spacer for sticky generate button */}
-            <div style={{ height: '1rem' }} />
+            <div style={{ height: '6rem' }} />
           </>
         ) : generatedWorkout || generatedPlan ? (
           /* Workout Display */
