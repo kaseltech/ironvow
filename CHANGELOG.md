@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### UI/UX Deep Dive Improvements (January 2025)
+- Undo toast for completed sets - 4-second undo window after logging a set
+- Rest timer completion notification when app resumes from background
+- Generate confirmation modal - shows workout summary before generating
+- Freeform AI mode indicator badge when custom prompt is active
+- Mid-workout abort confirmation with save/discard options
+- Weekly planner discoverability - dot indicator on Weekly toggle button
+- Expandable equipment lists in profile - tap "+X more" to see all items
+- Horizontal scroll indicator (gradient fade) on muscle filter pills
+- Better empty state in library with "Clear Filters" CTA button
+
+#### Accessibility Improvements (January 2025)
+- Global focus ring styles (`:focus-visible`) for keyboard navigation
+- ARIA labels on all icon-only buttons throughout the app
+- Proper `aria-current` on bottom navigation for screen readers
+- Keyboard-accessible modals with focus management
+
+### Improved
+
+#### Mobile Touch Experience (January 2025)
+- Tab buttons increased to 48px minimum height (was ~32px)
+- Global `:active` states for immediate button feedback on touch
+- WebkitTapHighlightColor disabled for native feel
+- User-select disabled on buttons to prevent accidental text selection
+- Minimum 44px touch targets enforced via CSS for coarse pointers
+
+#### Visual Polish (January 2025)
+- Edit set discoverability - highlighted "Tap to edit" badge on completed sets
+- Weight chart Y-axis labels increased from 10px to 12px
+- Muscle selector responsive layout - single column on phones <375px
+- Progress page loading indicator changed from full-screen to subtle inline toast
+- Error messages now include retry button with one-click regeneration
+
+#### Component Updates (January 2025)
+- BottomNav: Added ARIA labels, proper touch targets, current page indicator
+- PrimaryContext: Weekly mode tooltip with visual dot indicator
+- MuscleSelector: Responsive grid class for small phones
+- ExerciseSwapModal: Better accessibility and keyboard support
+
 #### Session Persistence & Recovery (January 2025)
 - Active workouts now stored in Supabase with full workout data
 - Sessions recover automatically on app refresh or crash

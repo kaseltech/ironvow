@@ -89,6 +89,8 @@ export function BottomNav() {
             <button
               key={item.label}
               onClick={() => router.push(item.href)}
+              aria-label={`Navigate to ${item.label}`}
+              aria-current={isActive ? 'page' : undefined}
               style={{
                 background: isActive ? colors.accentMuted : 'transparent',
                 border: 'none',
@@ -101,6 +103,9 @@ export function BottomNav() {
                 borderRadius: '0.75rem',
                 position: 'relative',
                 transition: 'all 0.2s ease',
+                minHeight: '48px',
+                minWidth: '48px',
+                WebkitTapHighlightColor: 'transparent',
               }}
             >
               {item.icon(isActive ? colors.accent : colors.textMuted)}

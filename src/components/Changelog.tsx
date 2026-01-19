@@ -26,6 +26,28 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.2.0',
+    date: 'January 18, 2026',
+    title: 'UX Polish & Accessibility',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Undo button appears for 4 seconds after logging a set' },
+      { type: 'added', description: 'Rest complete notification when returning from background' },
+      { type: 'added', description: 'Generate confirmation shows workout summary before creating' },
+      { type: 'added', description: 'Freeform AI mode indicator badge when using custom prompts' },
+      { type: 'added', description: 'End workout confirmation with save or discard options' },
+      { type: 'added', description: 'Expandable equipment lists - tap to see all items' },
+      { type: 'added', description: 'Keyboard focus rings for accessibility' },
+      { type: 'improved', description: 'Tab buttons now 48px height for easier tapping' },
+      { type: 'improved', description: 'Error messages include one-click retry button' },
+      { type: 'improved', description: '"Tap to edit" badge on completed sets is more visible' },
+      { type: 'improved', description: 'Chart labels are larger and easier to read' },
+      { type: 'improved', description: 'Muscle selector adapts to small phone screens' },
+      { type: 'improved', description: 'Loading indicator is now a subtle toast, not full-screen' },
+      { type: 'improved', description: 'Weekly mode has a visual dot indicator for discoverability' },
+    ],
+  },
+  {
     version: '2.1.0',
     date: 'January 18, 2026',
     title: 'Smart Progress & Persistence',

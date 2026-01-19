@@ -170,6 +170,16 @@ export default function WorkoutPage() {
   // Track beeps played to avoid duplicates
   const beepsPlayed = useRef<Set<number>>(new Set());
 
+  // Undo toast state
+  const [undoToast, setUndoToast] = useState<{ setId: string; weight: number; reps: number } | null>(null);
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Rest completed notification
+  const [showRestComplete, setShowRestComplete] = useState(false);
+
+  // End workout confirmation modal
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+
   // Initialize workoutExercises from workoutData
   useEffect(() => {
     if (workoutData.exercises && workoutData.exercises.length > 0 && workoutExercises.length === 0) {
@@ -248,6 +258,10 @@ export default function WorkoutPage() {
         if (remaining === 0) {
           setIsResting(false);
           setRestEndTime(null);
+          // Show rest complete notification when app resumes and rest was done
+          setShowRestComplete(true);
+          setTimeout(() => setShowRestComplete(false), 3000);
+          playBeep(1200, 400, 0.7);
         }
       }
     }).then(handle => {
@@ -362,7 +376,7 @@ export default function WorkoutPage() {
     setShowWeightPicker(false);
 
     try {
-      await logSet(
+      const loggedSet = await logSet(
         sessionId,
         exercise.exerciseId,
         exercise.name,
@@ -373,6 +387,18 @@ export default function WorkoutPage() {
         targetReps,
         setType === 'warmup' ? 'warmup' : 'working'
       );
+
+      // Show undo toast
+      if (loggedSet?.id) {
+        // Clear any existing undo timeout
+        if (undoTimeoutRef.current) {
+          clearTimeout(undoTimeoutRef.current);
+        }
+        setUndoToast({ setId: loggedSet.id, weight, reps });
+        undoTimeoutRef.current = setTimeout(() => {
+          setUndoToast(null);
+        }, 4000);
+      }
 
       // Check for new PR (if this weight exceeds the known PR)
       if (setType !== 'warmup' && exercise.prWeight && weight > exercise.prWeight) {
@@ -881,11 +907,9 @@ export default function WorkoutPage() {
         <header style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)', paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingBottom: '1rem' }}>
           <div className="flex items-center justify-between">
             <button
-              onClick={() => {
-                sessionStorage.removeItem('currentWorkout');
-                router.push('/');
-              }}
-              style={{ color: '#C9A75A', fontSize: '1rem', background: 'none', border: 'none' }}
+              onClick={() => setShowEndConfirm(true)}
+              style={{ color: '#C9A75A', fontSize: '1rem', background: 'none', border: 'none', minHeight: '44px', cursor: 'pointer' }}
+              aria-label="End workout"
             >
               ✕ End
             </button>
@@ -1145,21 +1169,38 @@ export default function WorkoutPage() {
               {/* Completed sets (tappable to edit) */}
               {exerciseLoggedSets.length > 0 && (
                 <div className="mb-4">
-                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-                    Completed Sets (tap to edit)
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600 }}>
+                      Completed Sets
+                    </p>
+                    <span style={{
+                      background: 'rgba(201, 167, 90, 0.2)',
+                      color: '#C9A75A',
+                      fontSize: '0.625rem',
+                      padding: '0.125rem 0.375rem',
+                      borderRadius: '0.25rem',
+                      fontWeight: 500,
+                    }}>
+                      Tap to edit
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {exerciseLoggedSets.map((set, i) => (
                       <button
                         key={set.id}
                         onClick={() => openEditSet(set)}
+                        aria-label={`Edit set ${i + 1}: ${set.weight} lbs times ${set.reps} reps`}
                         style={{
                           background: set.synced ? 'rgba(34, 197, 94, 0.1)' : 'rgba(201, 167, 90, 0.1)',
                           border: `1px solid ${set.synced ? 'rgba(34, 197, 94, 0.3)' : 'rgba(201, 167, 90, 0.3)'}`,
                           borderRadius: '0.5rem',
-                          padding: '0.5rem 0.75rem',
+                          padding: '0.625rem 0.875rem',
+                          minHeight: '44px',
                           color: '#F5F1EA',
                           fontSize: '0.875rem',
+                          cursor: 'pointer',
+                          WebkitTapHighlightColor: 'transparent',
+                          transition: 'transform 0.1s ease',
                         }}
                       >
                         <span style={{ fontWeight: 600 }}>{set.weight}</span>
@@ -1735,6 +1776,181 @@ export default function WorkoutPage() {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Undo Toast */}
+        {undoToast && (
+          <div
+            className="fixed z-50 animate-fade-in"
+            style={{
+              bottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(15, 34, 51, 0.95)',
+              border: '1px solid rgba(201, 167, 90, 0.3)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            <span style={{ color: '#F5F1EA', fontSize: '0.875rem' }}>
+              Set logged: {undoToast.weight} × {undoToast.reps}
+            </span>
+            <button
+              onClick={async () => {
+                try {
+                  await deleteSet(undoToast.setId);
+                  if (undoTimeoutRef.current) {
+                    clearTimeout(undoTimeoutRef.current);
+                  }
+                  setUndoToast(null);
+                } catch (err) {
+                  console.error('Failed to undo:', err);
+                }
+              }}
+              style={{
+                background: 'rgba(248, 113, 113, 0.2)',
+                border: '1px solid rgba(248, 113, 113, 0.4)',
+                borderRadius: '0.375rem',
+                padding: '0.375rem 0.75rem',
+                color: '#F87171',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                minHeight: '32px',
+              }}
+            >
+              Undo
+            </button>
+          </div>
+        )}
+
+        {/* Rest Complete Notification */}
+        {showRestComplete && (
+          <div
+            className="fixed z-50 animate-fade-in"
+            style={{
+              top: 'calc(2rem + env(safe-area-inset-top, 0px))',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(34, 197, 94, 0.15)',
+              border: '1px solid rgba(34, 197, 94, 0.4)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+            }}
+          >
+            <span style={{ fontSize: '1.25rem' }}>✓</span>
+            <span style={{ color: '#4ADE80', fontSize: '0.875rem', fontWeight: 600 }}>
+              Rest complete! Ready for next set
+            </span>
+          </div>
+        )}
+
+        {/* End Workout Confirmation Modal */}
+        {showEndConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0, 0, 0, 0.85)' }}
+            onClick={() => setShowEndConfirm(false)}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#1A3550',
+                borderRadius: '1rem',
+                padding: '1.5rem',
+                maxWidth: '320px',
+                width: '100%',
+                border: '1px solid rgba(201, 167, 90, 0.2)',
+              }}
+            >
+              <h3 style={{ color: '#F5F1EA', fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                End Workout?
+              </h3>
+              <p style={{ color: 'rgba(245, 241, 234, 0.6)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                {loggedSets.length > 0
+                  ? `You have ${loggedSets.length} set${loggedSets.length === 1 ? '' : 's'} logged. What would you like to do?`
+                  : 'Are you sure you want to end this workout?'
+                }
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {loggedSets.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      if (sessionId) {
+                        try {
+                          await completeSession(sessionId);
+                        } catch (err) {
+                          console.error('Failed to complete session:', err);
+                        }
+                      }
+                      sessionStorage.removeItem('currentWorkout');
+                      router.push('/');
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #C9A75A, #B8964A)',
+                      color: '#0F2233',
+                      padding: '0.875rem',
+                      borderRadius: '0.5rem',
+                      border: 'none',
+                      fontSize: '0.9375rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      minHeight: '48px',
+                    }}
+                  >
+                    Save & End ({loggedSets.length} set{loggedSets.length === 1 ? '' : 's'})
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (sessionId) {
+                      abandonSession(sessionId);
+                    }
+                    sessionStorage.removeItem('currentWorkout');
+                    router.push('/');
+                  }}
+                  style={{
+                    background: 'rgba(248, 113, 113, 0.1)',
+                    color: '#F87171',
+                    padding: '0.875rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid rgba(248, 113, 113, 0.3)',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    minHeight: '48px',
+                  }}
+                >
+                  {loggedSets.length > 0 ? 'Discard & End' : 'End Workout'}
+                </button>
+
+                <button
+                  onClick={() => setShowEndConfirm(false)}
+                  style={{
+                    background: 'none',
+                    color: 'rgba(245, 241, 234, 0.6)',
+                    padding: '0.75rem',
+                    border: 'none',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    minHeight: '44px',
+                  }}
+                >
+                  Continue Workout
+                </button>
               </div>
             </div>
           </div>

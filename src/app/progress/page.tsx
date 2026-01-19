@@ -134,10 +134,28 @@ export default function ProgressPage() {
   return (
     <AuthGuard>
     <div className="min-h-screen" style={{ backgroundColor: colors.bg }}>
-      {/* Loading state */}
+      {/* Inline loading indicator - shows at top while data loads */}
       {loading && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: colors.bg }}>
-          <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: colors.accent, borderTopColor: 'transparent' }} />
+        <div
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            top: 'calc(env(safe-area-inset-top, 0px) + 4rem)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 50,
+            background: colors.cardBg,
+            padding: '0.5rem 1rem',
+            borderRadius: '0.5rem',
+            border: `1px solid ${colors.borderSubtle}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          }}
+        >
+          <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: colors.accent, borderTopColor: 'transparent' }} />
+          <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>Loading...</span>
         </div>
       )}
 
@@ -239,10 +257,10 @@ export default function ProgressPage() {
               ) : (
                 <div style={{ position: 'relative', height: '160px', padding: '0 2.5rem 0 0' }}>
                   {/* Y-axis labels */}
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: '20px', width: '35px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                    <span style={{ color: colors.textMuted, fontSize: '0.625rem' }}>{maxWeight.toFixed(0)}</span>
-                    <span style={{ color: colors.textMuted, fontSize: '0.625rem' }}>{((maxWeight + minWeight) / 2).toFixed(0)}</span>
-                    <span style={{ color: colors.textMuted, fontSize: '0.625rem' }}>{minWeight.toFixed(0)}</span>
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: '20px', width: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <span style={{ color: colors.textMuted, fontSize: '0.75rem', fontWeight: 500 }}>{Math.round(maxWeight)}</span>
+                    <span style={{ color: colors.textMuted, fontSize: '0.75rem', fontWeight: 500 }}>{Math.round((maxWeight + minWeight) / 2)}</span>
+                    <span style={{ color: colors.textMuted, fontSize: '0.75rem', fontWeight: 500 }}>{Math.round(minWeight)}</span>
                   </div>
 
                   {/* Chart area */}

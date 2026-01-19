@@ -337,7 +337,7 @@ export default function LibraryPage() {
             <div className="mb-4">
               <input
                 type="text"
-                placeholder="Search exercises..."
+                placeholder="Search exercises, muscles, or difficulty..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
@@ -353,7 +353,15 @@ export default function LibraryPage() {
             </div>
 
             {/* Muscle Filter */}
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+            <div
+              className="flex gap-2 mb-4 overflow-x-auto pb-2"
+              style={{
+                scrollbarWidth: 'none',
+                maskImage: 'linear-gradient(to right, black 90%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, black 90%, transparent 100%)',
+                paddingRight: '1rem',
+              }}
+            >
               <button
                 onClick={() => setMuscleFilter(null)}
                 style={{
@@ -408,7 +416,25 @@ export default function LibraryPage() {
             <div className="space-y-3">
               {filteredExercises.length === 0 ? (
                 <div className="text-center py-8">
-                  <p style={{ color: colors.textMuted }}>No exercises found</p>
+                  <p style={{ color: colors.textMuted, marginBottom: '0.75rem' }}>No exercises match your search</p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setMuscleFilter(null);
+                    }}
+                    style={{
+                      background: colors.accentMuted,
+                      border: `1px solid ${colors.accent}`,
+                      borderRadius: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      color: colors.accent,
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Clear Filters
+                  </button>
                 </div>
               ) : (
                 filteredExercises.map(ex => (

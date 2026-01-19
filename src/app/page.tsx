@@ -66,6 +66,7 @@ export default function Home() {
   const [duration, setDuration] = useState(45);
   const [showWorkout, setShowWorkout] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [generatedWorkout, setGeneratedWorkout] = useState<GeneratedWorkout | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -766,7 +767,7 @@ export default function Home() {
         showRun={true}
       />
 
-      <main className="p-4" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+      <main className="p-4" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         {!showWorkout ? (
           <>
             {/* Primary Context - Sticky Header */}
@@ -971,11 +972,31 @@ export default function Home() {
                   background: 'rgba(248, 113, 113, 0.1)',
                   border: '1px solid #F87171',
                   borderRadius: '0.5rem',
-                  color: '#F87171',
-                  fontSize: '0.8125rem',
                 }}
               >
-                {error}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                  <span style={{ color: '#F87171', fontSize: '0.8125rem', flex: 1 }}>{error}</span>
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      handleGenerate();
+                    }}
+                    style={{
+                      background: 'rgba(248, 113, 113, 0.2)',
+                      border: '1px solid #F87171',
+                      borderRadius: '0.375rem',
+                      padding: '0.375rem 0.75rem',
+                      color: '#F87171',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      minHeight: '32px',
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
               </div>
             )}
 
@@ -988,6 +1009,52 @@ export default function Home() {
               />
             ) : (
               <>
+                {/* Freeform Mode Indicator */}
+                {freeformMode && (
+                  <div
+                    className="animate-fade-in mb-4"
+                    style={{
+                      background: 'rgba(147, 51, 234, 0.1)',
+                      border: '1px solid rgba(147, 51, 234, 0.3)',
+                      borderRadius: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{
+                        background: 'rgba(147, 51, 234, 0.2)',
+                        color: '#A855F7',
+                        fontSize: '0.625rem',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.25rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                      }}>
+                        AI Mode
+                      </span>
+                      <span style={{ color: colors.text, fontSize: '0.875rem' }}>
+                        Custom prompt active
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setFreeformMode(false)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: colors.textMuted,
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        padding: '0.25rem',
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* Muscle Selection - Progressive Disclosure */}
                 {!freeformMode && (
                   <MuscleSelector
@@ -1639,8 +1706,17 @@ export default function Home() {
             </button>
           )}
           <button
-            onClick={handleGenerate}
+            onClick={() => {
+              if (generating) return;
+              // Show confirmation for structured mode, generate directly for freeform
+              if (freeformMode) {
+                handleGenerate();
+              } else {
+                setShowGenerateConfirm(true);
+              }
+            }}
             disabled={!canGenerate || generating}
+            aria-label="Generate workout"
             style={{
               width: '100%',
               padding: '1.125rem 1.5rem',
@@ -1655,6 +1731,7 @@ export default function Home() {
               cursor: canGenerate && !generating ? 'pointer' : 'not-allowed',
               boxShadow: canGenerate ? '0 8px 24px rgba(201, 167, 90, 0.4)' : 'none',
               transition: 'all 0.2s ease',
+              WebkitTapHighlightColor: 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1689,6 +1766,107 @@ export default function Home() {
       )}
 
       <BottomNav />
+
+      {/* Generate Confirmation Modal */}
+      {showGenerateConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.85)' }}
+          onClick={() => setShowGenerateConfirm(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="animate-fade-in"
+            style={{
+              background: colors.cardBg,
+              borderRadius: '1rem',
+              padding: '1.5rem',
+              maxWidth: '360px',
+              width: '100%',
+              border: `1px solid ${colors.borderSubtle}`,
+            }}
+          >
+            <h3 style={{
+              color: colors.text,
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              marginBottom: '1rem',
+              fontFamily: 'var(--font-libre-baskerville)',
+            }}>
+              Generate Workout?
+            </h3>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              {/* Summary */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                  <span style={{ color: colors.textMuted }}>Location</span>
+                  <span style={{ color: colors.text, fontWeight: 500 }}>
+                    {selectedLocation === 'home' ? '🏠 Home' : selectedLocation === 'gym' ? '🏋️ Gym' : '🌳 Outdoor'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                  <span style={{ color: colors.textMuted }}>Duration</span>
+                  <span style={{ color: colors.text, fontWeight: 500 }}>{duration} min</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                  <span style={{ color: colors.textMuted }}>Style</span>
+                  <span style={{ color: colors.text, fontWeight: 500, textTransform: 'capitalize' }}>{selectedWorkoutStyle}</span>
+                </div>
+                {selectedMuscles.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', alignItems: 'flex-start' }}>
+                    <span style={{ color: colors.textMuted }}>Muscles</span>
+                    <span style={{ color: colors.text, fontWeight: 500, textAlign: 'right', maxWidth: '60%' }}>
+                      {selectedMuscles.slice(0, 3).map(m => m.charAt(0).toUpperCase() + m.slice(1)).join(', ')}
+                      {selectedMuscles.length > 3 && ` +${selectedMuscles.length - 3}`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => setShowGenerateConfirm(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.875rem',
+                  borderRadius: '0.5rem',
+                  background: 'transparent',
+                  border: `1px solid ${colors.borderSubtle}`,
+                  color: colors.textMuted,
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  minHeight: '48px',
+                }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  setShowGenerateConfirm(false);
+                  handleGenerate();
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.875rem',
+                  borderRadius: '0.5rem',
+                  background: `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`,
+                  border: 'none',
+                  color: colors.bg,
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  minHeight: '48px',
+                }}
+              >
+                Generate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings Modal */}
       <Settings

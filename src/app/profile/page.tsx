@@ -165,6 +165,8 @@ export default function ProfilePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [exercisesExpanded, setExercisesExpanded] = useState(true);
   const [bodyView, setBodyView] = useState<'front' | 'back'>('front');
+  const [showAllHomeEquipment, setShowAllHomeEquipment] = useState(false);
+  const [showAllGymEquipment, setShowAllGymEquipment] = useState(false);
 
   // Injury editor state
   const [showInjuryEditor, setShowInjuryEditor] = useState(false);
@@ -336,14 +338,17 @@ export default function ProfilePage() {
             onClick={() => setActiveTab(tab)}
             style={{
               flex: 1,
-              padding: '0.75rem 0.5rem',
+              padding: '0.875rem 0.75rem',
+              minHeight: '48px',
               background: 'none',
               border: 'none',
               borderBottom: activeTab === tab ? `2px solid ${colors.accent}` : '2px solid transparent',
               color: activeTab === tab ? colors.accent : colors.textMuted,
-              fontSize: '0.75rem',
+              fontSize: '0.8125rem',
               fontWeight: 500,
               textTransform: 'capitalize',
+              cursor: 'pointer',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             {tab === 'body' ? 'Body' : tab === 'saved' ? 'Saved' : tab === 'history' ? 'History' : 'Settings'}
@@ -1128,7 +1133,7 @@ export default function ProfilePage() {
                   </div>
                   {homeEquipmentNames.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
-                      {homeEquipmentNames.slice(0, 6).map(item => (
+                      {(showAllHomeEquipment ? homeEquipmentNames : homeEquipmentNames.slice(0, 6)).map(item => (
                         <span
                           key={item}
                           style={{
@@ -1143,9 +1148,21 @@ export default function ProfilePage() {
                         </span>
                       ))}
                       {homeEquipmentNames.length > 6 && (
-                        <span style={{ color: colors.textMuted, fontSize: '0.6875rem', padding: '0.25rem' }}>
-                          +{homeEquipmentNames.length - 6} more
-                        </span>
+                        <button
+                          onClick={() => setShowAllHomeEquipment(!showAllHomeEquipment)}
+                          style={{
+                            background: 'rgba(201, 167, 90, 0.15)',
+                            border: '1px solid rgba(201, 167, 90, 0.3)',
+                            borderRadius: '0.375rem',
+                            padding: '0.25rem 0.5rem',
+                            color: colors.accent,
+                            fontSize: '0.6875rem',
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {showAllHomeEquipment ? 'Show less' : `+${homeEquipmentNames.length - 6} more`}
+                        </button>
                       )}
                     </div>
                   ) : (
@@ -1165,7 +1182,7 @@ export default function ProfilePage() {
                   </div>
                   {gymEquipmentNames.length > 0 && gymEquipmentNames.length <= 20 && (
                     <div className="flex flex-wrap gap-1">
-                      {gymEquipmentNames.slice(0, 6).map(item => (
+                      {(showAllGymEquipment ? gymEquipmentNames : gymEquipmentNames.slice(0, 6)).map(item => (
                         <span
                           key={item}
                           style={{
@@ -1180,9 +1197,21 @@ export default function ProfilePage() {
                         </span>
                       ))}
                       {gymEquipmentNames.length > 6 && (
-                        <span style={{ color: colors.textMuted, fontSize: '0.6875rem', padding: '0.25rem' }}>
-                          +{gymEquipmentNames.length - 6} more
-                        </span>
+                        <button
+                          onClick={() => setShowAllGymEquipment(!showAllGymEquipment)}
+                          style={{
+                            background: 'rgba(201, 167, 90, 0.15)',
+                            border: '1px solid rgba(201, 167, 90, 0.3)',
+                            borderRadius: '0.375rem',
+                            padding: '0.25rem 0.5rem',
+                            color: colors.accent,
+                            fontSize: '0.6875rem',
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {showAllGymEquipment ? 'Show less' : `+${gymEquipmentNames.length - 6} more`}
+                        </button>
                       )}
                     </div>
                   )}

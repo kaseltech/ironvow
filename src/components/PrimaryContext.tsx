@@ -390,6 +390,8 @@ export function PrimaryContext({
           </button>
           <button
             onClick={() => setWeeklyMode(true)}
+            aria-label="Switch to weekly plan mode"
+            title="Plan your entire week of workouts"
             style={{
               padding: '0.5rem 1rem',
               borderRadius: '0.5rem',
@@ -402,9 +404,25 @@ export function PrimaryContext({
               fontSize: '0.8125rem',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
+              position: 'relative',
             }}
           >
             Weekly
+            {!weeklyMode && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-0.125rem',
+                  right: '-0.125rem',
+                  width: '0.5rem',
+                  height: '0.5rem',
+                  background: colors.accent,
+                  borderRadius: '50%',
+                  opacity: 0.8,
+                }}
+                aria-hidden="true"
+              />
+            )}
           </button>
         </div>
       </div>

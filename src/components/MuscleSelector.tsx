@@ -231,8 +231,8 @@ export function MuscleSelector({
         })}
       </div>
 
-      {/* Category Buttons - 2x2 Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+      {/* Category Buttons - Responsive Grid */}
+      <div className="muscle-category-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
         {categories.map(cat => {
           const isActive = isCategoryActive(cat.id);
           const isExpanded = expandedCategory === cat.id;
