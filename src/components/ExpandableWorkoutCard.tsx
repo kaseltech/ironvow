@@ -46,9 +46,9 @@ function formatWeight(weight: number | null): string {
 }
 
 // Exercise row component
-function ExerciseRow({ exercise, colors }: { exercise: SessionDetailExercise; colors: { text: string; textMuted: string; accent: string } }) {
+function ExerciseRow({ exercise, colors }: { exercise: SessionDetailExercise; colors: { text: string; textMuted: string; accent: string; borderSubtle: string; inputBg: string } }) {
   return (
-    <div style={{ padding: '0.5rem 0', borderBottom: '1px solid rgba(245, 241, 234, 0.08)' }}>
+    <div style={{ padding: '0.5rem 0', borderBottom: `1px solid ${colors.borderSubtle}` }}>
       <div className="flex justify-between items-center mb-1">
         <span style={{ color: colors.text, fontSize: '0.875rem', fontWeight: 500 }}>
           {exercise.exercise_name}
@@ -64,7 +64,7 @@ function ExerciseRow({ exercise, colors }: { exercise: SessionDetailExercise; co
             style={{
               color: colors.textMuted,
               fontSize: '0.75rem',
-              background: 'rgba(245, 241, 234, 0.05)',
+              background: colors.inputBg,
               padding: '0.125rem 0.375rem',
               borderRadius: '4px',
             }}
@@ -116,11 +116,15 @@ export function ExpandableWorkoutCard({ session, onBookmarkChange }: ExpandableW
 
   return (
     <div
-      className="card cursor-pointer transition-all"
+      className="cursor-pointer transition-all"
       onClick={handleClick}
       style={{
-        borderLeft: isExpanded ? `3px solid ${colors.accent}` : 'none',
-        paddingLeft: isExpanded ? 'calc(1rem - 3px)' : '1rem',
+        background: colors.cardBg,
+        borderRadius: '1rem',
+        padding: '1.5rem',
+        border: `1px solid ${colors.borderSubtle}`,
+        borderLeft: isExpanded ? `3px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
+        paddingLeft: isExpanded ? 'calc(1.5rem - 3px)' : '1.5rem',
       }}
     >
       {/* Header - always visible */}
@@ -137,7 +141,7 @@ export function ExpandableWorkoutCard({ session, onBookmarkChange }: ExpandableW
                 fontSize: '0.75rem',
                 padding: '0.125rem 0.375rem',
                 borderRadius: '4px',
-                background: 'rgba(245, 241, 234, 0.1)',
+                background: colors.inputBg,
               }}
             >
               Collapse
@@ -173,7 +177,7 @@ export function ExpandableWorkoutCard({ session, onBookmarkChange }: ExpandableW
 
       {/* Expanded content */}
       {isExpanded && (
-        <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(245, 241, 234, 0.1)' }}>
+        <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: `1px solid ${colors.borderSubtle}` }}>
           {loading && !detail && (
             <div style={{ color: colors.textMuted, fontSize: '0.875rem', textAlign: 'center', padding: '1rem 0' }}>
               Loading exercises...
@@ -202,7 +206,7 @@ export function ExpandableWorkoutCard({ session, onBookmarkChange }: ExpandableW
               textAlign: 'center',
               marginTop: '0.75rem',
               padding: '0.5rem',
-              background: 'rgba(245, 241, 234, 0.03)',
+              background: colors.inputBg,
               borderRadius: '4px',
             }}
           >
