@@ -437,7 +437,7 @@ export default function ProfilePage() {
                   <div className="flex items-center justify-center" style={{ height: '400px' }}>
                     <div
                       className="animate-spin rounded-full h-8 w-8 border-2"
-                      style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: '#C9A75A' }}
+                      style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: colors.accent }}
                     />
                   </div>
                 ) : (
@@ -643,7 +643,7 @@ export default function ProfilePage() {
                 <div className="text-center py-4">
                   <div
                     className="animate-spin rounded-full h-6 w-6 border-2 mx-auto"
-                    style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: '#C9A75A' }}
+                    style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: colors.accent }}
                   />
                 </div>
               ) : plans.length > 0 ? (
@@ -788,7 +788,7 @@ export default function ProfilePage() {
                   <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
                     No workout plans yet
                   </p>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.5rem' }}>
                     Create a weekly plan from the home page
                   </p>
                 </div>
@@ -805,7 +805,7 @@ export default function ProfilePage() {
                 <div className="text-center py-4">
                   <div
                     className="animate-spin rounded-full h-6 w-6 border-2 mx-auto"
-                    style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: '#C9A75A' }}
+                    style={{ borderColor: 'rgba(201, 167, 90, 0.2)', borderTopColor: colors.accent }}
                   />
                 </div>
               ) : savedWorkouts.length > 0 ? (
@@ -926,7 +926,7 @@ export default function ProfilePage() {
                   <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
                     No bookmarked workouts yet
                   </p>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.5rem' }}>
                     Save workouts after generating them to access them here
                   </p>
                 </div>
@@ -946,7 +946,7 @@ export default function ProfilePage() {
                 <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
                   No workout history yet
                 </p>
-                <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem', marginBottom: '1rem' }}>
+                <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.5rem', marginBottom: '1rem' }}>
                   Complete a workout to see it here
                 </p>
                 <Link
@@ -979,7 +979,7 @@ export default function ProfilePage() {
         {activeTab === 'settings' && (
           <div className="space-y-6">
             {/* Basic Info */}
-            <div className="card">
+            <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}` }}>
               <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Basic Info
               </h2>
@@ -1006,7 +1006,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Weight Goal */}
-            <div className="card">
+            <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}` }}>
               <div className="flex items-center justify-between mb-3">
                 <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Weight Goal
@@ -1091,7 +1091,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Fitness Goal */}
-            <div className="card">
+            <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}` }}>
               <div className="flex items-center justify-between mb-3">
                 <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Fitness Goal
@@ -1116,7 +1116,7 @@ export default function ProfilePage() {
                         ? 'rgba(201, 167, 90, 0.2)'
                         : colors.inputBg,
                       border: currentGoal === goal.id
-                        ? '2px solid #C9A75A'
+                        ? `2px solid ${colors.accent}`
                         : '1px solid rgba(201, 167, 90, 0.1)',
                       borderRadius: '0.75rem',
                       padding: '0.75rem',
@@ -1128,7 +1128,7 @@ export default function ProfilePage() {
                   >
                     <div style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{goal.icon}</div>
                     <div style={{
-                      color: currentGoal === goal.id ? '#C9A75A' : '#F5F1EA',
+                      color: currentGoal === goal.id ? colors.accent : colors.text,
                       fontSize: '0.875rem',
                       fontWeight: 500,
                     }}>
@@ -1143,7 +1143,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Injuries & Limitations */}
-            <div className="card">
+            <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}` }}>
               <div className="flex items-center justify-between mb-3">
                 <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Injuries & Limitations
@@ -1250,7 +1250,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Equipment */}
-            <div className="card">
+            <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}` }}>
               <div className="flex items-center justify-between mb-3">
                 <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Equipment
@@ -1381,7 +1381,7 @@ export default function ProfilePage() {
                             border: gym.is_default ? '1px solid rgba(201, 167, 90, 0.4)' : '1px solid rgba(201, 167, 90, 0.1)',
                             borderRadius: '0.375rem',
                             padding: '0.25rem 0.5rem',
-                            color: gym.is_default ? '#C9A75A' : 'rgba(245, 241, 234, 0.7)',
+                            color: gym.is_default ? colors.accent : colors.textMuted,
                             fontSize: '0.6875rem',
                           }}
                         >
@@ -1396,7 +1396,7 @@ export default function ProfilePage() {
             </div>
 
             {/* PRs */}
-            <div className="card">
+            <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}` }}>
               <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Personal Records
               </h2>
@@ -1413,7 +1413,7 @@ export default function ProfilePage() {
                       }}
                     >
                       <div style={{ color: colors.textMuted, fontSize: '0.75rem' }}>{pr.lift}</div>
-                      <div style={{ color: pr.weight > 0 ? '#C9A75A' : 'rgba(245, 241, 234, 0.3)', fontSize: '1.25rem', fontWeight: 700 }}>
+                      <div style={{ color: pr.weight > 0 ? colors.accent : colors.textMuted, fontSize: '1.25rem', fontWeight: 700 }}>
                         {pr.weight > 0 ? pr.weight : '—'}
                       </div>
                       <div style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>
@@ -1427,7 +1427,7 @@ export default function ProfilePage() {
                   <p style={{ color: colors.textMuted, fontSize: '0.8125rem' }}>
                     No PRs recorded yet
                   </p>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.25rem' }}>
                     Complete workouts to track your PRs
                   </p>
                 </div>

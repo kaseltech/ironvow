@@ -66,9 +66,9 @@ function getSetTypeBadge(setType: string, colors: { accent: string; textMuted: s
 }
 
 // Exercise card component
-function ExerciseCard({ exercise, colors }: { exercise: SessionDetailExercise; colors: { text: string; textMuted: string; accent: string } }) {
+function ExerciseCard({ exercise, colors }: { exercise: SessionDetailExercise; colors: { text: string; textMuted: string; accent: string; cardBg: string; borderSubtle: string } }) {
   return (
-    <div className="card" style={{ marginBottom: '0.75rem' }}>
+    <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}`, marginBottom: '0.75rem' }}>
       <div className="flex justify-between items-start mb-3">
         <div>
           <h3 style={{ color: colors.text, fontSize: '1rem', fontWeight: 600, marginBottom: '0.25rem' }}>

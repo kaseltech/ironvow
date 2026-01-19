@@ -298,7 +298,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             <div className="space-y-6">
               {/* Height */}
-              <div className="card">
+              <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}` }}>
                 <label style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Height
                 </label>
@@ -355,7 +355,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
 
               {/* Weight */}
-              <div className="card">
+              <div style={{ background: colors.cardBg, borderRadius: '1rem', padding: '1.5rem', border: `1px solid ${colors.borderSubtle}` }}>
                 <label style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Current Weight
                 </label>
