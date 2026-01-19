@@ -40,18 +40,48 @@ body {
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - thin and subtle */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--gold);
+  background: rgba(201, 167, 90, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 167, 90, 0.5);
+}
+
+/* Modal/changelog specific scrollbar - even more subtle */
+.changelog-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+
+.changelog-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 0.5rem 0;
+}
+
+.changelog-scroll::-webkit-scrollbar-thumb {
+  background: rgba(201, 167, 90, 0.2);
   border-radius: 3px;
+}
+
+.changelog-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 167, 90, 0.4);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 167, 90, 0.3) transparent;
 }
 
 /* Button styles */

@@ -431,8 +431,8 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
             aria-label="Close changelog"
             style={{
               padding: '0.5rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              border: 'none',
+              backgroundColor: colors.inputBg,
+              border: `1px solid ${colors.borderSubtle}`,
               borderRadius: '0.5rem',
               cursor: 'pointer',
               color: colors.text,
@@ -469,7 +469,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
                 border: 'none',
                 background: platformFilter === platform
                   ? colors.accentMuted
-                  : 'rgba(255, 255, 255, 0.05)',
+                  : colors.inputBg,
                 color: platformFilter === platform ? colors.accent : colors.textMuted,
                 fontSize: '0.8125rem',
                 fontWeight: 500,
@@ -484,11 +484,14 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
         </div>
 
         {/* Changelog entries */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '1.5rem 1.75rem',
-        }}>
+        <div
+          className="changelog-scroll"
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '1.5rem 1.75rem',
+          }}
+        >
           {filteredChangelog.map((entry, index) => (
             <div
               key={entry.version}
@@ -496,7 +499,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
                 marginBottom: index < filteredChangelog.length - 1 ? '2rem' : 0,
                 paddingBottom: index < filteredChangelog.length - 1 ? '2rem' : 0,
                 borderBottom: index < filteredChangelog.length - 1
-                  ? '1px solid rgba(201, 167, 90, 0.15)'
+                  ? `1px solid ${colors.borderSubtle}`
                   : 'none',
               }}
             >
@@ -573,7 +576,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
                       </span>
                       <span style={{
                         fontSize: '0.875rem',
-                        color: 'rgba(245, 241, 234, 0.85)',
+                        color: colors.text,
                         lineHeight: 1.5,
                       }}>
                         {change.description}
@@ -589,12 +592,12 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
         {/* Footer */}
         <div style={{
           padding: '1rem 1.75rem',
-          borderTop: '1px solid rgba(201, 167, 90, 0.15)',
+          borderTop: `1px solid ${colors.borderSubtle}`,
           textAlign: 'center',
         }}>
           <p style={{
             fontSize: '0.75rem',
-            color: 'rgba(245, 241, 234, 0.4)',
+            color: colors.textMuted,
             margin: 0,
           }}>
             Built for your fitness journey
