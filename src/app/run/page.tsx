@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Geolocation, Position } from '@capacitor/geolocation';
 import { AuthGuard } from '@/components/AuthGuard';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { getSupabase } from '@/lib/supabase/client';
 
 interface RoutePoint {
@@ -103,6 +104,7 @@ function formatDistance(meters: number, unit: 'km' | 'mi' = 'km'): string {
 export default function RunPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
 
   // Run state
   const [runState, setRunState] = useState<RunState>('ready');
@@ -392,7 +394,7 @@ export default function RunPage() {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0F2233' }}>
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: colors.bg }}>
         {/* Header */}
         <header style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)', paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingBottom: '1rem' }}>
           <div className="flex items-center justify-between">
@@ -406,11 +408,11 @@ export default function RunPage() {
                   router.push('/');
                 }
               }}
-              style={{ color: '#C9A75A', fontSize: '1rem', background: 'none', border: 'none' }}
+              style={{ color: colors.accent, fontSize: '1rem', background: 'none', border: 'none' }}
             >
               ← Back
             </button>
-            <span style={{ color: '#F5F1EA', fontSize: '1rem', fontWeight: 600 }}>
+            <span style={{ color: colors.text, fontSize: '1rem', fontWeight: 600 }}>
               Run
             </span>
             <button
@@ -501,7 +503,7 @@ export default function RunPage() {
               <h1 style={{
                 fontFamily: 'var(--font-libre-baskerville)',
                 fontSize: '2rem',
-                color: '#F5F1EA',
+                color: colors.text,
                 marginBottom: '0.5rem',
               }}>
                 Run Complete!
@@ -516,13 +518,13 @@ export default function RunPage() {
                 }}>
                   <div>
                     <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Distance</p>
-                    <p style={{ color: '#F5F1EA', fontSize: '1.5rem', fontWeight: 600 }}>
+                    <p style={{ color: colors.text, fontSize: '1.5rem', fontWeight: 600 }}>
                       {formatDistance(distance)} km
                     </p>
                   </div>
                   <div className="text-right">
                     <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Time</p>
-                    <p style={{ color: '#F5F1EA', fontSize: '1.5rem', fontWeight: 600 }}>
+                    <p style={{ color: colors.text, fontSize: '1.5rem', fontWeight: 600 }}>
                       {formatTime(elapsedTime)}
                     </p>
                   </div>
@@ -535,7 +537,7 @@ export default function RunPage() {
                 }}>
                   <div>
                     <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Avg Pace</p>
-                    <p style={{ color: '#F5F1EA', fontSize: '1.5rem', fontWeight: 600 }}>
+                    <p style={{ color: colors.text, fontSize: '1.5rem', fontWeight: 600 }}>
                       {formatPace(averagePace)} /km
                     </p>
                   </div>
@@ -564,10 +566,10 @@ export default function RunPage() {
                         padding: '0.25rem 0',
                         borderBottom: i < splits.length - 1 ? '1px solid rgba(245, 241, 234, 0.1)' : 'none',
                       }}>
-                        <span style={{ color: '#F5F1EA', fontSize: '0.875rem' }}>
+                        <span style={{ color: colors.text, fontSize: '0.875rem' }}>
                           KM {split.km}
                         </span>
-                        <span style={{ color: '#C9A75A', fontSize: '0.875rem' }}>
+                        <span style={{ color: colors.accent, fontSize: '0.875rem' }}>
                           {formatPace(split.pace_seconds_per_km)}
                         </span>
                       </div>
@@ -615,7 +617,7 @@ export default function RunPage() {
                   <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                     Distance
                   </p>
-                  <p style={{ color: '#F5F1EA', fontSize: '2rem', fontWeight: 600 }}>
+                  <p style={{ color: colors.text, fontSize: '2rem', fontWeight: 600 }}>
                     {formatDistance(distance)}
                   </p>
                   <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>km</p>
@@ -625,7 +627,7 @@ export default function RunPage() {
                   <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                     Pace
                   </p>
-                  <p style={{ color: '#C9A75A', fontSize: '2rem', fontWeight: 600 }}>
+                  <p style={{ color: colors.accent, fontSize: '2rem', fontWeight: 600 }}>
                     {formatPace(runState === 'running' ? currentPace : averagePace)}
                   </p>
                   <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>/km</p>
@@ -635,7 +637,7 @@ export default function RunPage() {
                   <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                     Avg Pace
                   </p>
-                  <p style={{ color: '#F5F1EA', fontSize: '2rem', fontWeight: 600 }}>
+                  <p style={{ color: colors.text, fontSize: '2rem', fontWeight: 600 }}>
                     {formatPace(averagePace)}
                   </p>
                   <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>/km</p>
@@ -654,7 +656,7 @@ export default function RunPage() {
                     <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
                       Last Split (KM {splits[splits.length - 1].km})
                     </span>
-                    <span style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600 }}>
+                    <span style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600 }}>
                       {formatPace(splits[splits.length - 1].pace_seconds_per_km)}
                     </span>
                   </div>
@@ -685,7 +687,7 @@ export default function RunPage() {
                     border: '2px solid rgba(201, 167, 90, 0.3)',
                     borderRadius: '1rem',
                     padding: '1.25rem',
-                    color: '#C9A75A',
+                    color: colors.accent,
                     fontSize: '1.25rem',
                     fontWeight: 600,
                   }}
@@ -725,7 +727,7 @@ export default function RunPage() {
                     border: '2px solid rgba(201, 167, 90, 0.3)',
                     borderRadius: '1rem',
                     padding: '1.25rem',
-                    color: '#C9A75A',
+                    color: colors.accent,
                     fontSize: '1rem',
                     fontWeight: 600,
                   }}

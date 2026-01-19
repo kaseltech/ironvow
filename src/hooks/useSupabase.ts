@@ -173,7 +173,21 @@ export function useWeightLogs(limit = 30) {
     return data;
   };
 
-  return { logs, loading, error, addWeightLog, refetch: fetchLogs };
+  const deleteWeightLog = async (logId: string) => {
+    if (!user) return;
+
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('weight_logs')
+      .delete()
+      .eq('id', logId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+    await fetchLogs(); // Refresh list
+  };
+
+  return { logs, loading, error, addWeightLog, deleteWeightLog, refetch: fetchLogs };
 }
 
 // Weight goal hook

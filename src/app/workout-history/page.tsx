@@ -242,9 +242,27 @@ function WorkoutHistoryContent() {
   if (loading && !detail) {
     return (
       <div style={{ minHeight: '100vh', background: colors.bg, padding: '1rem' }}>
-        <div style={{ color: colors.textMuted, textAlign: 'center', paddingTop: '4rem' }}>
-          Loading workout details...
+        <div style={{ textAlign: 'center', paddingTop: '4rem' }}>
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid rgba(201, 167, 90, 0.2)',
+              borderTopColor: colors.accent,
+              borderRadius: '50%',
+              margin: '0 auto 1rem',
+              animation: 'spin 1s linear infinite',
+            }}
+          />
+          <div style={{ color: colors.textMuted }}>
+            Loading workout details...
+          </div>
         </div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -286,9 +304,19 @@ function WorkoutHistoryContent() {
         <div className="flex items-center justify-between mb-2">
           <button
             onClick={handleBack}
-            style={{ color: colors.accent, fontSize: '0.875rem' }}
+            style={{
+              color: colors.accent,
+              fontSize: '0.875rem',
+              padding: '0.5rem 0.75rem',
+              background: 'rgba(201, 167, 90, 0.1)',
+              border: '1px solid rgba(201, 167, 90, 0.2)',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem',
+            }}
           >
-            Back
+            ← Back
           </button>
           {detail.workout_id && (
             <button

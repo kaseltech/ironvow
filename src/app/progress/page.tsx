@@ -20,7 +20,7 @@ import { BottomNav } from '@/components/BottomNav';
 
 export default function ProgressPage() {
   const { colors } = useTheme();
-  const { logs: weightLogs, loading: logsLoading, addWeightLog } = useWeightLogs(30);
+  const { logs: weightLogs, loading: logsLoading, addWeightLog, deleteWeightLog } = useWeightLogs(30);
   const { goal, loading: goalLoading } = useWeightGoal();
   const { profile } = useProfile();
   const { exercisePRs, sessions, loading: strengthLoading } = useStrengthData();
@@ -344,15 +344,15 @@ export default function ProgressPage() {
               <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Recent Weigh-ins
               </h2>
-              {weightHistory.length === 0 ? (
+              {weightLogs.length === 0 ? (
                 <p style={{ color: colors.textMuted, fontSize: '0.875rem', textAlign: 'center', padding: '1rem 0' }}>
                   No weigh-ins logged yet
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {[...weightHistory].reverse().slice(0, 5).map((w, i) => (
+                  {weightLogs.slice(0, 5).map((log, i) => (
                     <div
-                      key={i}
+                      key={log.id}
                       className="flex justify-between items-center"
                       style={{
                         padding: '0.5rem 0',
@@ -360,11 +360,35 @@ export default function ProgressPage() {
                       }}
                     >
                       <span style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
-                        {w.date}
+                        {new Date(log.logged_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
-                      <span style={{ color: colors.text, fontWeight: 500 }}>
-                        {w.weight} lbs
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span style={{ color: colors.text, fontWeight: 500 }}>
+                          {log.weight} lbs
+                        </span>
+                        <button
+                          onClick={async () => {
+                            if (confirm('Delete this weigh-in?')) {
+                              try {
+                                await deleteWeightLog(log.id);
+                              } catch (err) {
+                                console.error('Failed to delete:', err);
+                              }
+                            }
+                          }}
+                          style={{
+                            color: 'rgba(239, 68, 68, 0.6)',
+                            background: 'none',
+                            border: 'none',
+                            padding: '0.25rem',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            lineHeight: 1,
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -557,6 +581,7 @@ export default function ProgressPage() {
               <div className="text-center">
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={newWeight}
                   onChange={e => setNewWeight(e.target.value)}
                   style={{

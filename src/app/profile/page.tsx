@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { BodyMap } from '@/components/BodyMap';
 import { ExpandableWorkoutCard } from '@/components/ExpandableWorkoutCard';
 import { GymManager } from '@/components/GymManager';
 import { Header } from '@/components/Header';
 import { Settings } from '@/components/Settings';
 import { BottomNav } from '@/components/BottomNav';
-import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions } from '@/hooks/useSupabase';
+import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions, useInjuries } from '@/hooks/useSupabase';
 import { useStrengthData, convertToMuscleStrength, formatVolume, formatDate, formatDaysAgo, ExercisePR, MuscleVolume } from '@/hooks/useStrengthData';
 import { useWorkoutPlans, DAY_NAMES } from '@/hooks/useWorkoutPlans';
 import { useTheme } from '@/context/ThemeContext';
@@ -147,6 +148,7 @@ export default function ProfilePage() {
   const { sessions } = useWorkoutSessions(10);
   const { muscleVolume, exercisePRs, sessions: strengthSessions, loading: strengthLoading } = useStrengthData();
   const { plans, activePlan, setActivePlanById, deletePlan, loading: plansLoading } = useWorkoutPlans();
+  const { injuries, addInjury, removeInjury } = useInjuries();
 
   const [activeTab, setActiveTab] = useState<'body' | 'saved' | 'history' | 'settings'>('body');
   const [gender, setGender] = useState<'male' | 'female'>((profile?.gender as 'male' | 'female') || 'male');
@@ -163,6 +165,14 @@ export default function ProfilePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [exercisesExpanded, setExercisesExpanded] = useState(true);
   const [bodyView, setBodyView] = useState<'front' | 'back'>('front');
+
+  // Injury editor state
+  const [showInjuryEditor, setShowInjuryEditor] = useState(false);
+  const [injuryBodyPart, setInjuryBodyPart] = useState('');
+  const [injurySeverity, setInjurySeverity] = useState<'minor' | 'moderate' | 'severe'>('moderate');
+  const [injuryDescription, setInjuryDescription] = useState('');
+  const [injuryMovements, setInjuryMovements] = useState('');
+  const [savingInjury, setSavingInjury] = useState(false);
 
   // Convert muscle volume to strength data for BodyMap
   const muscleStrengthData = useMemo(() => {
@@ -778,12 +788,28 @@ export default function ProfilePage() {
             </p>
             {strengthSessions.length === 0 ? (
               <div className="text-center py-8">
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🏋️</div>
                 <p style={{ color: colors.textMuted, fontSize: '0.875rem' }}>
                   No workout history yet
                 </p>
-                <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                <p style={{ color: 'rgba(245, 241, 234, 0.3)', fontSize: '0.75rem', marginTop: '0.5rem', marginBottom: '1rem' }}>
                   Complete a workout to see it here
                 </p>
+                <Link
+                  href="/"
+                  style={{
+                    display: 'inline-block',
+                    padding: '0.625rem 1.25rem',
+                    background: colors.accent,
+                    color: colors.bg,
+                    borderRadius: '0.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Start Your First Workout
+                </Link>
               </div>
             ) : (
               strengthSessions.map(workout => (
@@ -968,18 +994,105 @@ export default function ProfilePage() {
                 <h2 style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Injuries & Limitations
                 </h2>
-                <button style={{ color: colors.accent, background: 'none', border: 'none', fontSize: '1.5rem' }}>
-                  +
+                <button
+                  onClick={() => {
+                    setInjuryBodyPart('');
+                    setInjurySeverity('moderate');
+                    setInjuryDescription('');
+                    setInjuryMovements('');
+                    setShowInjuryEditor(true);
+                  }}
+                  style={{
+                    color: colors.accent,
+                    background: 'rgba(201, 167, 90, 0.2)',
+                    border: '1px solid rgba(201, 167, 90, 0.3)',
+                    borderRadius: '0.5rem',
+                    padding: '0.375rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  + Add
                 </button>
               </div>
               <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '1rem' }}>
                 AI will suggest alternatives that work the same muscles without aggravating these areas
               </p>
-              <div className="text-center py-4">
-                <p style={{ color: colors.textMuted, fontSize: '0.8125rem' }}>
-                  No injuries recorded
-                </p>
-              </div>
+              {injuries.length > 0 ? (
+                <div className="space-y-2">
+                  {injuries.map(injury => (
+                    <div
+                      key={injury.id}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        borderRadius: '0.5rem',
+                        padding: '0.75rem',
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span style={{ color: colors.text, fontWeight: 500 }}>
+                              {injury.body_part}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '0.625rem',
+                                padding: '0.125rem 0.375rem',
+                                borderRadius: '999px',
+                                background: injury.severity === 'severe' ? 'rgba(239, 68, 68, 0.3)' :
+                                           injury.severity === 'moderate' ? 'rgba(251, 146, 60, 0.3)' :
+                                           'rgba(250, 204, 21, 0.3)',
+                                color: injury.severity === 'severe' ? '#EF4444' :
+                                       injury.severity === 'moderate' ? '#FB923C' :
+                                       '#FACC15',
+                                textTransform: 'uppercase',
+                                fontWeight: 600,
+                              }}
+                            >
+                              {injury.severity}
+                            </span>
+                          </div>
+                          {injury.description && (
+                            <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                              {injury.description}
+                            </p>
+                          )}
+                          {injury.movements_to_avoid && injury.movements_to_avoid.length > 0 && (
+                            <p style={{ color: 'rgba(239, 68, 68, 0.7)', fontSize: '0.6875rem', marginTop: '0.25rem' }}>
+                              Avoid: {injury.movements_to_avoid.join(', ')}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removeInjury(injury.id)}
+                          style={{
+                            color: colors.textMuted,
+                            background: 'none',
+                            border: 'none',
+                            padding: '0.25rem',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p style={{ color: colors.textMuted, fontSize: '0.8125rem' }}>
+                    No injuries recorded
+                  </p>
+                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    Add any injuries so AI can avoid aggravating movements
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Equipment */}
@@ -1248,6 +1361,7 @@ export default function ProfilePage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={editStartWeight}
                   onChange={e => setEditStartWeight(e.target.value)}
                   placeholder={currentWeight?.toString() || '180'}
@@ -1286,6 +1400,7 @@ export default function ProfilePage() {
                 </label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={editTargetWeight}
                   onChange={e => setEditTargetWeight(e.target.value)}
                   placeholder={editGoalType === 'maintain' ? 'Same as start' : '160'}
@@ -1344,6 +1459,227 @@ export default function ProfilePage() {
                   }}
                 >
                   {savingWeightGoal ? 'Saving...' : 'Save Goal'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Injury Editor Modal */}
+      {showInjuryEditor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.8)' }}
+          onClick={() => setShowInjuryEditor(false)}
+        >
+          <div
+            className="w-full max-w-sm"
+            style={{
+              background: colors.cardBg,
+              borderRadius: '1rem',
+              border: `1px solid ${colors.borderSubtle}`,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '1rem',
+                borderBottom: `1px solid ${colors.borderSubtle}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <h3 style={{ color: colors.accent, fontSize: '1rem', fontWeight: 600 }}>
+                Add Injury
+              </h3>
+              <button
+                onClick={() => setShowInjuryEditor(false)}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: 'none',
+                  color: colors.textMuted,
+                  fontSize: '1.25rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: '1rem' }}>
+              {/* Body Part */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ color: colors.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Body Part *
+                </label>
+                <select
+                  value={injuryBodyPart}
+                  onChange={e => setInjuryBodyPart(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(15, 34, 51, 0.5)',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: '0.5rem',
+                    color: colors.text,
+                    fontSize: '1rem',
+                  }}
+                >
+                  <option value="">Select body part...</option>
+                  <option value="Shoulder">Shoulder</option>
+                  <option value="Elbow">Elbow</option>
+                  <option value="Wrist">Wrist</option>
+                  <option value="Lower Back">Lower Back</option>
+                  <option value="Upper Back">Upper Back</option>
+                  <option value="Neck">Neck</option>
+                  <option value="Hip">Hip</option>
+                  <option value="Knee">Knee</option>
+                  <option value="Ankle">Ankle</option>
+                  <option value="Chest">Chest</option>
+                  <option value="Hamstring">Hamstring</option>
+                  <option value="Quadricep">Quadricep</option>
+                  <option value="Calf">Calf</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* Severity */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ color: colors.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Severity
+                </label>
+                <div className="flex gap-2">
+                  {(['minor', 'moderate', 'severe'] as const).map(sev => (
+                    <button
+                      key={sev}
+                      onClick={() => setInjurySeverity(sev)}
+                      style={{
+                        flex: 1,
+                        padding: '0.625rem',
+                        borderRadius: '0.5rem',
+                        border: injurySeverity === sev ? '2px solid' : `1px solid ${colors.borderSubtle}`,
+                        borderColor: injurySeverity === sev
+                          ? (sev === 'severe' ? '#EF4444' : sev === 'moderate' ? '#FB923C' : '#FACC15')
+                          : colors.borderSubtle,
+                        background: injurySeverity === sev
+                          ? (sev === 'severe' ? 'rgba(239, 68, 68, 0.2)' : sev === 'moderate' ? 'rgba(251, 146, 60, 0.2)' : 'rgba(250, 204, 21, 0.2)')
+                          : 'rgba(15, 34, 51, 0.5)',
+                        color: injurySeverity === sev
+                          ? (sev === 'severe' ? '#EF4444' : sev === 'moderate' ? '#FB923C' : '#FACC15')
+                          : colors.textMuted,
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        textTransform: 'capitalize',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {sev}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ color: colors.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Description (optional)
+                </label>
+                <input
+                  type="text"
+                  value={injuryDescription}
+                  onChange={e => setInjuryDescription(e.target.value)}
+                  placeholder="e.g., Rotator cuff strain"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(15, 34, 51, 0.5)',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: '0.5rem',
+                    color: colors.text,
+                    fontSize: '1rem',
+                  }}
+                />
+              </div>
+
+              {/* Movements to Avoid */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ color: colors.textMuted, fontSize: '0.75rem', display: 'block', marginBottom: '0.5rem' }}>
+                  Movements to Avoid (comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={injuryMovements}
+                  onChange={e => setInjuryMovements(e.target.value)}
+                  placeholder="e.g., overhead press, lateral raises"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(15, 34, 51, 0.5)',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: '0.5rem',
+                    color: colors.text,
+                    fontSize: '1rem',
+                  }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowInjuryEditor(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.875rem',
+                    background: 'transparent',
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: '0.75rem',
+                    color: colors.textMuted,
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!injuryBodyPart) return;
+
+                    setSavingInjury(true);
+                    try {
+                      const movements = injuryMovements
+                        .split(',')
+                        .map(m => m.trim())
+                        .filter(m => m.length > 0);
+
+                      await addInjury(
+                        injuryBodyPart,
+                        injurySeverity,
+                        injuryDescription || undefined,
+                        movements.length > 0 ? movements : undefined
+                      );
+                      setShowInjuryEditor(false);
+                    } catch (err) {
+                      console.error('Failed to add injury:', err);
+                    } finally {
+                      setSavingInjury(false);
+                    }
+                  }}
+                  disabled={savingInjury || !injuryBodyPart}
+                  className="btn-primary"
+                  style={{
+                    flex: 2,
+                    opacity: savingInjury || !injuryBodyPart ? 0.6 : 1,
+                  }}
+                >
+                  {savingInjury ? 'Saving...' : 'Add Injury'}
                 </button>
               </div>
             </div>

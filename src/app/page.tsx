@@ -1335,6 +1335,32 @@ export default function Home() {
             zIndex: 40,
           }}
         >
+          {/* Quick action for Run when Cardio is selected */}
+          {selectedWorkoutStyle === 'cardio' && selectedLocation === 'outdoor' && (
+            <button
+              onClick={() => router.push('/run')}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                marginBottom: '0.75rem',
+                borderRadius: '0.75rem',
+                background: 'rgba(34, 197, 94, 0.15)',
+                border: '1.5px solid rgba(34, 197, 94, 0.3)',
+                color: '#22C55E',
+                fontSize: '0.9375rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <span>🏃</span>
+              <span>Go for a Run</span>
+              <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>GPS Tracking</span>
+            </button>
+          )}
           <button
             onClick={handleGenerate}
             disabled={!canGenerate || generating}
