@@ -1031,10 +1031,17 @@ export default function Home() {
                         background: 'none',
                         border: 'none',
                         color: colors.textMuted,
-                        fontSize: '0.75rem',
+                        fontSize: '1rem',
                         cursor: 'pointer',
-                        padding: '0.25rem',
+                        padding: '0.5rem',
+                        minWidth: '44px',
+                        minHeight: '44px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '-0.5rem',
                       }}
+                      aria-label="Exit AI mode"
                     >
                       ✕
                     </button>
@@ -1684,7 +1691,7 @@ export default function Home() {
                 borderRadius: '0.75rem',
                 background: 'rgba(34, 197, 94, 0.15)',
                 border: '1.5px solid rgba(34, 197, 94, 0.3)',
-                color: '#22C55E',
+                color: colors.success,
                 fontSize: '0.9375rem',
                 fontWeight: 600,
                 cursor: 'pointer',

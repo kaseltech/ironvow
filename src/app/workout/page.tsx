@@ -316,9 +316,13 @@ export default function WorkoutPage() {
     return (
       <AuthGuard>
         <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: colors.bg }}>
-          <p style={{ color: colors.text, marginBottom: '1rem' }}>No workout found</p>
-          <button onClick={() => router.push('/')} className="btn-primary">
-            Go Back
+          <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>🏋️</div>
+          <p style={{ color: colors.text, fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem' }}>No Active Workout</p>
+          <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+            Generate a workout from the home page to get started
+          </p>
+          <button onClick={() => router.push('/')} className="btn-primary" style={{ padding: '0.875rem 2rem' }}>
+            Create Workout
           </button>
         </div>
       </AuthGuard>
@@ -330,8 +334,12 @@ export default function WorkoutPage() {
     return (
       <AuthGuard>
         <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: colors.bg }}>
-          <p style={{ color: colors.text, marginBottom: '1rem' }}>Exercise not found</p>
-          <button onClick={() => router.push('/')} className="btn-primary">
+          <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>⚠️</div>
+          <p style={{ color: colors.text, fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem' }}>Exercise Not Found</p>
+          <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+            There was an issue loading this exercise
+          </p>
+          <button onClick={() => router.push('/')} className="btn-primary" style={{ padding: '0.875rem 2rem' }}>
             Go Back
           </button>
         </div>
@@ -442,7 +450,10 @@ export default function WorkoutPage() {
   };
 
   const adjustWeight = (delta: number) => {
-    setAdjustedWeight(prev => (prev ?? lastLoggedWeight ?? (currentSet?.target_weight || 0)) + delta);
+    setAdjustedWeight(prev => {
+      const current = prev ?? lastLoggedWeight ?? (currentSet?.target_weight || 0);
+      return Math.max(0, current + delta);
+    });
   };
 
   const skipRest = () => {
@@ -613,7 +624,7 @@ export default function WorkoutPage() {
               >
                 ✕ End
               </button>
-              <span style={{ color: '#22C55E', fontSize: '0.875rem', fontWeight: 600 }}>
+              <span style={{ color: colors.success, fontSize: '0.875rem', fontWeight: 600 }}>
                 WARM-UP
               </span>
               <button
@@ -667,7 +678,7 @@ export default function WorkoutPage() {
                       height: '28px',
                       borderRadius: '50%',
                       border: warmupCompleted[i] ? '2px solid #22C55E' : '2px solid rgba(201, 167, 90, 0.4)',
-                      background: warmupCompleted[i] ? '#22C55E' : 'transparent',
+                      background: warmupCompleted[i] ? colors.success : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -683,7 +694,7 @@ export default function WorkoutPage() {
 
                   {/* Content */}
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: warmupCompleted[i] ? 'rgba(245, 241, 234, 0.5)' : '#F5F1EA', fontSize: '1rem', fontWeight: 500, textDecoration: warmupCompleted[i] ? 'line-through' : 'none' }}>
+                    <div style={{ color: warmupCompleted[i] ? 'rgba(245, 241, 234, 0.5)' : colors.text, fontSize: '1rem', fontWeight: 500, textDecoration: warmupCompleted[i] ? 'line-through' : 'none' }}>
                       {stretch.name}
                     </div>
                     {stretch.primaryMuscles && stretch.primaryMuscles.length > 0 && (
@@ -707,7 +718,7 @@ export default function WorkoutPage() {
                   </div>
 
                   {/* Duration */}
-                  <div style={{ color: '#22C55E', fontSize: '0.875rem', fontWeight: 600, flexShrink: 0 }}>
+                  <div style={{ color: colors.success, fontSize: '0.875rem', fontWeight: 600, flexShrink: 0 }}>
                     {stretch.duration}s
                   </div>
                 </button>
@@ -723,7 +734,7 @@ export default function WorkoutPage() {
               style={{
                 fontSize: '1.125rem',
                 padding: '1.125rem',
-                background: allWarmupCompleted ? '#22C55E' : 'linear-gradient(135deg, #C9A75A 0%, #B8963F 100%)',
+                background: allWarmupCompleted ? colors.success : 'linear-gradient(135deg, #C9A75A 0%, #B8963F 100%)',
               }}
             >
               {allWarmupCompleted ? 'Start Workout →' : 'Continue to Workout →'}
@@ -871,7 +882,7 @@ export default function WorkoutPage() {
             </p>
           )}
 
-          <p style={{ color: '#22C55E', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+          <p style={{ color: colors.success, fontSize: '0.875rem', marginBottom: '1.5rem' }}>
             ✓ Saved to database
           </p>
 
@@ -945,9 +956,9 @@ export default function WorkoutPage() {
               </p>
               <div
                 style={{
-                  fontSize: '6rem',
+                  fontSize: 'clamp(3.5rem, 18vw, 6rem)',
                   fontWeight: 700,
-                  color: restTimeRemaining <= 3 ? '#22C55E' : '#C9A75A',
+                  color: restTimeRemaining <= 3 ? colors.success : colors.accent,
                   fontFamily: 'var(--font-geist-mono)',
                   lineHeight: 1,
                   transition: 'color 0.2s ease',
@@ -1161,7 +1172,7 @@ export default function WorkoutPage() {
                         height: '8px',
                         borderRadius: '4px',
                         backgroundColor: i < completedSetCount
-                          ? '#22C55E'
+                          ? colors.success
                           : i === currentSetIndex
                             ? '#C9A75A'
                             : 'rgba(201, 167, 90, 0.2)',
@@ -1272,7 +1283,7 @@ export default function WorkoutPage() {
                         -5
                       </button>
                       <div className="text-center px-4">
-                        <div style={{ fontSize: '3rem', fontWeight: 700, color: colors.accent, lineHeight: 1 }}>
+                        <div style={{ fontSize: 'clamp(2rem, 10vw, 3rem)', fontWeight: 700, color: colors.accent, lineHeight: 1 }}>
                           {displayWeight}
                         </div>
                         <div style={{ color: colors.textMuted, fontSize: '0.75rem' }}>lbs</div>
@@ -1353,9 +1364,9 @@ export default function WorkoutPage() {
                       style={{ background: 'none', border: 'none', cursor: 'pointer' }}
                     >
                       <div style={{
-                        fontSize: '4rem',
+                        fontSize: 'clamp(2.5rem, 12vw, 4rem)',
                         fontWeight: 700,
-                        color: adjustedWeight ? '#C9A75A' : '#F5F1EA',
+                        color: adjustedWeight ? colors.accent : colors.text,
                         lineHeight: 1,
                         transition: 'color 0.2s',
                       }}>
@@ -1367,7 +1378,7 @@ export default function WorkoutPage() {
                     </button>
                     <div style={{ color: colors.textMuted, fontSize: '2rem' }}>×</div>
                     <div className="text-center">
-                      <div style={{ fontSize: '4rem', fontWeight: 700, color: colors.text, lineHeight: 1 }}>
+                      <div style={{ fontSize: 'clamp(2.5rem, 12vw, 4rem)', fontWeight: 700, color: colors.text, lineHeight: 1 }}>
                         {targetReps}
                       </div>
                       <div style={{ color: colors.textMuted, fontSize: '0.875rem' }}>reps</div>
@@ -1619,7 +1630,7 @@ export default function WorkoutPage() {
                     border: '1px solid rgba(239, 68, 68, 0.3)',
                     borderRadius: '0.75rem',
                     padding: '0.875rem',
-                    color: '#EF4444',
+                    color: colors.error,
                     fontSize: '0.875rem',
                   }}
                 >

@@ -56,7 +56,7 @@ function ExerciseDetail({
             {pr ? (
               <>
                 <div className="flex items-baseline gap-2">
-                  <span style={{ fontSize: '3rem', fontWeight: 700, color: colors.accent }}>
+                  <span style={{ fontSize: 'clamp(2rem, 10vw, 3rem)', fontWeight: 700, color: colors.accent }}>
                     {pr.pr_weight}
                   </span>
                   <span style={{ color: colors.textMuted }}>lbs × {pr.pr_reps}</span>

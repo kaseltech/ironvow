@@ -474,7 +474,7 @@ export default function RunPage() {
             background: 'rgba(239, 68, 68, 0.1)',
             borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
             padding: '0.5rem 1rem',
-            color: '#EF4444',
+            color: colors.error,
             fontSize: '0.875rem',
             textAlign: 'center',
           }}>
@@ -486,7 +486,7 @@ export default function RunPage() {
           <div style={{
             background: gpsAccuracy < 20 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(234, 179, 8, 0.1)',
             padding: '0.25rem 1rem',
-            color: gpsAccuracy < 20 ? '#22C55E' : '#EAB308',
+            color: gpsAccuracy < 20 ? colors.success : '#EAB308',
             fontSize: '0.75rem',
             textAlign: 'center',
           }}>
@@ -544,7 +544,7 @@ export default function RunPage() {
                   {splits.length > 0 && (
                     <div className="text-right">
                       <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>Best Split</p>
-                      <p style={{ color: '#22C55E', fontSize: '1.5rem', fontWeight: 600 }}>
+                      <p style={{ color: colors.success, fontSize: '1.5rem', fontWeight: 600 }}>
                         {formatPace(Math.min(...splits.map(s => s.pace_seconds_per_km)))} /km
                       </p>
                     </div>
@@ -601,9 +601,9 @@ export default function RunPage() {
                   {runState === 'ready' ? 'Duration' : runState === 'paused' ? 'Paused' : 'Time'}
                 </p>
                 <div style={{
-                  fontSize: '5rem',
+                  fontSize: 'clamp(3rem, 15vw, 5rem)',
                   fontWeight: 700,
-                  color: runState === 'paused' ? '#C9A75A' : '#F5F1EA',
+                  color: runState === 'paused' ? colors.accent : colors.text,
                   fontFamily: 'var(--font-geist-mono)',
                   lineHeight: 1,
                 }}>
@@ -712,7 +712,7 @@ export default function RunPage() {
                     border: '2px solid rgba(239, 68, 68, 0.3)',
                     borderRadius: '1rem',
                     padding: '1.25rem',
-                    color: '#EF4444',
+                    color: colors.error,
                     fontSize: '1rem',
                     fontWeight: 600,
                   }}

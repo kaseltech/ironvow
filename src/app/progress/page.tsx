@@ -195,7 +195,7 @@ export default function ProgressPage() {
                     Current Weight
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <span style={{ fontSize: '3rem', fontWeight: 700, color: colors.text }}>
+                    <span style={{ fontSize: 'clamp(2rem, 10vw, 3rem)', fontWeight: 700, color: colors.text }}>
                       {currentWeight}
                     </span>
                     <span style={{ color: colors.textMuted, fontSize: '1rem' }}>lbs</span>
@@ -398,11 +398,17 @@ export default function ProgressPage() {
                             color: 'rgba(239, 68, 68, 0.6)',
                             background: 'none',
                             border: 'none',
-                            padding: '0.25rem',
+                            padding: '0.5rem',
+                            minWidth: '44px',
+                            minHeight: '44px',
                             cursor: 'pointer',
-                            fontSize: '1rem',
+                            fontSize: '1.25rem',
                             lineHeight: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
+                          aria-label="Delete weight log"
                         >
                           ×
                         </button>
@@ -602,9 +608,11 @@ export default function ProgressPage() {
                   inputMode="decimal"
                   value={newWeight}
                   onChange={e => setNewWeight(e.target.value)}
+                  min="50"
+                  max="700"
                   style={{
                     width: '120px',
-                    fontSize: '2.5rem',
+                    fontSize: 'clamp(1.75rem, 8vw, 2.5rem)',
                     fontWeight: 700,
                     color: colors.text,
                     background: 'transparent',
@@ -613,6 +621,7 @@ export default function ProgressPage() {
                     outline: 'none',
                   }}
                   step="0.1"
+                  aria-label="Body weight in pounds"
                 />
                 <div style={{ color: colors.textMuted, fontSize: '0.875rem' }}>lbs</div>
               </div>

@@ -1214,7 +1214,7 @@ export default function ProfilePage() {
                                 background: injury.severity === 'severe' ? 'rgba(239, 68, 68, 0.3)' :
                                            injury.severity === 'moderate' ? 'rgba(251, 146, 60, 0.3)' :
                                            'rgba(250, 204, 21, 0.3)',
-                                color: injury.severity === 'severe' ? '#EF4444' :
+                                color: injury.severity === 'severe' ? colors.error :
                                        injury.severity === 'moderate' ? '#FB923C' :
                                        '#FACC15',
                                 textTransform: 'uppercase',
@@ -1241,10 +1241,16 @@ export default function ProfilePage() {
                             color: colors.textMuted,
                             background: 'none',
                             border: 'none',
-                            padding: '0.25rem',
+                            padding: '0.5rem',
+                            minWidth: '44px',
+                            minHeight: '44px',
                             cursor: 'pointer',
-                            fontSize: '1rem',
+                            fontSize: '1.25rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
+                          aria-label="Remove injury"
                         >
                           ×
                         </button>
@@ -1617,6 +1623,8 @@ export default function ProfilePage() {
                   value={editStartWeight}
                   onChange={e => setEditStartWeight(e.target.value)}
                   placeholder={currentWeight?.toString() || '180'}
+                  min="50"
+                  max="700"
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -1626,6 +1634,7 @@ export default function ProfilePage() {
                     color: colors.text,
                     fontSize: '1rem',
                   }}
+                  aria-label="Starting weight in pounds"
                 />
                 {currentWeight && (
                   <button
@@ -1656,6 +1665,8 @@ export default function ProfilePage() {
                   value={editTargetWeight}
                   onChange={e => setEditTargetWeight(e.target.value)}
                   placeholder={editGoalType === 'maintain' ? 'Same as start' : '160'}
+                  min="50"
+                  max="700"
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -1665,6 +1676,7 @@ export default function ProfilePage() {
                     color: colors.text,
                     fontSize: '1rem',
                   }}
+                  aria-label="Target weight in pounds"
                 />
               </div>
 
@@ -1827,13 +1839,13 @@ export default function ProfilePage() {
                         borderRadius: '0.5rem',
                         border: injurySeverity === sev ? '2px solid' : `1px solid ${colors.borderSubtle}`,
                         borderColor: injurySeverity === sev
-                          ? (sev === 'severe' ? '#EF4444' : sev === 'moderate' ? '#FB923C' : '#FACC15')
+                          ? (sev === 'severe' ? colors.error : sev === 'moderate' ? '#FB923C' : '#FACC15')
                           : colors.borderSubtle,
                         background: injurySeverity === sev
                           ? (sev === 'severe' ? 'rgba(239, 68, 68, 0.2)' : sev === 'moderate' ? 'rgba(251, 146, 60, 0.2)' : 'rgba(250, 204, 21, 0.2)')
                           : colors.inputBg,
                         color: injurySeverity === sev
-                          ? (sev === 'severe' ? '#EF4444' : sev === 'moderate' ? '#FB923C' : '#FACC15')
+                          ? (sev === 'severe' ? colors.error : sev === 'moderate' ? '#FB923C' : '#FACC15')
                           : colors.textMuted,
                         fontSize: '0.75rem',
                         fontWeight: 500,

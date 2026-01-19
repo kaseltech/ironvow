@@ -656,15 +656,19 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                         background: 'rgba(201, 167, 90, 0.3)',
                         border: 'none',
                         borderRadius: '50%',
-                        width: '20px',
-                        height: '20px',
+                        width: '24px',
+                        height: '24px',
+                        minWidth: '44px',
+                        minHeight: '44px',
                         color: colors.text,
                         cursor: 'pointer',
-                        fontSize: '0.75rem',
+                        fontSize: '0.875rem',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        margin: '-10px',
                       }}
+                      aria-label="Remove gym"
                     >
                       ×
                     </button>
