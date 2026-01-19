@@ -190,7 +190,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
           <div style={{
             width: '40px',
             height: '4px',
-            backgroundColor: 'rgba(201, 167, 90, 0.3)',
+            backgroundColor: colors.accentMuted,
             borderRadius: '2px',
           }} />
         </div>
@@ -201,14 +201,14 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 1.5rem 1rem',
-          borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
+          borderBottom: `1px solid ${colors.borderSubtle}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ fontSize: '1.75rem' }}>⚙️</span>
             <h2 style={{
               fontSize: '1.25rem',
               fontWeight: 600,
-              color: '#F5F1EA',
+              color: colors.text,
               margin: 0,
             }}>
               Settings
@@ -221,7 +221,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
               backgroundColor: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: 'rgba(245, 241, 234, 0.5)',
+              color: colors.textMuted,
             }}
           >
             <svg style={{ width: '1.5rem', height: '1.5rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,7 +239,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                 <h3 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   margin: '0 0 1rem',
@@ -247,7 +247,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                   Profile
                 </h3>
                 <div style={{
-                  backgroundColor: 'rgba(15, 34, 51, 0.5)',
+                  backgroundColor: '${colors.inputBg}',
                   borderRadius: '0.75rem',
                   overflow: 'hidden',
                 }}>
@@ -262,17 +262,17 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                       backgroundColor: 'transparent',
                       border: 'none',
                       cursor: 'pointer',
-                      borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
+                      borderBottom: `1px solid ${colors.borderSubtle}`,
                     }}
                   >
                     <span style={{ fontSize: '1.5rem' }}>👤</span>
                     <div style={{ flex: 1, textAlign: 'left' }}>
-                      <div style={{ fontWeight: 500, color: '#F5F1EA' }}>Edit Profile</div>
-                      <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                      <div style={{ fontWeight: 500, color: colors.text }}>Edit Profile</div>
+                      <div style={{ fontSize: '0.75rem', color: colors.textMuted }}>
                         {profile?.experience_level || 'Not set'} • {profile?.gender || 'Not set'}
                       </div>
                     </div>
-                    <svg style={{ width: '1.25rem', height: '1.25rem', color: 'rgba(245, 241, 234, 0.3)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg style={{ width: '1.25rem', height: '1.25rem', color: colors.textMuted }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -287,17 +287,17 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                       backgroundColor: 'transparent',
                       border: 'none',
                       cursor: 'pointer',
-                      borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
+                      borderBottom: `1px solid ${colors.borderSubtle}`,
                     }}
                   >
                     <span style={{ fontSize: '1.5rem' }}>🏋️</span>
                     <div style={{ flex: 1, textAlign: 'left' }}>
-                      <div style={{ fontWeight: 500, color: '#F5F1EA' }}>My Equipment</div>
-                      <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                      <div style={{ fontWeight: 500, color: colors.text }}>My Equipment</div>
+                      <div style={{ fontSize: '0.75rem', color: colors.textMuted }}>
                         {userEquipment.length} items • {(profile?.custom_equipment?.length || 0)} custom
                       </div>
                     </div>
-                    <svg style={{ width: '1.25rem', height: '1.25rem', color: 'rgba(245, 241, 234, 0.3)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg style={{ width: '1.25rem', height: '1.25rem', color: colors.textMuted }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -320,12 +320,12 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                     >
                       <span style={{ fontSize: '1.5rem' }}>🔄</span>
                       <div style={{ flex: 1, textAlign: 'left' }}>
-                        <div style={{ fontWeight: 500, color: '#F5F1EA' }}>Restart Onboarding</div>
-                        <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                        <div style={{ fontWeight: 500, color: colors.text }}>Restart Onboarding</div>
+                        <div style={{ fontSize: '0.75rem', color: colors.textMuted }}>
                           Go through setup again
                         </div>
                       </div>
-                      <svg style={{ width: '1.25rem', height: '1.25rem', color: 'rgba(245, 241, 234, 0.3)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg style={{ width: '1.25rem', height: '1.25rem', color: colors.textMuted }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
@@ -338,7 +338,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                 <h3 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   margin: '0 0 1rem',
@@ -361,8 +361,8 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                         gap: '0.375rem',
                         padding: '0.625rem 0.375rem',
                         borderRadius: '0.5rem',
-                        border: colorTheme === theme ? '2px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                        backgroundColor: colorTheme === theme ? 'rgba(201, 167, 90, 0.15)' : 'rgba(15, 34, 51, 0.5)',
+                        border: colorTheme === theme ? `2px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                        backgroundColor: colorTheme === theme ? colors.accentMuted : colors.inputBg,
                         cursor: 'pointer',
                       }}
                     >
@@ -371,11 +371,11 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                         height: '24px',
                         borderRadius: '50%',
                         backgroundColor: COLOR_THEMES[theme].preview,
-                        border: '2px solid rgba(255, 255, 255, 0.2)',
+                        border: `2px solid ${colors.borderSubtle}`,
                       }} />
                       <span style={{
                         fontSize: '0.625rem',
-                        color: colorTheme === theme ? '#C9A75A' : 'rgba(245, 241, 234, 0.7)',
+                        color: colorTheme === theme ? colors.accent : colors.textMuted,
                         fontWeight: colorTheme === theme ? 600 : 400,
                       }}>
                         {COLOR_THEMES[theme].name}
@@ -390,7 +390,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                 <h3 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   margin: '0 0 1rem',
@@ -398,18 +398,18 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                   About
                 </h3>
                 <div style={{
-                  backgroundColor: 'rgba(15, 34, 51, 0.5)',
+                  backgroundColor: '${colors.inputBg}',
                   borderRadius: '0.75rem',
                   overflow: 'hidden',
                 }}>
                   <div style={{
                     padding: '1rem',
-                    borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
+                    borderBottom: `1px solid ${colors.borderSubtle}`,
                   }}>
-                    <div style={{ fontWeight: 500, color: '#F5F1EA', marginBottom: '0.25rem' }}>
+                    <div style={{ fontWeight: 500, color: colors.text, marginBottom: '0.25rem' }}>
                       IronVow
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                    <div style={{ fontSize: '0.75rem', color: colors.textMuted }}>
                       Version 1.4.1
                     </div>
                   </div>
@@ -428,12 +428,12 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                   >
                     <span style={{ fontSize: '1.5rem' }}>📋</span>
                     <div style={{ flex: 1, textAlign: 'left' }}>
-                      <div style={{ fontWeight: 500, color: '#F5F1EA' }}>What's New</div>
-                      <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                      <div style={{ fontWeight: 500, color: colors.text }}>What's New</div>
+                      <div style={{ fontSize: '0.75rem', color: colors.textMuted }}>
                         View changelog and updates
                       </div>
                     </div>
-                    <svg style={{ width: '1.25rem', height: '1.25rem', color: 'rgba(245, 241, 234, 0.3)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg style={{ width: '1.25rem', height: '1.25rem', color: colors.textMuted }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -445,7 +445,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                 <h3 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   margin: '0 0 1rem',
@@ -458,9 +458,9 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                     width: '100%',
                     padding: '1rem',
                     borderRadius: '0.75rem',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                    color: '#EF4444',
+                    backgroundColor: `${colors.error}15`,
+                    border: `1px solid ${colors.error}33`,
+                    color: colors.error,
                     fontSize: '1rem',
                     fontWeight: 500,
                     cursor: 'pointer',
@@ -495,7 +495,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '1rem 1.5rem',
-              borderBottom: '1px solid rgba(201, 167, 90, 0.1)',
+              borderBottom: `1px solid ${colors.borderSubtle}`,
               backgroundColor: colors.cardBg,
             }}>
               <button
@@ -505,7 +505,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                   backgroundColor: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#C9A75A',
+                  color: colors.accent,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.25rem',
@@ -519,7 +519,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
               <h2 style={{
                 fontSize: '1.125rem',
                 fontWeight: 600,
-                color: '#F5F1EA',
+                color: colors.text,
                 margin: 0,
               }}>
                 My Equipment
@@ -538,9 +538,9 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                   width: '100%',
                   padding: '0.75rem 1rem',
                   borderRadius: '0.5rem',
-                  border: '1px solid rgba(201, 167, 90, 0.2)',
-                  backgroundColor: 'rgba(15, 34, 51, 0.5)',
-                  color: '#F5F1EA',
+                  border: `1px solid ${colors.border}`,
+                  backgroundColor: '${colors.inputBg}',
+                  color: colors.text,
                   fontSize: '1rem',
                 }}
               />
@@ -556,12 +556,12 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
               <div style={{
                 marginBottom: '1rem',
                 padding: '0.75rem',
-                backgroundColor: 'rgba(201, 167, 90, 0.1)',
+                backgroundColor: colors.accentMuted,
                 borderRadius: '0.5rem',
                 textAlign: 'center',
               }}>
-                <span style={{ color: '#C9A75A', fontWeight: 600 }}>{userEquipment.length}</span>
-                <span style={{ color: 'rgba(245, 241, 234, 0.7)' }}> items selected</span>
+                <span style={{ color: colors.accent, fontWeight: 600 }}>{userEquipment.length}</span>
+                <span style={{ color: colors.text }}> items selected</span>
               </div>
 
               {isSearching ? (
@@ -577,8 +577,8 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                         gap: '0.75rem',
                         padding: '0.875rem 1rem',
                         borderRadius: '0.5rem',
-                        border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                        backgroundColor: hasEquipment(eq.id) ? 'rgba(201, 167, 90, 0.1)' : 'rgba(15, 34, 51, 0.5)',
+                        border: hasEquipment(eq.id) ? `2px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                        backgroundColor: hasEquipment(eq.id) ? colors.accentMuted : colors.inputBg,
                         cursor: 'pointer',
                         width: '100%',
                         textAlign: 'left',
@@ -588,8 +588,8 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                         width: '1.5rem',
                         height: '1.5rem',
                         borderRadius: '0.25rem',
-                        border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.3)',
-                        backgroundColor: hasEquipment(eq.id) ? '#C9A75A' : 'transparent',
+                        border: hasEquipment(eq.id) ? `2px solid ${colors.accent}` : `2px solid ${colors.border}`,
+                        backgroundColor: hasEquipment(eq.id) ? colors.accent : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -602,15 +602,15 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                         )}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ color: '#F5F1EA', fontWeight: 500 }}>{eq.name}</div>
+                        <div style={{ color: colors.text, fontWeight: 500 }}>{eq.name}</div>
                         {eq.category && (
-                          <div style={{ fontSize: '0.75rem', color: 'rgba(245, 241, 234, 0.5)' }}>{eq.category}</div>
+                          <div style={{ fontSize: '0.75rem', color: colors.textMuted }}>{eq.category}</div>
                         )}
                       </div>
                     </button>
                   ))}
                   {filteredEquipment.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(245, 241, 234, 0.5)' }}>
+                    <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
                       No equipment found
                     </div>
                   )}
@@ -623,7 +623,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                     <h3 style={{
                       fontSize: '0.75rem',
                       fontWeight: 600,
-                      color: '#C9A75A',
+                      color: colors.accent,
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                       margin: '0 0 0.75rem',
@@ -638,9 +638,9 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                           style={{
                             padding: '0.5rem 0.875rem',
                             borderRadius: '999px',
-                            border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                            backgroundColor: hasEquipment(eq.id) ? 'rgba(201, 167, 90, 0.15)' : 'rgba(15, 34, 51, 0.5)',
-                            color: hasEquipment(eq.id) ? '#C9A75A' : '#F5F1EA',
+                            border: hasEquipment(eq.id) ? `2px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                            backgroundColor: hasEquipment(eq.id) ? colors.accentMuted : colors.inputBg,
+                            color: hasEquipment(eq.id) ? colors.accent : colors.text,
                             fontSize: '0.875rem',
                             cursor: 'pointer',
                             fontWeight: hasEquipment(eq.id) ? 600 : 400,
@@ -658,7 +658,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                       <h3 style={{
                         fontSize: '0.75rem',
                         fontWeight: 600,
-                        color: 'rgba(245, 241, 234, 0.5)',
+                        color: colors.textMuted,
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                         margin: '0 0 0.75rem',
@@ -676,8 +676,8 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                               gap: '0.75rem',
                               padding: '0.75rem 1rem',
                               borderRadius: '0.5rem',
-                              border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                              backgroundColor: hasEquipment(eq.id) ? 'rgba(201, 167, 90, 0.1)' : 'rgba(15, 34, 51, 0.5)',
+                              border: hasEquipment(eq.id) ? `2px solid ${colors.accent}` : `1px solid ${colors.border}`,
+                              backgroundColor: hasEquipment(eq.id) ? colors.accentMuted : colors.inputBg,
                               cursor: 'pointer',
                               width: '100%',
                               textAlign: 'left',
@@ -687,8 +687,8 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                               width: '1.25rem',
                               height: '1.25rem',
                               borderRadius: '0.25rem',
-                              border: hasEquipment(eq.id) ? '2px solid #C9A75A' : '2px solid rgba(201, 167, 90, 0.3)',
-                              backgroundColor: hasEquipment(eq.id) ? '#C9A75A' : 'transparent',
+                              border: hasEquipment(eq.id) ? `2px solid ${colors.accent}` : `2px solid ${colors.border}`,
+                              backgroundColor: hasEquipment(eq.id) ? colors.accent : 'transparent',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -700,7 +700,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                                 </svg>
                               )}
                             </div>
-                            <span style={{ color: '#F5F1EA' }}>{eq.name}</span>
+                            <span style={{ color: colors.text }}>{eq.name}</span>
                           </button>
                         ))}
                       </div>
@@ -710,11 +710,11 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
               )}
 
               {/* Custom Equipment Section */}
-              <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(201, 167, 90, 0.1)' }}>
+              <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: `1px solid ${colors.borderSubtle}` }}>
                 <h3 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                   margin: '0 0 0.75rem',
@@ -732,9 +732,9 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                       flex: 1,
                       padding: '0.625rem 0.875rem',
                       borderRadius: '0.5rem',
-                      border: '1px solid rgba(201, 167, 90, 0.2)',
-                      backgroundColor: 'rgba(15, 34, 51, 0.5)',
-                      color: '#F5F1EA',
+                      border: `1px solid ${colors.border}`,
+                      backgroundColor: '${colors.inputBg}',
+                      color: colors.text,
                       fontSize: '0.875rem',
                     }}
                   />
@@ -745,8 +745,8 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                       padding: '0.625rem 1rem',
                       borderRadius: '0.5rem',
                       border: 'none',
-                      backgroundColor: customInput.trim() ? '#C9A75A' : 'rgba(201, 167, 90, 0.2)',
-                      color: customInput.trim() ? '#0F2233' : 'rgba(245, 241, 234, 0.3)',
+                      backgroundColor: customInput.trim() ? colors.accent : colors.accentMuted,
+                      color: customInput.trim() ? colors.bg : colors.textMuted,
                       fontWeight: 600,
                       cursor: customInput.trim() ? 'pointer' : 'default',
                     }}
@@ -765,9 +765,9 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                           gap: '0.5rem',
                           padding: '0.375rem 0.75rem',
                           borderRadius: '999px',
-                          backgroundColor: 'rgba(201, 167, 90, 0.15)',
-                          border: '1px solid rgba(201, 167, 90, 0.3)',
-                          color: '#C9A75A',
+                          backgroundColor: colors.accentMuted,
+                          border: `1px solid ${colors.border}`,
+                          color: colors.accent,
                           fontSize: '0.875rem',
                         }}
                       >
@@ -779,7 +779,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            color: 'rgba(201, 167, 90, 0.6)',
+                            color: colors.accent,
                             display: 'flex',
                           }}
                         >
@@ -798,7 +798,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
             <div style={{
               padding: '1rem 1.5rem',
               backgroundColor: colors.cardBg,
-              borderTop: '1px solid rgba(201, 167, 90, 0.1)',
+              borderTop: `1px solid ${colors.borderSubtle}`,
             }}>
               <button
                 onClick={saveEquipment}
@@ -808,7 +808,7 @@ export function Settings({ isOpen, onClose, onRestartOnboarding }: SettingsProps
                   padding: '1rem',
                   borderRadius: '0.75rem',
                   border: 'none',
-                  backgroundColor: '#C9A75A',
+                  backgroundColor: colors.accent,
                   color: colors.bg,
                   fontSize: '1rem',
                   fontWeight: 600,
