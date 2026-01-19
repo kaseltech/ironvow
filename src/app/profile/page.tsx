@@ -1114,7 +1114,7 @@ export default function ProfilePage() {
                     style={{
                       background: currentGoal === goal.id
                         ? 'rgba(201, 167, 90, 0.2)'
-                        : 'rgba(15, 34, 51, 0.5)',
+                        : colors.inputBg,
                       border: currentGoal === goal.id
                         ? '2px solid #C9A75A'
                         : '1px solid rgba(201, 167, 90, 0.1)',
@@ -1377,7 +1377,7 @@ export default function ProfilePage() {
                         <span
                           key={gym.id}
                           style={{
-                            background: gym.is_default ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                            background: gym.is_default ? 'rgba(201, 167, 90, 0.2)' : colors.inputBg,
                             border: gym.is_default ? '1px solid rgba(201, 167, 90, 0.4)' : '1px solid rgba(201, 167, 90, 0.1)',
                             borderRadius: '0.375rem',
                             padding: '0.25rem 0.5rem',
@@ -1406,7 +1406,7 @@ export default function ProfilePage() {
                     <div
                       key={pr.lift}
                       style={{
-                        background: 'rgba(15, 34, 51, 0.5)',
+                        background: colors.inputBg,
                         borderRadius: '0.5rem',
                         padding: '0.75rem',
                         textAlign: 'center',
@@ -1570,7 +1570,7 @@ export default function ProfilePage() {
                       onClick={() => setEditGoalType(type.id as 'cut' | 'bulk' | 'maintain' | 'recomp')}
                       style={{
                         padding: '0.75rem',
-                        background: editGoalType === type.id ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                        background: editGoalType === type.id ? 'rgba(201, 167, 90, 0.2)' : colors.inputBg,
                         border: editGoalType === type.id ? `2px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
                         borderRadius: '0.5rem',
                         cursor: 'pointer',
@@ -1605,7 +1605,7 @@ export default function ProfilePage() {
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    background: 'rgba(15, 34, 51, 0.5)',
+                    background: colors.inputBg,
                     border: `1px solid ${colors.borderSubtle}`,
                     borderRadius: '0.5rem',
                     color: colors.text,
@@ -1644,7 +1644,7 @@ export default function ProfilePage() {
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    background: 'rgba(15, 34, 51, 0.5)',
+                    background: colors.inputBg,
                     border: `1px solid ${colors.borderSubtle}`,
                     borderRadius: '0.5rem',
                     color: colors.text,
@@ -1771,7 +1771,7 @@ export default function ProfilePage() {
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    background: 'rgba(15, 34, 51, 0.5)',
+                    background: colors.inputBg,
                     border: `1px solid ${colors.borderSubtle}`,
                     borderRadius: '0.5rem',
                     color: colors.text,
@@ -1816,7 +1816,7 @@ export default function ProfilePage() {
                           : colors.borderSubtle,
                         background: injurySeverity === sev
                           ? (sev === 'severe' ? 'rgba(239, 68, 68, 0.2)' : sev === 'moderate' ? 'rgba(251, 146, 60, 0.2)' : 'rgba(250, 204, 21, 0.2)')
-                          : 'rgba(15, 34, 51, 0.5)',
+                          : colors.inputBg,
                         color: injurySeverity === sev
                           ? (sev === 'severe' ? '#EF4444' : sev === 'moderate' ? '#FB923C' : '#FACC15')
                           : colors.textMuted,
@@ -1845,7 +1845,7 @@ export default function ProfilePage() {
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    background: 'rgba(15, 34, 51, 0.5)',
+                    background: colors.inputBg,
                     border: `1px solid ${colors.borderSubtle}`,
                     borderRadius: '0.5rem',
                     color: colors.text,
@@ -1867,7 +1867,7 @@ export default function ProfilePage() {
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    background: 'rgba(15, 34, 51, 0.5)',
+                    background: colors.inputBg,
                     border: `1px solid ${colors.borderSubtle}`,
                     borderRadius: '0.5rem',
                     color: colors.text,

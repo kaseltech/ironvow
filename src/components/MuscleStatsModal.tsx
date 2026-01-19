@@ -207,7 +207,7 @@ export function MuscleStatsModal({
         >
           <h2
             style={{
-              color: '#C9A75A',
+              color: colors.accent,
               fontSize: '1.25rem',
               fontWeight: 600,
               textTransform: 'capitalize',
@@ -221,7 +221,7 @@ export function MuscleStatsModal({
             style={{
               background: 'none',
               border: 'none',
-              color: 'rgba(245, 241, 234, 0.5)',
+              color: colors.textMuted,
               cursor: 'pointer',
               padding: '0.5rem',
               fontSize: '1.5rem',
@@ -239,24 +239,24 @@ export function MuscleStatsModal({
             <>
               {/* Summary Stats */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', fontWeight: 500, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <h3 style={{ color: colors.textMuted, fontSize: '0.75rem', fontWeight: 500, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Summary
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                  <div style={{ background: 'rgba(15, 34, 51, 0.5)', borderRadius: '0.75rem', padding: '0.875rem', textAlign: 'center' }}>
-                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', marginBottom: '0.25rem' }}>30d Volume</p>
-                    <p style={{ color: '#F5F1EA', fontWeight: 600, fontSize: '1rem' }}>
+                  <div style={{ background: colors.inputBg, borderRadius: '0.75rem', padding: '0.875rem', textAlign: 'center' }}>
+                    <p style={{ color: colors.textMuted, fontSize: '0.625rem', marginBottom: '0.25rem' }}>30d Volume</p>
+                    <p style={{ color: colors.text, fontWeight: 600, fontSize: '1rem' }}>
                       {volumeData ? formatVolume(volumeData.total_volume) : '—'}
                     </p>
                   </div>
-                  <div style={{ background: 'rgba(15, 34, 51, 0.5)', borderRadius: '0.75rem', padding: '0.875rem', textAlign: 'center' }}>
-                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', marginBottom: '0.25rem' }}>Last Trained</p>
-                    <p style={{ color: '#F5F1EA', fontWeight: 600, fontSize: '1rem' }}>
+                  <div style={{ background: colors.inputBg, borderRadius: '0.75rem', padding: '0.875rem', textAlign: 'center' }}>
+                    <p style={{ color: colors.textMuted, fontSize: '0.625rem', marginBottom: '0.25rem' }}>Last Trained</p>
+                    <p style={{ color: colors.text, fontWeight: 600, fontSize: '1rem' }}>
                       {volumeData ? formatDate(volumeData.last_trained) : '—'}
                     </p>
                   </div>
-                  <div style={{ background: 'rgba(15, 34, 51, 0.5)', borderRadius: '0.75rem', padding: '0.875rem', textAlign: 'center' }}>
-                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.625rem', marginBottom: '0.25rem' }}>Trend</p>
+                  <div style={{ background: colors.inputBg, borderRadius: '0.75rem', padding: '0.875rem', textAlign: 'center' }}>
+                    <p style={{ color: colors.textMuted, fontSize: '0.625rem', marginBottom: '0.25rem' }}>Trend</p>
                     <p style={{
                       color: trend === 'up' ? '#4ADE80' : trend === 'down' ? '#F87171' : '#C9A75A',
                       fontWeight: 600,
@@ -285,10 +285,10 @@ export function MuscleStatsModal({
                       marginBottom: exercisesExpanded ? '0.75rem' : 0,
                     }}
                   >
-                    <h3 style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                    <h3 style={{ color: colors.textMuted, fontSize: '0.75rem', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
                       Exercises ({relevantExercises.length})
                     </h3>
-                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', transform: exercisesExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s ease' }}>
+                    <span style={{ color: colors.textMuted, fontSize: '0.875rem', transform: exercisesExpanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s ease' }}>
                       ▼
                     </span>
                   </button>
@@ -299,21 +299,21 @@ export function MuscleStatsModal({
                         <div
                           key={exercise.exercise_id}
                           style={{
-                            background: 'rgba(15, 34, 51, 0.5)',
+                            background: colors.inputBg,
                             borderRadius: '0.75rem',
                             padding: '0.875rem 1rem',
                             border: '1px solid rgba(201, 167, 90, 0.1)',
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
-                            <span style={{ color: '#F5F1EA', fontWeight: 500, fontSize: '0.9375rem' }}>
+                            <span style={{ color: colors.text, fontWeight: 500, fontSize: '0.9375rem' }}>
                               {exercise.exercise_name}
                             </span>
-                            <span style={{ color: '#C9A75A', fontWeight: 600, fontSize: '0.875rem', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
+                            <span style={{ color: colors.accent, fontWeight: 600, fontSize: '0.875rem', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
                               1RM: {Math.round(exercise.estimated_1rm)} lbs
                             </span>
                           </div>
-                          <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', margin: 0 }}>
+                          <p style={{ color: colors.textMuted, fontSize: '0.75rem', margin: 0 }}>
                             PR: {exercise.pr_weight} lbs × {exercise.pr_reps} reps • {formatDate(exercise.achieved_at)}
                           </p>
                         </div>
@@ -327,13 +327,13 @@ export function MuscleStatsModal({
             /* No Data State */
             <div style={{ textAlign: 'center', padding: '2rem 0' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>💪</div>
-              <h3 style={{ color: '#C9A75A', fontWeight: 600, marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+              <h3 style={{ color: colors.accent, fontWeight: 600, marginBottom: '0.5rem', textTransform: 'capitalize' }}>
                 No {muscleName || muscleId?.replace('_', ' ')} Data Yet
               </h3>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+              <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '0.25rem' }}>
                 Complete a workout targeting this muscle group to start tracking your progress.
               </p>
-              <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>
+              <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
                 We'll show your 1RM, volume, and exercise history here.
               </p>
             </div>

@@ -432,11 +432,11 @@ export default function RunPage() {
           {showSettings && (
             <div style={{
               marginTop: '0.5rem',
-              background: 'rgba(26, 53, 80, 0.9)',
+              background: colors.cardBg,
               borderRadius: '0.75rem',
               padding: '0.75rem',
             }}>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+              <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                 Voice Updates
               </p>
               <div className="flex gap-2">
@@ -454,9 +454,9 @@ export default function RunPage() {
                       flex: 1,
                       padding: '0.5rem',
                       borderRadius: '0.5rem',
-                      background: voiceInterval === interval ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                      background: voiceInterval === interval ? 'rgba(201, 167, 90, 0.2)' : colors.inputBg,
                       border: voiceInterval === interval ? '1px solid #C9A75A' : '1px solid rgba(201, 167, 90, 0.2)',
-                      color: voiceInterval === interval ? '#C9A75A' : '#F5F1EA',
+                      color: voiceInterval === interval ? colors.accent : colors.text,
                       fontSize: '0.75rem',
                     }}
                   >
@@ -517,13 +517,13 @@ export default function RunPage() {
                   padding: '1rem',
                 }}>
                   <div>
-                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Distance</p>
+                    <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>Distance</p>
                     <p style={{ color: colors.text, fontSize: '1.5rem', fontWeight: 600 }}>
                       {formatDistance(distance)} km
                     </p>
                   </div>
                   <div className="text-right">
-                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Time</p>
+                    <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>Time</p>
                     <p style={{ color: colors.text, fontSize: '1.5rem', fontWeight: 600 }}>
                       {formatTime(elapsedTime)}
                     </p>
@@ -536,14 +536,14 @@ export default function RunPage() {
                   padding: '1rem',
                 }}>
                   <div>
-                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Avg Pace</p>
+                    <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>Avg Pace</p>
                     <p style={{ color: colors.text, fontSize: '1.5rem', fontWeight: 600 }}>
                       {formatPace(averagePace)} /km
                     </p>
                   </div>
                   {splits.length > 0 && (
                     <div className="text-right">
-                      <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>Best Split</p>
+                      <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>Best Split</p>
                       <p style={{ color: '#22C55E', fontSize: '1.5rem', fontWeight: 600 }}>
                         {formatPace(Math.min(...splits.map(s => s.pace_seconds_per_km)))} /km
                       </p>
@@ -554,11 +554,11 @@ export default function RunPage() {
                 {/* Splits */}
                 {splits.length > 0 && (
                   <div style={{
-                    background: 'rgba(15, 34, 51, 0.5)',
+                    background: colors.inputBg,
                     borderRadius: '0.75rem',
                     padding: '1rem',
                   }}>
-                    <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                    <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.5rem' }}>
                       Splits
                     </p>
                     {splits.map((split, i) => (
@@ -592,7 +592,7 @@ export default function RunPage() {
               {/* Time - Big and centered */}
               <div className="flex-1 flex flex-col items-center justify-center">
                 <p style={{
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   fontSize: '0.875rem',
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
@@ -614,46 +614,46 @@ export default function RunPage() {
               {/* Stats row */}
               <div className="flex justify-around mb-8">
                 <div className="text-center">
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                     Distance
                   </p>
                   <p style={{ color: colors.text, fontSize: '2rem', fontWeight: 600 }}>
                     {formatDistance(distance)}
                   </p>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>km</p>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>km</p>
                 </div>
 
                 <div className="text-center">
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                     Pace
                   </p>
                   <p style={{ color: colors.accent, fontSize: '2rem', fontWeight: 600 }}>
                     {formatPace(runState === 'running' ? currentPace : averagePace)}
                   </p>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>/km</p>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>/km</p>
                 </div>
 
                 <div className="text-center">
-                  <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.25rem' }}>
                     Avg Pace
                   </p>
                   <p style={{ color: colors.text, fontSize: '2rem', fontWeight: 600 }}>
                     {formatPace(averagePace)}
                   </p>
-                  <p style={{ color: 'rgba(245, 241, 234, 0.4)', fontSize: '0.75rem' }}>/km</p>
+                  <p style={{ color: colors.textMuted, fontSize: '0.75rem' }}>/km</p>
                 </div>
               </div>
 
               {/* Recent splits */}
               {splits.length > 0 && (
                 <div style={{
-                  background: 'rgba(15, 34, 51, 0.5)',
+                  background: colors.inputBg,
                   borderRadius: '0.75rem',
                   padding: '0.75rem 1rem',
                   marginBottom: '1rem',
                 }}>
                   <div className="flex justify-between">
-                    <span style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem' }}>
+                    <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
                       Last Split (KM {splits[splits.length - 1].km})
                     </span>
                     <span style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600 }}>

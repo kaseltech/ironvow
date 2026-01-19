@@ -466,7 +466,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       key={preset.id}
                       onClick={() => togglePreset(preset.id)}
                       style={{
-                        background: isSelected ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
+                        background: isSelected ? 'rgba(201, 167, 90, 0.2)' : colors.inputBg,
                         border: isSelected ? '2px solid ' + colors.accent : '2px solid rgba(201, 167, 90, 0.2)',
                         borderRadius: '0.75rem',
                         padding: '1rem',
@@ -562,7 +562,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                   style={{
                     width: '100%',
                     padding: '0.75rem 1rem',
-                    background: 'rgba(15, 34, 51, 0.5)',
+                    background: colors.inputBg,
                     border: '1px solid rgba(201, 167, 90, 0.2)',
                     borderRadius: '0.5rem',
                     color: colors.text,
@@ -638,7 +638,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                     style={{
                       width: '100%',
                       padding: '0.625rem 2.5rem 0.625rem 0.875rem',
-                      background: 'rgba(15, 34, 51, 0.5)',
+                      background: colors.inputBg,
                       border: `1px solid ${equipmentSearch ? colors.accent : colors.accentMuted}40`,
                       borderRadius: '0.5rem',
                       color: colors.text,
@@ -698,7 +698,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                               onClick={() => toggleEquipment(eq.id)}
                               style={{
                                 padding: '0.375rem 0.625rem',
-                                background: isSelected ? colors.accent : 'rgba(15, 34, 51, 0.5)',
+                                background: isSelected ? colors.accent : colors.inputBg,
                                 border: isSelected ? 'none' : '1px solid rgba(201, 167, 90, 0.3)',
                                 borderRadius: '0.375rem',
                                 color: isSelected ? colors.bg : colors.text,
@@ -751,7 +751,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                               onClick={() => toggleEquipment(eq.id)}
                               style={{
                                 padding: '0.375rem 0.625rem',
-                                background: isSelected ? colors.accent : 'rgba(15, 34, 51, 0.5)',
+                                background: isSelected ? colors.accent : colors.inputBg,
                                 border: 'none',
                                 borderRadius: '0.375rem',
                                 color: isSelected ? colors.bg : colors.text,
@@ -798,7 +798,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                             onClick={() => toggleEquipment(eq.id)}
                             style={{
                               padding: '0.375rem 0.625rem',
-                              background: isSelected ? colors.accent : 'rgba(15, 34, 51, 0.5)',
+                              background: isSelected ? colors.accent : colors.inputBg,
                               border: 'none',
                               borderRadius: '0.375rem',
                               color: isSelected ? colors.bg : colors.text,
@@ -831,7 +831,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                     style={{
                       flex: 1,
                       padding: '0.625rem 0.875rem',
-                      background: 'rgba(15, 34, 51, 0.5)',
+                      background: colors.inputBg,
                       border: '1px solid rgba(201, 167, 90, 0.2)',
                       borderRadius: '0.5rem',
                       color: colors.text,

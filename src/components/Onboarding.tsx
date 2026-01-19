@@ -174,14 +174,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               style={{
                 fontFamily: 'var(--font-libre-baskerville)',
                 fontSize: '2rem',
-                color: '#F5F1EA',
+                color: colors.text,
                 marginTop: '2rem',
                 marginBottom: '1rem',
               }}
             >
               Welcome to IronVow
             </h1>
-            <p style={{ color: 'rgba(245, 241, 234, 0.7)', fontSize: '1rem', maxWidth: '300px', marginBottom: '3rem' }}>
+            <p style={{ color: colors.textMuted, fontSize: '1rem', maxWidth: '300px', marginBottom: '3rem' }}>
               Your AI-powered training partner. Let's set up your profile to personalize your experience.
             </p>
             <button onClick={nextStep} className="btn-primary" style={{ padding: '1rem 3rem', fontSize: '1.125rem' }}>
@@ -193,13 +193,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         {/* Gender */}
         {step === 'gender' && (
           <div className="flex-1 flex flex-col">
-            <button onClick={prevStep} style={{ color: '#C9A75A', background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
+            <button onClick={prevStep} style={{ color: colors.accent, background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
               ← Back
             </button>
-            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: '#F5F1EA', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: colors.text, marginBottom: '0.5rem' }}>
               What's your gender?
             </h2>
-            <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '2rem' }}>
+            <p style={{ color: colors.textMuted, marginBottom: '2rem' }}>
               This helps us show accurate body maps and adjust exercise recommendations.
             </p>
 
@@ -218,7 +218,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   }}
                 >
                   <span style={{ fontSize: '2rem' }}>{option.icon}</span>
-                  <span style={{ color: '#F5F1EA', fontSize: '1.125rem' }}>{option.label}</span>
+                  <span style={{ color: colors.text, fontSize: '1.125rem' }}>{option.label}</span>
                 </button>
               ))}
             </div>
@@ -239,13 +239,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         {/* Experience */}
         {step === 'experience' && (
           <div className="flex-1 flex flex-col">
-            <button onClick={prevStep} style={{ color: '#C9A75A', background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
+            <button onClick={prevStep} style={{ color: colors.accent, background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
               ← Back
             </button>
-            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: '#F5F1EA', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: colors.text, marginBottom: '0.5rem' }}>
               What's your experience level?
             </h2>
-            <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '2rem' }}>
+            <p style={{ color: colors.textMuted, marginBottom: '2rem' }}>
               We'll adjust exercise complexity and volume accordingly.
             </p>
 
@@ -264,8 +264,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                     background: experience === option.value ? 'rgba(201, 167, 90, 0.1)' : undefined,
                   }}
                 >
-                  <div style={{ color: '#F5F1EA', fontSize: '1.125rem', marginBottom: '0.25rem' }}>{option.label}</div>
-                  <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.875rem' }}>{option.desc}</div>
+                  <div style={{ color: colors.text, fontSize: '1.125rem', marginBottom: '0.25rem' }}>{option.label}</div>
+                  <div style={{ color: colors.textMuted, fontSize: '0.875rem' }}>{option.desc}</div>
                 </button>
               ))}
             </div>
@@ -286,20 +286,20 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         {/* Body stats */}
         {step === 'body' && (
           <div className="flex-1 flex flex-col">
-            <button onClick={prevStep} style={{ color: '#C9A75A', background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
+            <button onClick={prevStep} style={{ color: colors.accent, background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
               ← Back
             </button>
-            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: '#F5F1EA', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: colors.text, marginBottom: '0.5rem' }}>
               Body measurements
             </h2>
-            <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '2rem' }}>
+            <p style={{ color: colors.textMuted, marginBottom: '2rem' }}>
               Optional but helps track progress and estimate strength.
             </p>
 
             <div className="space-y-6">
               {/* Height */}
               <div className="card">
-                <label style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <label style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Height
                 </label>
                 <div className="flex items-center gap-3 mt-3">
@@ -318,9 +318,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                         width: '60px',
                         padding: '0.75rem',
                         borderRadius: '0.5rem',
-                        background: 'rgba(15, 34, 51, 0.8)',
+                        background: colors.inputBg,
                         border: '1px solid rgba(201, 167, 90, 0.2)',
-                        color: '#F5F1EA',
+                        color: colors.text,
                         fontSize: '1.25rem',
                         textAlign: 'center',
                       }}
@@ -342,9 +342,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                         width: '60px',
                         padding: '0.75rem',
                         borderRadius: '0.5rem',
-                        background: 'rgba(15, 34, 51, 0.8)',
+                        background: colors.inputBg,
                         border: '1px solid rgba(201, 167, 90, 0.2)',
-                        color: '#F5F1EA',
+                        color: colors.text,
                         fontSize: '1.25rem',
                         textAlign: 'center',
                       }}
@@ -356,7 +356,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
               {/* Weight */}
               <div className="card">
-                <label style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <label style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Current Weight
                 </label>
                 <div className="flex items-center gap-2 mt-3">
@@ -374,9 +374,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                       width: '100px',
                       padding: '0.75rem',
                       borderRadius: '0.5rem',
-                      background: 'rgba(15, 34, 51, 0.8)',
+                      background: colors.inputBg,
                       border: '1px solid rgba(201, 167, 90, 0.2)',
-                      color: '#F5F1EA',
+                      color: colors.text,
                       fontSize: '1.25rem',
                       textAlign: 'center',
                     }}
@@ -397,7 +397,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   marginTop: '0.75rem',
                   background: 'transparent',
                   border: 'none',
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   fontSize: '0.875rem',
                 }}
               >
@@ -410,13 +410,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         {/* Goal */}
         {step === 'goal' && (
           <div className="flex-1 flex flex-col">
-            <button onClick={prevStep} style={{ color: '#C9A75A', background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
+            <button onClick={prevStep} style={{ color: colors.accent, background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
               ← Back
             </button>
-            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: '#F5F1EA', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: colors.text, marginBottom: '0.5rem' }}>
               What's your goal?
             </h2>
-            <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '2rem' }}>
+            <p style={{ color: colors.textMuted, marginBottom: '2rem' }}>
               This helps the AI optimize your workouts.
             </p>
 
@@ -438,8 +438,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 >
                   <span style={{ fontSize: '1.5rem' }}>{option.icon}</span>
                   <div>
-                    <div style={{ color: '#F5F1EA', fontSize: '1rem', fontWeight: 500 }}>{option.label}</div>
-                    <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.8125rem' }}>{option.desc}</div>
+                    <div style={{ color: colors.text, fontSize: '1rem', fontWeight: 500 }}>{option.label}</div>
+                    <div style={{ color: colors.textMuted, fontSize: '0.8125rem' }}>{option.desc}</div>
                   </div>
                 </button>
               ))}
@@ -447,7 +447,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             {goalType && (goalType === 'cut' || goalType === 'bulk') && (
               <div className="card mt-4">
-                <label style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <label style={{ color: colors.accent, fontSize: '0.875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Target Weight (optional)
                 </label>
                 <div className="flex items-center gap-2 mt-3">
@@ -465,9 +465,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                       width: '100px',
                       padding: '0.75rem',
                       borderRadius: '0.5rem',
-                      background: 'rgba(15, 34, 51, 0.8)',
+                      background: colors.inputBg,
                       border: '1px solid rgba(201, 167, 90, 0.2)',
-                      color: '#F5F1EA',
+                      color: colors.text,
                       fontSize: '1.25rem',
                       textAlign: 'center',
                     }}
@@ -488,7 +488,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   marginTop: '0.75rem',
                   background: 'transparent',
                   border: 'none',
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   fontSize: '0.875rem',
                 }}
               >
@@ -501,13 +501,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         {/* Equipment */}
         {step === 'equipment' && (
           <div className="flex-1 flex flex-col">
-            <button onClick={prevStep} style={{ color: '#C9A75A', background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
+            <button onClick={prevStep} style={{ color: colors.accent, background: 'none', border: 'none', alignSelf: 'flex-start', marginBottom: '1rem' }}>
               ← Back
             </button>
-            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: '#F5F1EA', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '1.75rem', color: colors.text, marginBottom: '0.5rem' }}>
               What equipment do you have?
             </h2>
-            <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '1rem' }}>
+            <p style={{ color: colors.textMuted, marginBottom: '1rem' }}>
               Select what's available to you. You can update this anytime in Settings.
             </p>
 
@@ -548,7 +548,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             {/* Common home gym equipment - quick select */}
             {equipmentLocation === 'home' && (
               <div className="mb-4">
-                <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                <h3 style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                   Common Home Gym
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -580,7 +580,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <div className="flex-1 overflow-y-auto space-y-4" style={{ maxHeight: equipmentLocation === 'home' ? '180px' : '250px' }}>
               {Object.entries(groupedEquipment).map(([category, items]) => (
                 <div key={category}>
-                  <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                  <h3 style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                     {category.replace('_', ' ')}
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -610,10 +610,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
             {/* Custom Equipment Section */}
             <div className="mt-4">
-              <h3 style={{ color: '#C9A75A', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+              <h3 style={{ color: colors.accent, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
                 Custom Equipment
               </h3>
-              <p style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+              <p style={{ color: colors.textMuted, fontSize: '0.75rem', marginBottom: '0.75rem' }}>
                 Add anything not listed above. The AI will consider these when generating workouts.
               </p>
 
@@ -667,9 +667,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                     flex: 1,
                     padding: '0.625rem 0.875rem',
                     borderRadius: '0.5rem',
-                    background: 'rgba(15, 34, 51, 0.8)',
+                    background: colors.inputBg,
                     border: '1px solid rgba(201, 167, 90, 0.2)',
-                    color: '#F5F1EA',
+                    color: colors.text,
                     fontSize: '0.875rem',
                   }}
                 />
@@ -703,7 +703,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   marginTop: '0.75rem',
                   background: 'transparent',
                   border: 'none',
-                  color: 'rgba(245, 241, 234, 0.5)',
+                  color: colors.textMuted,
                   fontSize: '0.875rem',
                 }}
               >
@@ -721,13 +721,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               style={{
                 fontFamily: 'var(--font-libre-baskerville)',
                 fontSize: '2rem',
-                color: '#F5F1EA',
+                color: colors.text,
                 marginBottom: '0.5rem',
               }}
             >
               You're all set!
             </h2>
-            <p style={{ color: 'rgba(245, 241, 234, 0.7)', fontSize: '1rem', maxWidth: '300px', marginBottom: '3rem' }}>
+            <p style={{ color: colors.textMuted, fontSize: '1rem', maxWidth: '300px', marginBottom: '3rem' }}>
               Your profile is ready. Let's generate your first workout.
             </p>
             <button onClick={finishOnboarding} disabled={saving} className="btn-primary" style={{ padding: '1rem 3rem', fontSize: '1.125rem' }}>
