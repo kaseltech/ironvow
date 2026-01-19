@@ -2,15 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-
-// IronVow brand colors
-const BRAND = {
-  navy: '#1F3A5A',
-  navyDark: '#0F2233',
-  cream: '#F5F1EA',
-  gold: '#C9A75A',
-  goldMuted: '#B8A070',
-};
+import { useTheme } from '@/context/ThemeContext';
 
 interface ChangelogEntry {
   version: string;
@@ -314,6 +306,7 @@ interface ChangelogProps {
 }
 
 export function Changelog({ isOpen, onClose }: ChangelogProps) {
+  const { colors } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [platformFilter, setPlatformFilter] = useState<'all' | 'ios' | 'web'>('all');
@@ -377,7 +370,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
     >
       <div
         style={{
-          backgroundColor: BRAND.navy,
+          backgroundColor: colors.cardBg,
           borderRadius: '1.5rem',
           width: '100%',
           maxWidth: '36rem',
@@ -385,7 +378,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5)',
-          border: '1px solid rgba(201, 167, 90, 0.2)',
+          border: `1px solid ${colors.border}`,
           transform: isClosing ? 'scale(0.95) translateY(10px)' : 'scale(1) translateY(0)',
           transition: 'transform 0.25s ease',
           overflow: 'hidden',
@@ -394,8 +387,8 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
         {/* Header */}
         <div style={{
           padding: '1.5rem 1.75rem',
-          background: `linear-gradient(135deg, ${BRAND.navy} 0%, ${BRAND.navyDark} 100%)`,
-          borderBottom: '1px solid rgba(201, 167, 90, 0.3)',
+          background: `linear-gradient(135deg, ${colors.cardBg} 0%, ${colors.bg} 100%)`,
+          borderBottom: `1px solid ${colors.border}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -405,7 +398,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
               width: '2.5rem',
               height: '2.5rem',
               borderRadius: '0.75rem',
-              backgroundColor: 'rgba(201, 167, 90, 0.15)',
+              backgroundColor: colors.accentMuted,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -417,7 +410,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
               <h2 style={{
                 fontSize: '1.25rem',
                 fontWeight: 600,
-                color: BRAND.cream,
+                color: colors.text,
                 margin: 0,
                 fontFamily: 'var(--font-libre-baskerville), Georgia, serif',
               }}>
@@ -425,7 +418,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
               </h2>
               <p style={{
                 fontSize: '0.75rem',
-                color: BRAND.goldMuted,
+                color: colors.textMuted,
                 margin: 0,
                 marginTop: '0.125rem',
               }}>
@@ -435,17 +428,20 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
           </div>
           <button
             onClick={handleClose}
+            aria-label="Close changelog"
             style={{
               padding: '0.5rem',
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
               border: 'none',
               borderRadius: '0.5rem',
               cursor: 'pointer',
-              color: BRAND.cream,
+              color: colors.text,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'background-color 0.15s ease',
+              minHeight: '44px',
+              minWidth: '44px',
             }}
           >
             <svg style={{ width: '1.25rem', height: '1.25rem' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -459,8 +455,8 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
           display: 'flex',
           gap: '0.5rem',
           padding: '0.75rem 1.75rem',
-          borderBottom: '1px solid rgba(201, 167, 90, 0.15)',
-          background: BRAND.navyDark,
+          borderBottom: `1px solid ${colors.borderSubtle}`,
+          background: colors.bg,
         }}>
           {(['all', 'ios', 'web'] as const).map(platform => (
             <button
@@ -472,13 +468,14 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
                 borderRadius: '0.5rem',
                 border: 'none',
                 background: platformFilter === platform
-                  ? 'rgba(201, 167, 90, 0.2)'
+                  ? colors.accentMuted
                   : 'rgba(255, 255, 255, 0.05)',
-                color: platformFilter === platform ? BRAND.gold : 'rgba(245, 241, 234, 0.6)',
+                color: platformFilter === platform ? colors.accent : colors.textMuted,
                 fontSize: '0.8125rem',
                 fontWeight: 500,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
+                minHeight: '44px',
               }}
             >
               {platform === 'all' ? 'All' : platform === 'ios' ? 'iOS' : 'Web'}
@@ -508,8 +505,8 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                   <span style={{
                     padding: '0.25rem 0.625rem',
-                    backgroundColor: 'rgba(201, 167, 90, 0.2)',
-                    color: BRAND.gold,
+                    backgroundColor: colors.accentMuted,
+                    color: colors.accent,
                     borderRadius: '0.375rem',
                     fontSize: '0.75rem',
                     fontWeight: 600,
@@ -532,7 +529,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
                   )}
                   <span style={{
                     fontSize: '0.8125rem',
-                    color: 'rgba(245, 241, 234, 0.5)',
+                    color: colors.textMuted,
                   }}>
                     {entry.date}
                   </span>
@@ -540,7 +537,7 @@ export function Changelog({ isOpen, onClose }: ChangelogProps) {
                 <h3 style={{
                   fontSize: '1.125rem',
                   fontWeight: 600,
-                  color: BRAND.cream,
+                  color: colors.text,
                   margin: 0,
                 }}>
                   {entry.title}

@@ -3,15 +3,8 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useGymProfiles, useEquipmentPresets, useEquipment } from '@/hooks/useSupabase';
+import { useTheme } from '@/context/ThemeContext';
 import type { GymProfile, EquipmentPreset } from '@/lib/supabase/types';
-
-const BRAND = {
-  navy: '#1F3A5A',
-  navyDark: '#0F2233',
-  cream: '#F5F1EA',
-  gold: '#C9A75A',
-  goldMuted: '#B8A070',
-};
 
 interface GymManagerProps {
   isOpen: boolean;
@@ -21,6 +14,7 @@ interface GymManagerProps {
 type ViewMode = 'list' | 'select-presets' | 'customize';
 
 export function GymManager({ isOpen, onClose }: GymManagerProps) {
+  const { colors } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [editingProfile, setEditingProfile] = useState<GymProfile | null>(null);
@@ -282,7 +276,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          backgroundColor: BRAND.navy,
+          backgroundColor: colors.cardBg,
           borderRadius: '1.5rem 1.5rem 0 0',
           width: '100%',
           maxWidth: '500px',
@@ -314,7 +308,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: BRAND.gold,
+                  color: colors.accent,
                   cursor: 'pointer',
                   fontSize: '1.25rem',
                   padding: '0.25rem',
@@ -326,7 +320,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
             <h2 style={{
               fontSize: '1.125rem',
               fontWeight: 600,
-              color: BRAND.cream,
+              color: colors.text,
               margin: 0,
             }}>
               {viewMode === 'list' ? 'My Gyms' :
@@ -339,7 +333,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
             style={{
               background: 'transparent',
               border: 'none',
-              color: BRAND.cream,
+              color: colors.text,
               cursor: 'pointer',
               fontSize: '1.5rem',
             }}
@@ -351,7 +345,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
         {/* Content */}
         <div style={{ flex: 1, overflow: 'auto', padding: '1rem 1.5rem' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: BRAND.goldMuted }}>
+            <div style={{ textAlign: 'center', padding: '2rem', color: colors.accentMuted }}>
               Loading...
             </div>
           ) : viewMode === 'list' ? (
@@ -360,7 +354,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
               {/* Existing Gyms */}
               {profiles.length > 0 && (
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <h3 style={{ fontSize: '0.75rem', color: BRAND.goldMuted, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <h3 style={{ fontSize: '0.75rem', color: colors.accentMuted, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Your Gyms
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -378,12 +372,12 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       >
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ color: BRAND.cream, fontWeight: 500 }}>{profile.name}</span>
+                            <span style={{ color: colors.text, fontWeight: 500 }}>{profile.name}</span>
                             {profile.is_default && (
                               <span style={{
                                 fontSize: '0.625rem',
-                                background: BRAND.gold,
-                                color: BRAND.navyDark,
+                                background: colors.accent,
+                                color: colors.bg,
                                 padding: '0.125rem 0.375rem',
                                 borderRadius: '0.25rem',
                                 fontWeight: 600,
@@ -392,7 +386,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                               </span>
                             )}
                           </div>
-                          <span style={{ fontSize: '0.75rem', color: BRAND.goldMuted }}>
+                          <span style={{ fontSize: '0.75rem', color: colors.accentMuted }}>
                             {(profile.equipment_ids?.length || 0) + (profile.custom_equipment?.length || 0)} items
                           </span>
                         </div>
@@ -404,7 +398,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                               border: 'none',
                               borderRadius: '0.5rem',
                               padding: '0.5rem 0.75rem',
-                              color: BRAND.cream,
+                              color: colors.text,
                               cursor: 'pointer',
                               fontSize: '0.75rem',
                             }}
@@ -441,10 +435,10 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                 style={{
                   width: '100%',
                   padding: '1.25rem',
-                  background: `linear-gradient(135deg, ${BRAND.gold}20 0%, ${BRAND.gold}10 100%)`,
+                  background: `linear-gradient(135deg, ${colors.accent}20 0%, ${colors.accent}10 100%)`,
                   border: '2px dashed rgba(201, 167, 90, 0.4)',
                   borderRadius: '0.75rem',
-                  color: BRAND.gold,
+                  color: colors.accent,
                   fontSize: '1rem',
                   fontWeight: 500,
                   cursor: 'pointer',
@@ -460,7 +454,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
           ) : viewMode === 'select-presets' ? (
             /* PRESET SELECTION (Multi-select) */
             <>
-              <p style={{ color: BRAND.goldMuted, fontSize: '0.875rem', marginBottom: '1rem' }}>
+              <p style={{ color: colors.accentMuted, fontSize: '0.875rem', marginBottom: '1rem' }}>
                 Select all gym types that apply. Equipment will be combined.
               </p>
 
@@ -473,7 +467,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       onClick={() => togglePreset(preset.id)}
                       style={{
                         background: isSelected ? 'rgba(201, 167, 90, 0.2)' : 'rgba(15, 34, 51, 0.5)',
-                        border: isSelected ? '2px solid ' + BRAND.gold : '2px solid rgba(201, 167, 90, 0.2)',
+                        border: isSelected ? '2px solid ' + colors.accent : '2px solid rgba(201, 167, 90, 0.2)',
                         borderRadius: '0.75rem',
                         padding: '1rem',
                         cursor: 'pointer',
@@ -488,12 +482,12 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                         width: '24px',
                         height: '24px',
                         borderRadius: '4px',
-                        border: `2px solid ${isSelected ? BRAND.gold : 'rgba(201, 167, 90, 0.4)'}`,
-                        background: isSelected ? BRAND.gold : 'transparent',
+                        border: `2px solid ${isSelected ? colors.accent : 'rgba(201, 167, 90, 0.4)'}`,
+                        background: isSelected ? colors.accent : 'transparent',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: BRAND.navyDark,
+                        color: colors.bg,
                         fontWeight: 'bold',
                         fontSize: '0.875rem',
                         flexShrink: 0,
@@ -503,9 +497,9 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span style={{ fontSize: '1.25rem' }}>{preset.icon}</span>
-                          <span style={{ color: BRAND.cream, fontWeight: 500 }}>{preset.name}</span>
+                          <span style={{ color: colors.text, fontWeight: 500 }}>{preset.name}</span>
                         </div>
-                        <div style={{ color: BRAND.goldMuted, fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                        <div style={{ color: colors.accentMuted, fontSize: '0.75rem', marginTop: '0.25rem' }}>
                           {preset.equipment_names.length} items • {preset.description}
                         </div>
                       </div>
@@ -523,7 +517,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                   background: 'transparent',
                   border: '1px solid rgba(201, 167, 90, 0.2)',
                   borderRadius: '0.5rem',
-                  color: BRAND.goldMuted,
+                  color: colors.accentMuted,
                   fontSize: '0.875rem',
                   cursor: 'pointer',
                   marginBottom: '1rem',
@@ -539,10 +533,10 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                   style={{
                     width: '100%',
                     padding: '1rem',
-                    background: BRAND.gold,
+                    background: colors.accent,
                     border: 'none',
                     borderRadius: '0.75rem',
-                    color: BRAND.navyDark,
+                    color: colors.bg,
                     fontSize: '1rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -557,7 +551,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
             <>
               {/* Gym Name */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: BRAND.goldMuted, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: colors.accentMuted, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Gym Name
                 </label>
                 <input
@@ -571,7 +565,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                     background: 'rgba(15, 34, 51, 0.5)',
                     border: '1px solid rgba(201, 167, 90, 0.2)',
                     borderRadius: '0.5rem',
-                    color: BRAND.cream,
+                    color: colors.text,
                     fontSize: '1rem',
                   }}
                 />
@@ -589,9 +583,9 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                     type="checkbox"
                     checked={isDefault}
                     onChange={e => setIsDefault(e.target.checked)}
-                    style={{ accentColor: BRAND.gold }}
+                    style={{ accentColor: colors.accent }}
                   />
-                  <span style={{ color: BRAND.cream, fontSize: '0.875rem' }}>
+                  <span style={{ color: colors.text, fontSize: '0.875rem' }}>
                     Set as default gym
                   </span>
                 </label>
@@ -600,7 +594,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
               {/* Equipment Selection */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <label style={{ fontSize: '0.75rem', color: BRAND.goldMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <label style={{ fontSize: '0.75rem', color: colors.accentMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Equipment ({selectedEquipmentIds.length} selected)
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -609,7 +603,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: BRAND.gold,
+                        color: colors.accent,
                         fontSize: '0.7rem',
                         cursor: 'pointer',
                         textDecoration: 'underline',
@@ -622,7 +616,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: BRAND.goldMuted,
+                        color: colors.accentMuted,
                         fontSize: '0.7rem',
                         cursor: 'pointer',
                         textDecoration: 'underline',
@@ -645,9 +639,9 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       width: '100%',
                       padding: '0.625rem 2.5rem 0.625rem 0.875rem',
                       background: 'rgba(15, 34, 51, 0.5)',
-                      border: `1px solid ${equipmentSearch ? BRAND.gold : BRAND.goldMuted}40`,
+                      border: `1px solid ${equipmentSearch ? colors.accent : colors.accentMuted}40`,
                       borderRadius: '0.5rem',
-                      color: BRAND.cream,
+                      color: colors.text,
                       fontSize: '0.875rem',
                     }}
                   />
@@ -664,7 +658,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                         borderRadius: '50%',
                         width: '20px',
                         height: '20px',
-                        color: BRAND.cream,
+                        color: colors.text,
                         cursor: 'pointer',
                         fontSize: '0.75rem',
                         display: 'flex',
@@ -682,7 +676,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                   <div style={{ marginBottom: '1rem' }}>
                     <h4 style={{
                       fontSize: '0.7rem',
-                      color: BRAND.gold,
+                      color: colors.accent,
                       marginBottom: '0.5rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
@@ -704,10 +698,10 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                               onClick={() => toggleEquipment(eq.id)}
                               style={{
                                 padding: '0.375rem 0.625rem',
-                                background: isSelected ? BRAND.gold : 'rgba(15, 34, 51, 0.5)',
+                                background: isSelected ? colors.accent : 'rgba(15, 34, 51, 0.5)',
                                 border: isSelected ? 'none' : '1px solid rgba(201, 167, 90, 0.3)',
                                 borderRadius: '0.375rem',
-                                color: isSelected ? BRAND.navyDark : BRAND.cream,
+                                color: isSelected ? colors.bg : colors.text,
                                 fontSize: '0.75rem',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
@@ -728,7 +722,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                     margin: '0.75rem 0',
                     paddingTop: '0.75rem',
                   }}>
-                    <div style={{ fontSize: '0.65rem', color: BRAND.goldMuted, marginBottom: '0.5rem' }}>
+                    <div style={{ fontSize: '0.65rem', color: colors.accentMuted, marginBottom: '0.5rem' }}>
                       All Equipment by Category
                     </div>
                   </div>
@@ -737,12 +731,12 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                 {/* Search results (flat list) */}
                 {isSearching && (
                   filteredEquipment.length === 0 ? (
-                    <div style={{ color: BRAND.goldMuted, fontSize: '0.75rem', textAlign: 'center', padding: '1rem' }}>
+                    <div style={{ color: colors.accentMuted, fontSize: '0.75rem', textAlign: 'center', padding: '1rem' }}>
                       No equipment found matching "{equipmentSearch}"
                     </div>
                   ) : (
                     <div style={{ marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.7rem', color: BRAND.goldMuted, marginBottom: '0.5rem' }}>
+                      <div style={{ fontSize: '0.7rem', color: colors.accentMuted, marginBottom: '0.5rem' }}>
                         {filteredEquipment.length} result{filteredEquipment.length !== 1 ? 's' : ''}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
@@ -757,10 +751,10 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                               onClick={() => toggleEquipment(eq.id)}
                               style={{
                                 padding: '0.375rem 0.625rem',
-                                background: isSelected ? BRAND.gold : 'rgba(15, 34, 51, 0.5)',
+                                background: isSelected ? colors.accent : 'rgba(15, 34, 51, 0.5)',
                                 border: 'none',
                                 borderRadius: '0.375rem',
-                                color: isSelected ? BRAND.navyDark : BRAND.cream,
+                                color: isSelected ? colors.bg : colors.text,
                                 fontSize: '0.75rem',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
@@ -788,7 +782,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                   <div key={category} style={{ marginBottom: '1rem' }}>
                     <h4 style={{
                       fontSize: '0.7rem',
-                      color: BRAND.gold,
+                      color: colors.accent,
                       marginBottom: '0.5rem',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
@@ -804,10 +798,10 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                             onClick={() => toggleEquipment(eq.id)}
                             style={{
                               padding: '0.375rem 0.625rem',
-                              background: isSelected ? BRAND.gold : 'rgba(15, 34, 51, 0.5)',
+                              background: isSelected ? colors.accent : 'rgba(15, 34, 51, 0.5)',
                               border: 'none',
                               borderRadius: '0.375rem',
-                              color: isSelected ? BRAND.navyDark : BRAND.cream,
+                              color: isSelected ? colors.bg : colors.text,
                               fontSize: '0.75rem',
                               cursor: 'pointer',
                               transition: 'all 0.15s ease',
@@ -824,7 +818,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
 
               {/* Custom Equipment */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: BRAND.goldMuted, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: colors.accentMuted, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Custom Equipment
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -840,7 +834,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       background: 'rgba(15, 34, 51, 0.5)',
                       border: '1px solid rgba(201, 167, 90, 0.2)',
                       borderRadius: '0.5rem',
-                      color: BRAND.cream,
+                      color: colors.text,
                       fontSize: '0.875rem',
                     }}
                   />
@@ -851,7 +845,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                       background: 'rgba(201, 167, 90, 0.2)',
                       border: 'none',
                       borderRadius: '0.5rem',
-                      color: BRAND.gold,
+                      color: colors.accent,
                       cursor: 'pointer',
                       fontWeight: 600,
                     }}
@@ -868,7 +862,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                           padding: '0.375rem 0.625rem',
                           background: 'rgba(201, 167, 90, 0.15)',
                           borderRadius: '0.375rem',
-                          color: BRAND.cream,
+                          color: colors.text,
                           fontSize: '0.75rem',
                           display: 'flex',
                           alignItems: 'center',
@@ -881,7 +875,7 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                           style={{
                             background: 'transparent',
                             border: 'none',
-                            color: BRAND.goldMuted,
+                            color: colors.accentMuted,
                             cursor: 'pointer',
                             padding: 0,
                             fontSize: '0.875rem',
@@ -903,10 +897,10 @@ export function GymManager({ isOpen, onClose }: GymManagerProps) {
                 style={{
                   width: '100%',
                   padding: '1rem',
-                  background: gymName.trim() ? BRAND.gold : 'rgba(201, 167, 90, 0.3)',
+                  background: gymName.trim() ? colors.accent : 'rgba(201, 167, 90, 0.3)',
                   border: 'none',
                   borderRadius: '0.75rem',
-                  color: BRAND.navyDark,
+                  color: colors.bg,
                   fontSize: '1rem',
                   fontWeight: 600,
                   cursor: gymName.trim() ? 'pointer' : 'not-allowed',
