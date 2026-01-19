@@ -26,6 +26,27 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.1.0',
+    date: 'January 18, 2026',
+    title: 'Smart Progress & Persistence',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Session persistence - workouts recover automatically on app refresh or crash' },
+      { type: 'added', description: 'Progress-aware AI - your PRs inform personalized weight suggestions' },
+      { type: 'added', description: 'Deload intelligence - automatic detection when weekly volume exceeds 100k lbs' },
+      { type: 'added', description: 'Workout bookmarking - save button now stores workouts to database' },
+      { type: 'added', description: 'Weekly plan adherence tracking - see completion percentage for your plans' },
+      { type: 'added', description: 'Context tags showing PRs, injuries, and experience level during generation' },
+      { type: 'added', description: 'Smart suggestions - "Due for Training" cards for muscles not hit in 4+ days' },
+      { type: 'added', description: '"Last Workout" card with "Do Again" button to repeat recent sessions' },
+      { type: 'added', description: 'PR celebration on workout completion with trophy badges' },
+      { type: 'added', description: '5-star workout rating after completion' },
+      { type: 'improved', description: 'Unified swap modal - consistent experience across single and weekly workouts' },
+      { type: 'improved', description: 'Mobile optimization - 44-48px touch targets throughout the app' },
+      { type: 'improved', description: 'Safe area insets for iPhone notch and home indicator' },
+    ],
+  },
+  {
     version: '2.0.0',
     date: 'January 17, 2026',
     title: 'Workout Session Overhaul',
