@@ -40,7 +40,9 @@ export function Header({ onSettingsClick, onTimerClick, onRunClick, showSettings
               style={{
                 background: 'transparent',
                 border: 'none',
-                padding: '0.5rem',
+                padding: '0.75rem',
+                minWidth: '44px',
+                minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -63,7 +65,9 @@ export function Header({ onSettingsClick, onTimerClick, onRunClick, showSettings
               style={{
                 background: 'transparent',
                 border: 'none',
-                padding: '0.5rem',
+                padding: '0.75rem',
+                minWidth: '44px',
+                minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -86,7 +90,9 @@ export function Header({ onSettingsClick, onTimerClick, onRunClick, showSettings
             style={{
               background: 'transparent',
               border: 'none',
-              padding: '0.5rem',
+              padding: '0.75rem',
+              minWidth: '44px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -107,7 +113,9 @@ export function Header({ onSettingsClick, onTimerClick, onRunClick, showSettings
               style={{
                 background: 'transparent',
                 border: 'none',
-                padding: '0.5rem',
+                padding: '0.75rem',
+                minWidth: '44px',
+                minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

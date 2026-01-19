@@ -59,7 +59,13 @@ export function ExerciseDetailModal({ exerciseName, onClose }: ExerciseDetailMod
               border: 'none',
               cursor: 'pointer',
               padding: '0.5rem',
+              minWidth: '44px',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
+            aria-label="Close"
           >
             ×
           </button>

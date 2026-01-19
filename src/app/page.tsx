@@ -1126,7 +1126,7 @@ export default function Home() {
             )}
 
             {/* Spacer for sticky generate button */}
-            <div style={{ height: '6rem' }} />
+            <div style={{ height: '7rem' }} />
           </>
         ) : generatedWorkout || generatedPlan ? (
           /* Workout Display */
@@ -1527,21 +1527,25 @@ export default function Home() {
                           setShowExerciseDetail(exercise.name);
                         }}
                         style={{
-                          width: '20px',
-                          height: '20px',
+                          width: '28px',
+                          height: '28px',
+                          minWidth: '44px',
+                          minHeight: '44px',
                           borderRadius: '50%',
                           background: 'rgba(201, 167, 90, 0.15)',
                           border: '1px solid rgba(201, 167, 90, 0.3)',
                           color: colors.accent,
-                          fontSize: '0.6875rem',
+                          fontSize: '0.75rem',
                           fontWeight: 600,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           flexShrink: 0,
+                          margin: '-8px',
                         }}
                         title="How to do this exercise"
+                        aria-label={`How to do ${exercise.name}`}
                       >
                         ?
                       </button>
@@ -1630,11 +1634,13 @@ export default function Home() {
                         background: 'transparent',
                         border: `1px solid ${colors.borderSubtle}`,
                         color: colors.textMuted,
-                        fontSize: '0.625rem',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.25rem',
+                        fontSize: '0.75rem',
+                        padding: '0.5rem 0.75rem',
+                        minHeight: '44px',
+                        borderRadius: '0.375rem',
                         cursor: 'pointer',
                       }}
+                      aria-label={`Swap ${exercise.name} for a different exercise`}
                     >
                       Swap
                     </button>
@@ -1661,9 +1667,9 @@ export default function Home() {
         <div
           className="fixed left-0 right-0"
           style={{
-            bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
-            padding: '0 1rem 1rem',
-            background: `linear-gradient(180deg, transparent 0%, ${colors.bg} 40%)`,
+            bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))',
+            padding: '0 1rem 1.5rem',
+            background: `linear-gradient(180deg, transparent 0%, ${colors.bg} 30%)`,
             zIndex: 40,
           }}
         >
@@ -1707,17 +1713,19 @@ export default function Home() {
             aria-label="Generate workout"
             style={{
               width: '100%',
-              padding: '1.125rem 1.5rem',
+              padding: '1.25rem 1.5rem',
               borderRadius: '1rem',
               background: canGenerate
                 ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`
                 : colors.cardBg,
-              border: canGenerate ? 'none' : `1.5px solid ${colors.borderSubtle}`,
+              border: canGenerate ? '2px solid rgba(255, 255, 255, 0.15)' : `1.5px solid ${colors.borderSubtle}`,
               color: canGenerate ? colors.bg : colors.textMuted,
-              fontSize: '1.0625rem',
+              fontSize: '1.125rem',
               fontWeight: 700,
               cursor: canGenerate && !generating ? 'pointer' : 'not-allowed',
-              boxShadow: canGenerate ? '0 8px 24px rgba(201, 167, 90, 0.4)' : 'none',
+              boxShadow: canGenerate
+                ? '0 10px 30px rgba(201, 167, 90, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3)'
+                : 'none',
               transition: 'all 0.2s ease',
               WebkitTapHighlightColor: 'transparent',
               display: 'flex',
@@ -1772,7 +1780,7 @@ export default function Home() {
               background: colors.cardBg,
               borderRadius: '1rem',
               padding: '1.5rem',
-              maxWidth: '360px',
+              maxWidth: 'min(360px, calc(100vw - 2rem))',
               width: '100%',
               border: `1px solid ${colors.borderSubtle}`,
             }}
