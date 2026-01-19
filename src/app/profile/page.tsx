@@ -10,6 +10,8 @@ import { Settings } from '@/components/Settings';
 import { BottomNav } from '@/components/BottomNav';
 import { useProfile, useEquipment, useGymProfiles, useWeightLogs, useWeightGoal, useWorkoutSessions, useInjuries, useBookmarkedWorkouts } from '@/hooks/useSupabase';
 import { useStrengthData, convertToMuscleStrength, formatVolume, formatDate, formatDaysAgo, ExercisePR, MuscleVolume } from '@/hooks/useStrengthData';
+import { StreakTracker } from '@/components/StreakTracker';
+import { WorkoutCalendar } from '@/components/WorkoutCalendar';
 import { useWorkoutPlans, DAY_NAMES } from '@/hooks/useWorkoutPlans';
 import { useTheme } from '@/context/ThemeContext';
 import { getSupabase } from '@/lib/supabase/client';
@@ -146,7 +148,7 @@ export default function ProfilePage() {
   const { logs: weightLogs } = useWeightLogs(1);
   const { goal: weightGoal, setWeightGoal, refetch: refetchWeightGoal } = useWeightGoal();
   const { sessions } = useWorkoutSessions(10);
-  const { muscleVolume, exercisePRs, sessions: strengthSessions, loading: strengthLoading } = useStrengthData();
+  const { muscleVolume, exercisePRs, sessions: strengthSessions, streakData, calendarData, loading: strengthLoading } = useStrengthData();
   const { plans, activePlan, setActivePlanById, deletePlan, loading: plansLoading, getAdherenceStats } = useWorkoutPlans();
   const { injuries, addInjury, removeInjury } = useInjuries();
   const { savedWorkouts, loading: savedWorkoutsLoading, unsaveWorkout } = useBookmarkedWorkouts();
@@ -937,9 +939,22 @@ export default function ProfilePage() {
 
         {activeTab === 'history' && (
           <div className="space-y-3">
-            <p style={{ color: colors.textMuted, fontSize: '0.875rem', marginBottom: '1rem' }}>
-              Your recent workouts
-            </p>
+            {/* Streak Tracker */}
+            <StreakTracker streakData={streakData} />
+
+            {/* Workout Calendar Heatmap */}
+            <WorkoutCalendar calendarData={calendarData} weeks={12} />
+
+            {/* Recent Workouts Header */}
+            <div className="flex items-center justify-between" style={{ marginTop: '0.5rem' }}>
+              <span style={{ color: colors.text, fontSize: '0.875rem', fontWeight: 600 }}>
+                Recent Workouts
+              </span>
+              <span style={{ color: colors.textMuted, fontSize: '0.75rem' }}>
+                {strengthSessions.length} sessions
+              </span>
+            </div>
+
             {strengthSessions.length === 0 ? (
               <div className="text-center py-8">
                 <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🏋️</div>
