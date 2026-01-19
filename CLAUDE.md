@@ -72,7 +72,19 @@ npm run build && npx cap sync && npx cap open ios
 /opt/homebrew/bin/supabase status
 ```
 
-## Recent Features (January 2025)
+## Recent Features (January 2026)
+
+### UI/UX Polish & Accessibility (v2.5.0)
+- **Profile Editor Modal**: Edit gender, experience level, height, and birth date from Settings without re-running onboarding
+- **Age Calculation**: Now calculated from full birth date (month/day), not just year
+- **Touch Targets**: All interactive elements now meet 44px minimum for accessibility
+- **Text Contrast**: Muted text increased from 60% to 70% opacity for WCAG compliance
+- **Responsive Typography**: Large text uses `clamp()` for proper scaling on small screens/landscape
+- **Theme Consistency**: All hardcoded colors replaced with theme context colors
+- **Form Validation**: Weight inputs constrained to 50-700 lbs, prevents negative values
+- **Empty States**: Improved with icons, helpful messages, and actionable CTAs
+- **Generate Button**: More prominent styling, no longer overlaps bottom nav
+- **Files**: `src/components/ProfileEditor.tsx`, `src/context/ThemeContext.tsx`
 
 ### Workout Tracking & Streaks (v2.4.0)
 - **Streak Tracker**: Shows current streak (consecutive workout days), longest streak ever, motivational messages

@@ -18,6 +18,27 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.5.0',
+    date: 'January 19, 2026',
+    title: 'UI/UX Polish & Accessibility',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Profile editor modal - edit gender, experience, height, birth date without re-running onboarding' },
+      { type: 'added', description: 'Age calculated correctly from full birth date (not just year)' },
+      { type: 'improved', description: 'All buttons now meet 44px minimum touch target for easier tapping' },
+      { type: 'improved', description: 'Text contrast increased from 60% to 70% for better readability' },
+      { type: 'improved', description: 'Large text now scales responsively on small screens and landscape' },
+      { type: 'improved', description: 'Generate button more prominent with stronger shadow and border' },
+      { type: 'improved', description: 'Empty states now show helpful icons and actionable messages' },
+      { type: 'improved', description: 'Weight inputs have min/max constraints (50-700 lbs)' },
+      { type: 'improved', description: 'Weight adjustment prevents going below 0' },
+      { type: 'fixed', description: 'Generate button no longer overlaps bottom navigation' },
+      { type: 'fixed', description: 'Warm-up toggle now fully visible when scrolled down' },
+      { type: 'fixed', description: 'All hardcoded colors now respect theme selection' },
+      { type: 'fixed', description: 'Modals now responsive on very small screens' },
+    ],
+  },
+  {
     version: '2.4.0',
     date: 'January 19, 2026',
     title: 'Workout Tracking & Streaks',
