@@ -44,6 +44,24 @@ export interface GeneratedWeeklyPlan {
   }[];
 }
 
+// User's personal record for an exercise
+export interface UserPR {
+  exerciseId: string;
+  exerciseName: string;
+  prWeight: number;
+  prReps: number;
+  estimated1RM: number;
+  achievedAt: string;
+}
+
+// Recent training data for smart suggestions
+export interface RecentTraining {
+  musclesTrained: string[];
+  lastWorkoutDate: string;
+  weeklyVolume: number;
+  suggestDeload: boolean;
+}
+
 export interface WorkoutRequest {
   userId: string;
   location: 'gym' | 'home' | 'outdoor';
@@ -58,6 +76,10 @@ export interface WorkoutRequest {
   excludeExerciseIds?: string[]; // For regenerating - exclude previous exercises
   freeformPrompt?: string; // User's custom description for AI-powered generation
   includeWarmup?: boolean; // Include warm-up stretches (default true)
+  // Progress data for personalization
+  userPRs?: UserPR[]; // User's personal records for weight suggestions
+  recentTraining?: RecentTraining; // Recent training for recovery-aware programming
+  intensityLevel?: 'deload' | 'light' | 'normal' | 'heavy'; // Override default intensity
 }
 
 export interface SwapRequest {

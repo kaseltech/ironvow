@@ -9,6 +9,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Session Persistence & Recovery (January 2025)
+- Active workouts now stored in Supabase with full workout data
+- Sessions recover automatically on app refresh or crash
+- Added `workout_data` JSONB column to `workout_sessions` table
+- Falls back to sessionStorage for immediate navigation
+
+#### Progress-Aware AI Generation (January 2025)
+- User PRs (Personal Records) passed to AI for personalized weight suggestions
+- AI aims for 5-10% progression based on user's strength history
+- Recent training data informs recovery-aware programming
+- Added `userPRs` and `recentTraining` to workout request interface
+
+#### Deload Intelligence (January 2025)
+- Automatic deload detection based on weekly volume (>100k lbs threshold)
+- AI reduces weight by 40-50% when deload is recommended
+- Added `deload_suggested` column to track deload recommendations
+- Edge function calculates 7-day volume from `user_session_summary` view
+
+#### Workout Bookmarking (January 2025)
+- Save button now functional - saves workouts to database
+- `useBookmarkedWorkouts` hook for bookmark management
+- Saved workouts include all exercises with sets/reps/weights
+- Visual feedback shows "Saved" state with checkmark
+
+#### Weekly Plan Adherence Tracking (January 2025)
+- Plan days track completion with `completed_at` timestamp
+- Link sessions to plan days via `session_id` reference
+- `getAdherenceStats()` returns completion percentage
+- `markDayCompleted()` function for session-plan linking
+- Updated `user_workout_plans` view with adherence fields
+
+#### Unified Swap Modal Component (January 2025)
+- New shared `ExerciseSwapModal` component (`/src/components/ExerciseSwapModal.tsx`)
+- Eliminates ~300 lines of duplicated code between page.tsx and WeeklyPlanReview
+- Consistent UX across single workout and weekly plan swaps
+- Mobile-optimized with 44-48px touch targets
+
+#### Context Tags for Workout Preview (January 2025)
+- Experience level tag shows user's skill level
+- PR count tag shows how many personal records influence generation
+- Injury notes tag shows active injury considerations
+- Location and style tags already existed
+
+#### Smart Workout Suggestions (January 2025)
+- "Due for Training" cards show muscles not trained in 4+ days
+- Clicking a muscle pre-selects it for workout generation
+- "Last Workout" card with "Do Again" button to repeat recent session
+- Shows only when no active weekly plan
+
+#### Enhanced Post-Workout Completion Screen (January 2025)
+- PR celebration with trophy emoji when new records hit
+- PR badges showing exercise name and weight×reps
+- 5-star workout rating system
+- Improved stats summary (duration, sets, exercises, volume)
+- Mobile-optimized star buttons with 48px touch targets
+
+#### Mobile Optimization (January 2025)
+- All interactive elements have minimum 44-48px touch targets
+- Safe area insets for iPhone notch/home indicator
+- `WebkitTapHighlightColor: 'transparent'` for native feel
+- Proper spacing for finger-friendly interactions
+
+#### New Shared Utilities
+- `/src/lib/muscleInference.ts` - Shared muscle inference from exercise names
+- `buildTargetMuscles()` - Build target muscles from exercise context
+
 #### Equipment Toggle for Exercise Swaps
 - Quick equipment variant switching in swap modal (Barbell ↔ Dumbbell ↔ Cable ↔ Machine)
 - Equipment detection from exercise names

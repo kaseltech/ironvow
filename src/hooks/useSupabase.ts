@@ -373,15 +373,17 @@ export function useExercises(filters?: { muscleGroup?: string; equipment?: strin
   return { exercises, loading };
 }
 
-// Workout sessions hook
+// Workout sessions hook with persistence support
 export function useWorkoutSessions(limit = 10) {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [activeSession, setActiveSession] = useState<(WorkoutSession & { workout_data?: any }) | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchSessions = useCallback(async () => {
     if (!user) {
       setSessions([]);
+      setActiveSession(null);
       setLoading(false);
       return;
     }
@@ -389,6 +391,8 @@ export function useWorkoutSessions(limit = 10) {
     try {
       setLoading(true);
       const supabase = getSupabase();
+
+      // Fetch completed sessions
       const { data, error } = await supabase
         .from('workout_sessions')
         .select('*')
@@ -398,6 +402,18 @@ export function useWorkoutSessions(limit = 10) {
 
       if (error) throw error;
       setSessions(data || []);
+
+      // Check for active (incomplete) session
+      const { data: active } = await supabase
+        .from('workout_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .is('completed_at', null)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      setActiveSession(active || null);
     } finally {
       setLoading(false);
     }
@@ -407,10 +423,12 @@ export function useWorkoutSessions(limit = 10) {
     fetchSessions();
   }, [fetchSessions]);
 
+  // Start a new session with full workout data for recovery
   const startSession = async (
     name: string,
-    workoutId?: string,
-    location?: 'home' | 'gym' | 'travel' | 'outdoor'
+    workoutData?: any,
+    location?: 'home' | 'gym' | 'travel' | 'outdoor',
+    workoutId?: string
   ) => {
     if (!user) return;
 
@@ -422,18 +440,35 @@ export function useWorkoutSessions(limit = 10) {
         workout_id: workoutId,
         name,
         location,
+        workout_data: workoutData,
         started_at: new Date().toISOString(),
       })
       .select()
       .single();
 
     if (error) throw error;
+    setActiveSession(data);
     return data;
+  };
+
+  // Update workout data mid-session (for swaps, etc.)
+  const updateSessionData = async (sessionId: string, workoutData: any) => {
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('workout_sessions')
+      .update({ workout_data: workoutData })
+      .eq('id', sessionId);
+
+    if (error) throw error;
+    if (activeSession?.id === sessionId) {
+      setActiveSession({ ...activeSession, workout_data: workoutData });
+    }
   };
 
   const completeSession = async (sessionId: string, rating?: number, notes?: string) => {
     const supabase = getSupabase();
-    const startedAt = sessions.find(s => s.id === sessionId)?.started_at;
+    const session = sessions.find(s => s.id === sessionId) || activeSession;
+    const startedAt = session?.started_at;
     const durationSeconds = startedAt
       ? Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
       : null;
@@ -449,10 +484,34 @@ export function useWorkoutSessions(limit = 10) {
       .eq('id', sessionId);
 
     if (error) throw error;
+    setActiveSession(null);
     await fetchSessions();
   };
 
-  return { sessions, loading, startSession, completeSession, refetch: fetchSessions };
+  // Abandon an incomplete session
+  const abandonSession = async (sessionId: string) => {
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('workout_sessions')
+      .delete()
+      .eq('id', sessionId)
+      .is('completed_at', null);
+
+    if (error) throw error;
+    setActiveSession(null);
+    await fetchSessions();
+  };
+
+  return {
+    sessions,
+    activeSession,
+    loading,
+    startSession,
+    updateSessionData,
+    completeSession,
+    abandonSession,
+    refetch: fetchSessions,
+  };
 }
 
 // Injuries hook
@@ -970,5 +1029,208 @@ export function useGymProfiles() {
     deleteProfile,
     getDefaultProfile,
     refetch: fetchProfiles,
+  };
+}
+
+// Saved/Bookmarked Workout interface
+export interface SavedWorkout {
+  id: string;
+  name: string;
+  description: string | null;
+  workout_type: string | null;
+  target_muscles: string[] | null;
+  estimated_duration: number | null;
+  created_at: string;
+  exercises: {
+    id: string;
+    exercise_id: string | null;
+    exercise_name?: string;
+    order_index: number;
+    target_sets: number;
+    target_reps: number;
+    target_weight: number | null;
+    rest_seconds: number;
+    notes: string | null;
+  }[];
+}
+
+// Hook for bookmarking/saving workouts
+export function useBookmarkedWorkouts() {
+  const { user } = useAuth();
+  const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSavedWorkouts = useCallback(async () => {
+    if (!user) {
+      setSavedWorkouts([]);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const supabase = getSupabase();
+
+      // Fetch saved workouts with their exercises
+      const { data: workouts, error } = await supabase
+        .from('workouts')
+        .select(`
+          id,
+          name,
+          description,
+          workout_type,
+          target_muscles,
+          estimated_duration,
+          created_at,
+          workout_exercises (
+            id,
+            exercise_id,
+            order_index,
+            target_sets,
+            target_reps,
+            target_weight,
+            rest_seconds,
+            notes
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('is_saved', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formattedWorkouts: SavedWorkout[] = (workouts || []).map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        description: w.description,
+        workout_type: w.workout_type,
+        target_muscles: w.target_muscles,
+        estimated_duration: w.estimated_duration,
+        created_at: w.created_at,
+        exercises: w.workout_exercises || [],
+      }));
+
+      setSavedWorkouts(formattedWorkouts);
+    } catch (err) {
+      console.error('Failed to fetch saved workouts:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchSavedWorkouts();
+  }, [fetchSavedWorkouts]);
+
+  // Save a generated workout to bookmarks
+  const saveWorkout = async (workout: {
+    name: string;
+    description?: string;
+    workoutType?: string;
+    targetMuscles?: string[];
+    duration?: number;
+    exercises: {
+      exerciseId: string;
+      name: string;
+      sets: number;
+      reps: string;
+      weight?: string;
+      restSeconds: number;
+      notes?: string;
+    }[];
+  }): Promise<string | null> => {
+    if (!user) return null;
+
+    try {
+      const supabase = getSupabase();
+
+      // Insert the workout
+      const { data: workoutData, error: workoutError } = await supabase
+        .from('workouts')
+        .insert({
+          user_id: user.id,
+          name: workout.name,
+          description: workout.description || null,
+          workout_type: workout.workoutType || null,
+          target_muscles: workout.targetMuscles || null,
+          estimated_duration: workout.duration || null,
+          is_ai_generated: true,
+          is_saved: true,
+        })
+        .select()
+        .single();
+
+      if (workoutError) throw workoutError;
+
+      // Insert workout exercises
+      const exerciseInserts = workout.exercises.map((ex, index) => ({
+        workout_id: workoutData.id,
+        exercise_id: ex.exerciseId || null,
+        order_index: index,
+        target_sets: ex.sets,
+        target_reps: parseInt(ex.reps) || 10,
+        target_weight: ex.weight ? parseFloat(ex.weight) : null,
+        rest_seconds: ex.restSeconds || 60,
+        notes: ex.notes || null,
+      }));
+
+      if (exerciseInserts.length > 0) {
+        const { error: exerciseError } = await supabase
+          .from('workout_exercises')
+          .insert(exerciseInserts);
+
+        if (exerciseError) throw exerciseError;
+      }
+
+      await fetchSavedWorkouts();
+      return workoutData.id;
+    } catch (err) {
+      console.error('Failed to save workout:', err);
+      return null;
+    }
+  };
+
+  // Remove a saved workout
+  const unsaveWorkout = async (workoutId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const supabase = getSupabase();
+
+      // Delete workout exercises first
+      await supabase
+        .from('workout_exercises')
+        .delete()
+        .eq('workout_id', workoutId);
+
+      // Delete the workout
+      const { error } = await supabase
+        .from('workouts')
+        .delete()
+        .eq('id', workoutId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      await fetchSavedWorkouts();
+      return true;
+    } catch (err) {
+      console.error('Failed to unsave workout:', err);
+      return false;
+    }
+  };
+
+  // Check if a workout name is already saved (for duplicate detection)
+  const isWorkoutSaved = (workoutName: string): boolean => {
+    return savedWorkouts.some(w => w.name === workoutName);
+  };
+
+  return {
+    savedWorkouts,
+    loading,
+    saveWorkout,
+    unsaveWorkout,
+    isWorkoutSaved,
+    refetch: fetchSavedWorkouts,
   };
 }

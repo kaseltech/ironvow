@@ -8,6 +8,7 @@ import type { GeneratedWeeklyPlan, GeneratedWorkout, GeneratedExercise, Exercise
 import { getSwapAlternatives, getEquipmentFromName, getBaseMovement, getAvailableEquipmentVariants, findEquipmentVariant } from '@/lib/generateWorkout';
 import { getSupabase } from '@/lib/supabase/client';
 import { RefreshIcon, ChevronDownIcon, XIcon } from '@/components/Icons';
+import { ExerciseSwapModal } from '@/components/ExerciseSwapModal';
 
 interface WeeklyPlanReviewProps {
   plan: GeneratedWeeklyPlan;
@@ -836,280 +837,28 @@ export function WeeklyPlanReview({
       </div>
 
       {/* Swap Modal */}
-      {swappingExerciseIndex !== null && swappingDayIndex !== null && (
-        <div
-          onClick={() => {
-            setSwappingDayIndex(null);
-            setSwappingExerciseIndex(null);
-            setSwapAlternatives([]);
-          }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 300,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              backgroundColor: colors.cardBg,
-              borderRadius: '1.5rem 1.5rem 0 0',
-              width: '100%',
-              maxWidth: '500px',
-              maxHeight: '70vh',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div style={{
-              padding: '1rem 1.25rem',
-              borderBottom: `1px solid ${colors.borderSubtle}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}>
-              <div>
-                <h3 style={{ color: colors.text, margin: 0, fontSize: '1.0625rem', fontWeight: 600 }}>
-                  Swap Exercise
-                </h3>
-                <p style={{ color: colors.textMuted, margin: 0, fontSize: '0.8125rem', marginTop: '0.25rem' }}>
-                  Replacing: {plan.days[swappingDayIndex]?.workout.exercises[swappingExerciseIndex]?.name}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setSwappingDayIndex(null);
-                  setSwappingExerciseIndex(null);
-                  setSwapAlternatives([]);
-                }}
-                style={{
-                  background: colors.inputBg,
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-              >
-                <XIcon size={18} color={colors.textMuted} />
-              </button>
-            </div>
-            <div style={{
-              padding: '1rem 1.25rem',
-              overflow: 'auto',
-              flex: 1,
-            }}>
-              {/* Equipment Toggle Section */}
-              {currentEquipment && availableEquipment.size > 1 && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.5rem', fontWeight: 500 }}>
-                    Equipment Variant
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-                    {Array.from(availableEquipment.keys()).map(eq => {
-                      const isActive = eq === currentEquipment;
-                      const isLoading = loadingEquipmentSwap === eq;
-                      return (
-                        <button
-                          key={eq}
-                          onClick={() => !isActive && handleEquipmentSwap(eq)}
-                          disabled={isActive || loadingEquipmentSwap !== null}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: isActive || loadingEquipmentSwap !== null ? 'default' : 'pointer',
-                            border: isActive ? `1.5px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
-                            background: isActive ? colors.accentMuted : colors.inputBg,
-                            color: isActive ? colors.accent : colors.text,
-                            opacity: loadingEquipmentSwap !== null && !isLoading ? 0.5 : 1,
-                            transition: 'all 0.15s ease',
-                            textTransform: 'capitalize',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem',
-                          }}
-                        >
-                          {isLoading && (
-                            <div
-                              style={{
-                                width: '12px',
-                                height: '12px',
-                                border: `2px solid ${colors.accent}`,
-                                borderTopColor: 'transparent',
-                                borderRadius: '50%',
-                                animation: 'spin 0.8s linear infinite',
-                              }}
-                            />
-                          )}
-                          {eq}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Divider if equipment section shown */}
-              {currentEquipment && availableEquipment.size > 1 && !loadingAlternatives && swapAlternatives.length > 0 && (
-                <div style={{
-                  borderTop: `1px solid ${colors.borderSubtle}`,
-                  marginBottom: '1rem',
-                  paddingTop: '0.75rem',
-                }}>
-                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem', fontWeight: 500 }}>
-                    Other Exercises
-                  </div>
-                </div>
-              )}
-
-              {loadingAlternatives ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
-                  <div
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      border: `2px solid ${colors.accent}`,
-                      borderTopColor: 'transparent',
-                      borderRadius: '50%',
-                      animation: 'spin 0.8s linear infinite',
-                      margin: '0 auto 0.75rem',
-                    }}
-                  />
-                  Finding alternatives...
-                </div>
-              ) : swapAlternatives.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
-                  No alternatives found for this exercise.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {swapAlternatives.map(alt => (
-                    <button
-                      key={alt.id}
-                      onClick={() => handleSwapExercise(alt)}
-                      style={{
-                        padding: '0.875rem 1rem',
-                        background: colors.inputBg,
-                        border: `1.5px solid ${colors.borderSubtle}`,
-                        borderRadius: '0.75rem',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                        <span style={{ color: colors.text, fontSize: '0.9375rem', fontWeight: 600 }}>
-                          {alt.name}
-                        </span>
-                        {(alt as any).source === 'ai_pending' && (
-                          <span
-                            style={{
-                              background: 'rgba(147, 51, 234, 0.15)',
-                              color: '#a855f7',
-                              padding: '0.125rem 0.375rem',
-                              borderRadius: '999px',
-                              fontSize: '0.625rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            AI
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-                        {alt.primaryMuscles.map(m => (
-                          <span
-                            key={m}
-                            style={{
-                              background: colors.accentMuted,
-                              color: colors.accent,
-                              padding: '0.125rem 0.5rem',
-                              borderRadius: '999px',
-                              fontSize: '0.6875rem',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {m}
-                          </span>
-                        ))}
-                        {alt.isCompound && (
-                          <span
-                            style={{
-                              background: 'rgba(34, 197, 94, 0.15)',
-                              color: colors.success,
-                              padding: '0.125rem 0.5rem',
-                              borderRadius: '999px',
-                              fontSize: '0.6875rem',
-                              fontWeight: 500,
-                            }}
-                          >
-                            compound
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-
-                  {/* Load More Button */}
-                  <button
-                    onClick={handleLoadMoreAlternatives}
-                    disabled={loadingMore}
-                    style={{
-                      marginTop: '0.5rem',
-                      padding: '0.75rem 1rem',
-                      background: 'transparent',
-                      border: `1.5px dashed ${colors.border}`,
-                      borderRadius: '0.75rem',
-                      color: colors.textMuted,
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      cursor: loadingMore ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      opacity: loadingMore ? 0.6 : 1,
-                    }}
-                  >
-                    {loadingMore ? (
-                      <>
-                        <div
-                          style={{
-                            width: '14px',
-                            height: '14px',
-                            border: `2px solid ${colors.accent}`,
-                            borderTopColor: 'transparent',
-                            borderRadius: '50%',
-                            animation: 'spin 0.8s linear infinite',
-                          }}
-                        />
-                        Finding more...
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: '1rem' }}>+</span>
-                        Load More (AI)
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <ExerciseSwapModal
+        isOpen={swappingExerciseIndex !== null && swappingDayIndex !== null}
+        onClose={() => {
+          setSwappingDayIndex(null);
+          setSwappingExerciseIndex(null);
+          setSwapAlternatives([]);
+        }}
+        currentExerciseName={
+          swappingDayIndex !== null && swappingExerciseIndex !== null
+            ? plan.days[swappingDayIndex]?.workout.exercises[swappingExerciseIndex]?.name || ''
+            : ''
+        }
+        alternatives={swapAlternatives}
+        loadingAlternatives={loadingAlternatives}
+        loadingMore={loadingMore}
+        availableEquipment={availableEquipment}
+        currentEquipment={currentEquipment}
+        loadingEquipmentSwap={loadingEquipmentSwap}
+        onSwapExercise={handleSwapExercise}
+        onLoadMore={handleLoadMoreAlternatives}
+        onEquipmentSwap={handleEquipmentSwap}
+      />
     </div>
   );
 }

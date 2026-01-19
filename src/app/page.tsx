@@ -11,8 +11,9 @@ import { TrainingStyleSelector } from '@/components/TrainingStyleSelector';
 import { AdvancedOptions } from '@/components/AdvancedOptions';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { useProfile, useInjuries, useEquipment, useGymProfiles } from '@/hooks/useSupabase';
+import { useProfile, useInjuries, useEquipment, useGymProfiles, useWorkoutSessions, useBookmarkedWorkouts } from '@/hooks/useSupabase';
 import { useWorkoutPlans, DAY_NAMES_FULL } from '@/hooks/useWorkoutPlans';
+import { useStrengthData } from '@/hooks/useStrengthData';
 import { generateWorkout, getSwapAlternatives, generateWeeklyPlan, findEquipmentVariant, getAvailableEquipmentVariants, getEquipmentFromName, getBaseMovement, type GeneratedWorkout, type GeneratedExercise, type ExerciseAlternative, type WorkoutStyle, type WeeklyPlanDay, type GeneratedWeeklyPlan, type EquipmentType } from '@/lib/generateWorkout';
 import { WeeklyPlanner } from '@/components/WeeklyPlanner';
 import { WeeklyPlanReview } from '@/components/WeeklyPlanReview';
@@ -21,6 +22,7 @@ import { Settings } from '@/components/Settings';
 import { GymManager } from '@/components/GymManager';
 import { FlexTimerModal } from '@/components/FlexTimer';
 import { BottomNav } from '@/components/BottomNav';
+import { ExerciseSwapModal } from '@/components/ExerciseSwapModal';
 import type { GymProfile } from '@/lib/supabase/types';
 
 // Location icons for workout display
@@ -52,6 +54,9 @@ export default function Home() {
   const { userEquipment, allEquipment } = useEquipment();
   const { profiles: gymProfiles, getDefaultProfile, refetch: refetchGymProfiles } = useGymProfiles();
   const { activePlan, getTodaysWorkout, fetchPlans: refetchPlans } = useWorkoutPlans();
+  const { exercisePRs, muscleVolume, sessions: recentSessions } = useStrengthData();
+  const { activeSession, startSession } = useWorkoutSessions();
+  const { saveWorkout, isWorkoutSaved } = useBookmarkedWorkouts();
 
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedGym, setSelectedGym] = useState<GymProfile | null>(null);
@@ -91,6 +96,9 @@ export default function Home() {
   const [showExerciseDetail, setShowExerciseDetail] = useState<string | null>(null);
   // Warm-up settings
   const [includeWarmup, setIncludeWarmup] = useState(true); // On by default
+  // Save/Bookmark state
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedWorkoutId, setSavedWorkoutId] = useState<string | null>(null);
   const [warmupExpanded, setWarmupExpanded] = useState(false); // Collapsed by default in display
 
   const toggleMuscle = (id: string) => {
@@ -134,8 +142,32 @@ export default function Home() {
         movementsToAvoid: i.movements_to_avoid || [],
       }));
 
-      // Try AI-powered Edge Function first, fall back to local generation
-      // Include recently generated exercise IDs to avoid duplicates
+      // Format user PRs for personalized weight suggestions
+      const userPRs = exercisePRs.slice(0, 15).map(pr => ({
+        exerciseId: pr.exercise_id,
+        exerciseName: pr.exercise_name,
+        prWeight: pr.pr_weight,
+        prReps: pr.pr_reps,
+        estimated1RM: pr.estimated_1rm,
+        achievedAt: pr.achieved_at,
+      }));
+
+      // Calculate recent training data for smart suggestions
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const recentWorkouts = recentSessions.filter(s => new Date(s.started_at).getTime() > sevenDaysAgo);
+      const weeklyVolume = recentWorkouts.reduce((sum, s) => sum + (s.total_volume || 0), 0);
+      const musclesTrained = muscleVolume
+        .filter(m => new Date(m.last_trained).getTime() > sevenDaysAgo)
+        .map(m => m.muscle);
+
+      const recentTraining = {
+        musclesTrained,
+        lastWorkoutDate: recentWorkouts[0]?.started_at || '',
+        weeklyVolume,
+        suggestDeload: weeklyVolume > 100000 || recentWorkouts.length >= 6,
+      };
+
+      // Build workout request with progress data
       const workoutRequest = {
         userId: user.id,
         location: selectedLocation as 'gym' | 'home' | 'outdoor',
@@ -150,6 +182,8 @@ export default function Home() {
         freeformPrompt: freeformMode ? freeformPrompt : undefined, // Add freeform prompt
         excludeExerciseIds: recentExerciseIds.length > 0 ? recentExerciseIds : undefined,
         includeWarmup, // Include warm-up stretches
+        userPRs: userPRs.length > 0 ? userPRs : undefined, // Pass user PRs for weight suggestions
+        recentTraining, // Pass recent training for deload detection
       };
 
       // Save request for potential regeneration
@@ -175,6 +209,7 @@ export default function Home() {
 
       setGeneratedWorkout(workout);
       setShowWorkout(true);
+      setSavedWorkoutId(null); // Reset saved state for new workout
 
       // Track generated exercise IDs to avoid duplicates on next generate
       // Keep last 20 exercises to avoid memory bloat while providing variety
@@ -190,11 +225,68 @@ export default function Home() {
     }
   };
 
-  const handleStartWorkout = () => {
+  const handleStartWorkout = async () => {
     if (generatedWorkout) {
-      // Store workout in sessionStorage for the workout page
-      sessionStorage.setItem('currentWorkout', JSON.stringify(generatedWorkout));
-      router.push('/workout');
+      try {
+        // Start session in database with full workout data for recovery
+        await startSession(
+          generatedWorkout.name,
+          generatedWorkout, // Store full workout data for persistence
+          selectedLocation as 'home' | 'gym' | 'outdoor',
+          generatedWorkout.id
+        );
+
+        // Also store in sessionStorage as fallback for immediate navigation
+        sessionStorage.setItem('currentWorkout', JSON.stringify(generatedWorkout));
+        router.push('/workout');
+      } catch (err) {
+        console.error('Failed to start session:', err);
+        // Fall back to sessionStorage-only approach
+        sessionStorage.setItem('currentWorkout', JSON.stringify(generatedWorkout));
+        router.push('/workout');
+      }
+    }
+  };
+
+  // Save/Bookmark workout
+  const handleSaveWorkout = async () => {
+    if (!generatedWorkout || isSaving) return;
+
+    // Check if already saved
+    if (savedWorkoutId) {
+      // TODO: Could implement unsave here
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const workoutId = await saveWorkout({
+        name: generatedWorkout.name,
+        description: generatedWorkout.description,
+        workoutType: generatedWorkout.workoutType,
+        targetMuscles: generatedWorkout.targetMuscles,
+        duration: generatedWorkout.duration,
+        exercises: generatedWorkout.exercises.map(ex => ({
+          exerciseId: ex.exerciseId,
+          name: ex.name,
+          sets: ex.sets,
+          reps: ex.reps,
+          weight: ex.weight,
+          restSeconds: ex.restSeconds,
+          notes: ex.notes,
+        })),
+      });
+
+      if (workoutId) {
+        setSavedWorkoutId(workoutId);
+      } else {
+        setError('Failed to save workout');
+      }
+    } catch (err) {
+      console.error('Failed to save workout:', err);
+      setError('Failed to save workout');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -375,6 +467,7 @@ export default function Home() {
       const workout = await generateWorkout(regenerateRequest);
 
       setGeneratedWorkout(workout);
+      setSavedWorkoutId(null); // Reset saved state for new workout
 
       // Track generated exercise IDs
       const newIds = workout.exercises.map(ex => ex.exerciseId).filter(Boolean);
@@ -589,6 +682,7 @@ export default function Home() {
           ...generatedWorkout,
           exercises: updatedExercises,
         });
+        setSavedWorkoutId(null); // Reset saved state since workout changed
 
         // Update current equipment state
         setCurrentEquipment(targetEquipment);
@@ -630,6 +724,7 @@ export default function Home() {
       ...generatedWorkout,
       exercises: updatedExercises,
     });
+    setSavedWorkoutId(null); // Reset saved state since workout changed
 
     setSwappingExerciseIndex(null);
     setSwapAlternatives([]);
@@ -736,6 +831,135 @@ export default function Home() {
                 >
                   Start Today's Workout
                 </button>
+              </div>
+            )}
+
+            {/* Smart Suggestions Section */}
+            {!weeklyMode && !activePlan && (
+              <div className="mb-4">
+                {/* Muscles Due for Training */}
+                {muscleVolume && muscleVolume.length > 0 && (() => {
+                  // Find muscles that haven't been trained in 4+ days
+                  const now = new Date();
+                  const dueMuscles = muscleVolume
+                    .filter(mv => {
+                      const lastTrained = new Date(mv.last_trained);
+                      const daysSince = Math.floor((now.getTime() - lastTrained.getTime()) / (1000 * 60 * 60 * 24));
+                      return daysSince >= 4;
+                    })
+                    .sort((a, b) => new Date(a.last_trained).getTime() - new Date(b.last_trained).getTime())
+                    .slice(0, 3);
+
+                  if (dueMuscles.length === 0) return null;
+
+                  return (
+                    <div
+                      className="card mb-3"
+                      style={{
+                        background: colors.cardBg,
+                        border: `1px solid ${colors.borderSubtle}`,
+                        padding: '0.75rem',
+                      }}
+                    >
+                      <div style={{
+                        color: colors.textMuted,
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        marginBottom: '0.5rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}>
+                        Due for Training
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {dueMuscles.map(mv => {
+                          const daysSince = Math.floor((now.getTime() - new Date(mv.last_trained).getTime()) / (1000 * 60 * 60 * 24));
+                          return (
+                            <button
+                              key={mv.muscle}
+                              onClick={() => {
+                                setSelectedMuscles([mv.muscle]);
+                              }}
+                              style={{
+                                background: colors.inputBg,
+                                border: `1px solid ${colors.borderSubtle}`,
+                                borderRadius: '0.5rem',
+                                padding: '0.75rem 1rem',
+                                minHeight: '48px',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                WebkitTapHighlightColor: 'transparent',
+                              }}
+                            >
+                              <div style={{ color: colors.text, fontSize: '0.875rem', fontWeight: 500, textTransform: 'capitalize' }}>
+                                {mv.muscle}
+                              </div>
+                              <div style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>
+                                {daysSince} days ago
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Repeat Last Workout */}
+                {recentSessions && recentSessions.length > 0 && (
+                  <div
+                    className="card mb-3"
+                    style={{
+                      background: colors.cardBg,
+                      border: `1px solid ${colors.borderSubtle}`,
+                      padding: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div>
+                      <div style={{
+                        color: colors.textMuted,
+                        fontSize: '0.6875rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}>
+                        Last Workout
+                      </div>
+                      <div style={{ color: colors.text, fontSize: '0.875rem', fontWeight: 500, marginTop: '0.125rem' }}>
+                        {recentSessions[0].session_name}
+                      </div>
+                      <div style={{ color: colors.textMuted, fontSize: '0.6875rem' }}>
+                        {new Date(recentSessions[0].started_at).toLocaleDateString()} · {recentSessions[0].exercise_count} exercises
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        // Load the session's workout if available
+                        if (recentSessions[0].session_id) {
+                          sessionStorage.setItem('repeatSessionId', recentSessions[0].session_id);
+                          router.push('/workout');
+                        }
+                      }}
+                      style={{
+                        background: colors.inputBg,
+                        border: `1px solid ${colors.borderSubtle}`,
+                        borderRadius: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        minHeight: '44px',
+                        cursor: 'pointer',
+                        color: colors.accent,
+                        fontSize: '0.8125rem',
+                        fontWeight: 500,
+                        WebkitTapHighlightColor: 'transparent',
+                      }}
+                    >
+                      Do Again
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -860,6 +1084,7 @@ export default function Home() {
                   setShowWorkout(false);
                   setGeneratedWorkout(null);
                   setGeneratedPlan(null);
+                  setSavedWorkoutId(null);
                 }}
                 style={{
                   background: 'transparent',
@@ -908,17 +1133,21 @@ export default function Home() {
                   {generating ? '...' : '🔄 New'}
                 </button>
                 <button
+                  onClick={handleSaveWorkout}
+                  disabled={isSaving || savedWorkoutId !== null}
                   style={{
-                    background: 'transparent',
-                    border: `1px solid ${colors.border}`,
-                    color: colors.accent,
+                    background: savedWorkoutId ? colors.accent : 'transparent',
+                    border: `1px solid ${savedWorkoutId ? colors.accent : colors.border}`,
+                    color: savedWorkoutId ? '#fff' : colors.accent,
                     fontSize: '0.75rem',
                     padding: '0.5rem 1rem',
                     borderRadius: '0.5rem',
-                    cursor: 'pointer',
+                    cursor: isSaving || savedWorkoutId ? 'default' : 'pointer',
+                    opacity: isSaving ? 0.5 : 1,
                   }}
+                  title={savedWorkoutId ? 'Workout saved' : 'Save workout to library'}
                 >
-                  Save
+                  {isSaving ? '...' : savedWorkoutId ? '✓ Saved' : 'Save'}
                 </button>
               </div>
             </div>
@@ -976,6 +1205,54 @@ export default function Home() {
                     }}
                   >
                     {workoutStyleNames[generatedWorkout.workoutStyle] || generatedWorkout.workoutStyle}
+                  </span>
+                )}
+                {/* Experience Level Tag */}
+                {profile?.experience_level && (
+                  <span
+                    style={{
+                      background: 'rgba(34, 197, 94, 0.15)',
+                      border: '1px solid rgba(34, 197, 94, 0.4)',
+                      borderRadius: '999px',
+                      padding: '0.125rem 0.5rem',
+                      fontSize: '0.625rem',
+                      color: '#22c55e',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {profile.experience_level}
+                  </span>
+                )}
+                {/* PRs Used Tag */}
+                {exercisePRs && exercisePRs.length > 0 && (
+                  <span
+                    style={{
+                      background: 'rgba(251, 191, 36, 0.15)',
+                      border: '1px solid rgba(251, 191, 36, 0.4)',
+                      borderRadius: '999px',
+                      padding: '0.125rem 0.5rem',
+                      fontSize: '0.625rem',
+                      color: '#f59e0b',
+                    }}
+                    title={`${exercisePRs.length} personal records influencing weight suggestions`}
+                  >
+                    {exercisePRs.length} PRs
+                  </span>
+                )}
+                {/* Injuries Tag */}
+                {injuries && injuries.length > 0 && (
+                  <span
+                    style={{
+                      background: 'rgba(239, 68, 68, 0.15)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      borderRadius: '999px',
+                      padding: '0.125rem 0.5rem',
+                      fontSize: '0.625rem',
+                      color: '#ef4444',
+                    }}
+                    title={`Avoiding movements for: ${injuries.map(i => i.body_part).join(', ')}`}
+                  >
+                    {injuries.length} injury{injuries.length > 1 ? ' notes' : ' note'}
                   </span>
                 )}
               </div>
@@ -1513,260 +1790,23 @@ export default function Home() {
       )}
 
       {/* Swap Exercise Modal */}
-      {swappingExerciseIndex !== null && (
-        <div
-          onClick={() => {
-            setSwappingExerciseIndex(null);
-            setSwapAlternatives([]);
-          }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 300,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              backgroundColor: colors.cardBg,
-              borderRadius: '1.5rem 1.5rem 0 0',
-              width: '100%',
-              maxWidth: '500px',
-              maxHeight: '70vh',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div style={{
-              padding: '1rem 1.25rem',
-              borderBottom: `1px solid ${colors.borderSubtle}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}>
-              <div>
-                <h3 style={{ color: colors.text, margin: 0, fontSize: '1rem' }}>
-                  Swap Exercise
-                </h3>
-                <p style={{ color: colors.textMuted, margin: 0, fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                  Replacing: {generatedWorkout?.exercises[swappingExerciseIndex]?.name}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setSwappingExerciseIndex(null);
-                  setSwapAlternatives([]);
-                }}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: colors.text,
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div style={{
-              padding: '1rem',
-              overflow: 'auto',
-              flex: 1,
-            }}>
-              {/* Equipment Toggle Section */}
-              {currentEquipment && availableEquipment.size > 1 && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem', marginBottom: '0.5rem', fontWeight: 500 }}>
-                    Equipment Variant
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-                    {Array.from(availableEquipment.keys()).map(equipment => {
-                      const isActive = equipment === currentEquipment;
-                      const isLoading = loadingEquipmentSwap === equipment;
-                      return (
-                        <button
-                          key={equipment}
-                          onClick={() => !isActive && handleEquipmentSwap(equipment)}
-                          disabled={isActive || loadingEquipmentSwap !== null}
-                          style={{
-                            padding: '0.5rem 0.75rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: isActive || loadingEquipmentSwap !== null ? 'default' : 'pointer',
-                            border: isActive ? `1.5px solid ${colors.accent}` : `1px solid ${colors.borderSubtle}`,
-                            background: isActive ? colors.accentMuted : colors.inputBg,
-                            color: isActive ? colors.accent : colors.text,
-                            opacity: loadingEquipmentSwap !== null && !isLoading ? 0.5 : 1,
-                            transition: 'all 0.15s ease',
-                            textTransform: 'capitalize',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem',
-                          }}
-                        >
-                          {isLoading && (
-                            <div
-                              style={{
-                                width: '12px',
-                                height: '12px',
-                                border: `2px solid ${colors.accent}`,
-                                borderTopColor: 'transparent',
-                                borderRadius: '50%',
-                                animation: 'spin 0.8s linear infinite',
-                              }}
-                            />
-                          )}
-                          {equipment}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Divider if equipment section shown */}
-              {currentEquipment && availableEquipment.size > 1 && !loadingAlternatives && swapAlternatives.length > 0 && (
-                <div style={{
-                  borderTop: `1px solid ${colors.borderSubtle}`,
-                  marginBottom: '1rem',
-                  paddingTop: '0.75rem',
-                }}>
-                  <div style={{ color: colors.textMuted, fontSize: '0.6875rem', fontWeight: 500 }}>
-                    Other Exercises
-                  </div>
-                </div>
-              )}
-
-              {loadingAlternatives ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
-                  <div className="animate-pulse">Finding alternatives...</div>
-                </div>
-              ) : swapAlternatives.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
-                  No alternatives found for this exercise.
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {swapAlternatives.map(alt => (
-                    <button
-                      key={alt.id}
-                      onClick={() => handleSwapExercise(alt)}
-                      style={{
-                        background: colors.inputBg,
-                        border: `1px solid ${colors.borderSubtle}`,
-                        borderRadius: '0.75rem',
-                        padding: '0.875rem 1rem',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                        <span style={{ color: colors.text, fontSize: '0.9rem', fontWeight: 500 }}>
-                          {alt.name}
-                        </span>
-                        {(alt as any).source === 'ai_pending' && (
-                          <span
-                            style={{
-                              background: 'rgba(147, 51, 234, 0.15)',
-                              color: '#a855f7',
-                              padding: '0.125rem 0.375rem',
-                              borderRadius: '999px',
-                              fontSize: '0.5625rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            AI
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {alt.primaryMuscles?.map((muscle: string) => (
-                          <span
-                            key={muscle}
-                            style={{
-                              fontSize: '0.625rem',
-                              backgroundColor: colors.accentMuted,
-                              color: colors.accent,
-                              padding: '0.125rem 0.375rem',
-                              borderRadius: '0.25rem',
-                            }}
-                          >
-                            {muscle}
-                          </span>
-                        ))}
-                        {alt.isCompound && (
-                          <span style={{
-                            fontSize: '0.625rem',
-                            backgroundColor: colors.inputBg,
-                            color: colors.textMuted,
-                            padding: '0.125rem 0.375rem',
-                            borderRadius: '0.25rem',
-                          }}>
-                            Compound
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-
-                  {/* Load More Button */}
-                  <button
-                    onClick={handleLoadMoreAlternatives}
-                    disabled={loadingMoreAlternatives}
-                    style={{
-                      marginTop: '0.5rem',
-                      padding: '0.75rem 1rem',
-                      background: 'transparent',
-                      border: `1.5px dashed ${colors.border}`,
-                      borderRadius: '0.75rem',
-                      color: colors.textMuted,
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      cursor: loadingMoreAlternatives ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      opacity: loadingMoreAlternatives ? 0.6 : 1,
-                    }}
-                  >
-                    {loadingMoreAlternatives ? (
-                      <>
-                        <div
-                          style={{
-                            width: '14px',
-                            height: '14px',
-                            border: `2px solid ${colors.accent}`,
-                            borderTopColor: 'transparent',
-                            borderRadius: '50%',
-                            animation: 'spin 0.8s linear infinite',
-                          }}
-                        />
-                        Finding more...
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: '1rem' }}>+</span>
-                        Load More (AI)
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <ExerciseSwapModal
+        isOpen={swappingExerciseIndex !== null}
+        onClose={() => {
+          setSwappingExerciseIndex(null);
+          setSwapAlternatives([]);
+        }}
+        currentExerciseName={generatedWorkout?.exercises[swappingExerciseIndex ?? 0]?.name || ''}
+        alternatives={swapAlternatives}
+        loadingAlternatives={loadingAlternatives}
+        loadingMore={loadingMoreAlternatives}
+        availableEquipment={availableEquipment}
+        currentEquipment={currentEquipment}
+        loadingEquipmentSwap={loadingEquipmentSwap}
+        onSwapExercise={handleSwapExercise}
+        onLoadMore={handleLoadMoreAlternatives}
+        onEquipmentSwap={handleEquipmentSwap}
+      />
 
       {/* Weekly Plan Review Modal */}
       {showPlanReview && generatedPlan && (

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthGuard } from '@/components/AuthGuard';
 import { useWorkoutSessions, useSetLogs, type LoggedSet } from '@/hooks/useSupabase';
+import type { GeneratedWorkout as FullGeneratedWorkout } from '@/lib/generateWorkout';
 import { ExerciseDetailModal } from '@/components/ExerciseDetailModal';
 import { getSwapAlternatives, type GeneratedWorkout, type WarmupExercise, type GeneratedExercise, type ExerciseAlternative } from '@/lib/generateWorkout';
 import { useProfile, useEquipment, useInjuries } from '@/hooks/useSupabase';
@@ -104,15 +105,23 @@ function playBeep(frequency: number = 800, duration: number = 150, volume: numbe
 export default function WorkoutPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { startSession, completeSession } = useWorkoutSessions();
+  const { activeSession, startSession, updateSessionData, completeSession, abandonSession } = useWorkoutSessions();
   const { sets: loggedSets, logSet, editSet, deleteSet, getSetsForExercise, pendingSync } = useSetLogs();
   const { profile } = useProfile();
   const { userEquipment, allEquipment } = useEquipment();
   const { injuries } = useInjuries();
 
+  // Load workout data: prioritize active session from DB, then sessionStorage, then fallback
   const workoutData = useMemo<WorkoutData>(() => {
     if (typeof window === 'undefined') return fallbackWorkout;
 
+    // First check if there's an active session with workout data in the database
+    if (activeSession?.workout_data) {
+      console.log('[Workout] Recovered session from database:', activeSession.id);
+      return convertGeneratedWorkout(activeSession.workout_data as FullGeneratedWorkout);
+    }
+
+    // Fall back to sessionStorage
     try {
       const stored = sessionStorage.getItem('currentWorkout');
       if (stored) {
@@ -123,7 +132,7 @@ export default function WorkoutPage() {
       console.error('Failed to parse workout:', err);
     }
     return fallbackWorkout;
-  }, []);
+  }, [activeSession]);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -132,6 +141,8 @@ export default function WorkoutPage() {
   const [restEndTime, setRestEndTime] = useState<number | null>(null);
   const [restTimeRemaining, setRestTimeRemaining] = useState(0);
   const [showComplete, setShowComplete] = useState(false);
+  const [workoutRating, setWorkoutRating] = useState<number>(0);
+  const [newPRs, setNewPRs] = useState<{ exerciseName: string; weight: number; reps: number }[]>([]);
   const [adjustedWeight, setAdjustedWeight] = useState<number | null>(null);
   const [showWeightPicker, setShowWeightPicker] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -362,6 +373,22 @@ export default function WorkoutPage() {
         targetReps,
         setType === 'warmup' ? 'warmup' : 'working'
       );
+
+      // Check for new PR (if this weight exceeds the known PR)
+      if (setType !== 'warmup' && exercise.prWeight && weight > exercise.prWeight) {
+        setNewPRs(prev => {
+          // Only add if we don't already have this exercise
+          if (!prev.some(pr => pr.exerciseName === exercise.name)) {
+            return [...prev, { exerciseName: exercise.name, weight, reps }];
+          }
+          // Update if this is a higher weight for the same exercise
+          return prev.map(pr =>
+            pr.exerciseName === exercise.name && weight > pr.weight
+              ? { ...pr, weight, reps }
+              : pr
+          );
+        });
+      }
     } catch (err) {
       console.error('Failed to log set:', err);
     }
@@ -684,13 +711,55 @@ export default function WorkoutPage() {
     return (
       <AuthGuard>
         <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#0F2233' }}>
-          <div className="text-6xl mb-4">🎉</div>
+          {/* Celebration emoji - bigger if PRs hit */}
+          <div style={{ fontSize: newPRs.length > 0 ? '4rem' : '3.5rem', marginBottom: '1rem' }}>
+            {newPRs.length > 0 ? '🏆' : '🎉'}
+          </div>
           <h1 style={{ fontFamily: 'var(--font-libre-baskerville)', fontSize: '2rem', color: '#F5F1EA', marginBottom: '0.5rem' }}>
-            Workout Complete!
+            {newPRs.length > 0 ? 'New Personal Records!' : 'Workout Complete!'}
           </h1>
-          <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '2rem' }}>
-            Great work. You crushed it.
+          <p style={{ color: 'rgba(245, 241, 234, 0.6)', marginBottom: '1.5rem' }}>
+            {newPRs.length > 0
+              ? `You crushed ${newPRs.length} PR${newPRs.length > 1 ? 's' : ''} today!`
+              : 'Great work. You crushed it.'}
           </p>
+
+          {/* PR Badges */}
+          {newPRs.length > 0 && (
+            <div
+              style={{
+                width: '100%',
+                maxWidth: '320px',
+                marginBottom: '1rem',
+              }}
+            >
+              {newPRs.map((pr, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(201, 167, 90, 0.2) 0%, rgba(201, 167, 90, 0.1) 100%)',
+                    border: '1px solid rgba(201, 167, 90, 0.4)',
+                    borderRadius: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1.25rem' }}>🏅</span>
+                    <span style={{ color: '#F5F1EA', fontSize: '0.875rem', fontWeight: 500 }}>
+                      {pr.exerciseName}
+                    </span>
+                  </div>
+                  <span style={{ color: '#C9A75A', fontSize: '0.875rem', fontWeight: 600 }}>
+                    {pr.weight} × {pr.reps}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Stats Summary */}
           <div
@@ -700,7 +769,7 @@ export default function WorkoutPage() {
               background: 'rgba(26, 53, 80, 0.8)',
               borderRadius: '1rem',
               padding: '1.5rem',
-              marginBottom: '1.5rem',
+              marginBottom: '1rem',
             }}
           >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -731,8 +800,45 @@ export default function WorkoutPage() {
             </div>
           </div>
 
+          {/* Workout Rating */}
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '320px',
+              textAlign: 'center',
+              marginBottom: '1rem',
+            }}
+          >
+            <div style={{ color: 'rgba(245, 241, 234, 0.5)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+              How was this workout?
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setWorkoutRating(star)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '2rem',
+                    padding: '0.5rem',
+                    minWidth: '48px',
+                    minHeight: '48px',
+                    cursor: 'pointer',
+                    opacity: workoutRating >= star ? 1 : 0.3,
+                    transition: 'opacity 0.15s ease, transform 0.15s ease',
+                    transform: workoutRating >= star ? 'scale(1.1)' : 'scale(1)',
+                    WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  ⭐
+                </button>
+              ))}
+            </div>
+          </div>
+
           {pendingSync > 0 && (
-            <p style={{ color: '#C9A75A', fontSize: '0.875rem', marginBottom: '1rem' }}>
+            <p style={{ color: '#C9A75A', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
               ⏳ {pendingSync} sets syncing...
             </p>
           )}
@@ -747,6 +853,7 @@ export default function WorkoutPage() {
               router.push('/');
             }}
             className="btn-primary"
+            style={{ width: '100%', maxWidth: '320px' }}
           >
             Back to Home
           </button>

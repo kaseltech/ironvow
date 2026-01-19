@@ -337,6 +337,8 @@ export type Database = {
           notes: string | null;
           rating: number | null;
           created_at: string;
+          workout_data: Record<string, any> | null;
+          deload_suggested: boolean | null;
         };
         Insert: {
           id?: string;
@@ -350,6 +352,8 @@ export type Database = {
           notes?: string | null;
           rating?: number | null;
           created_at?: string;
+          workout_data?: Record<string, any> | null;
+          deload_suggested?: boolean | null;
         };
         Update: {
           id?: string;
@@ -363,6 +367,8 @@ export type Database = {
           notes?: string | null;
           rating?: number | null;
           created_at?: string;
+          workout_data?: Record<string, any> | null;
+          deload_suggested?: boolean | null;
         };
       };
       set_logs: {
@@ -584,6 +590,8 @@ export type Database = {
           muscle_focus: string[] | null;
           workout_style: string | null;
           created_at: string;
+          completed_at: string | null;
+          session_id: string | null;
         };
         Insert: {
           id?: string;
@@ -593,6 +601,8 @@ export type Database = {
           muscle_focus?: string[] | null;
           workout_style?: string | null;
           created_at?: string;
+          completed_at?: string | null;
+          session_id?: string | null;
         };
         Update: {
           id?: string;
@@ -602,6 +612,8 @@ export type Database = {
           muscle_focus?: string[] | null;
           workout_style?: string | null;
           created_at?: string;
+          completed_at?: string | null;
+          session_id?: string | null;
         };
       };
     };

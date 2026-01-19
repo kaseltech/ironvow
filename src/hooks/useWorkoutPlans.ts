@@ -18,6 +18,8 @@ interface RawPlanViewRow {
   day_of_week: number | null;
   muscle_focus: string[] | null;
   day_workout_style: string | null;
+  day_completed_at: string | null;
+  day_session_id: string | null;
   workout_id: string | null;
   workout_name: string | null;
   workout_type: string | null;
@@ -102,6 +104,8 @@ export function useWorkoutPlans() {
             muscle_focus: row.muscle_focus,
             workout_style: row.day_workout_style,
             created_at: row.created_at,
+            completed_at: row.day_completed_at,
+            session_id: row.day_session_id,
             workout: row.workout_id
               ? {
                   id: row.workout_id,
@@ -341,6 +345,71 @@ export function useWorkoutPlans() {
     return todayDay?.workout || null;
   }, [activePlan]);
 
+  /**
+   * Mark a plan day as completed (link to session)
+   */
+  const markDayCompleted = useCallback(
+    async (dayId: string, sessionId: string): Promise<boolean> => {
+      if (!user) {
+        setError('Not authenticated');
+        return false;
+      }
+
+      setError(null);
+
+      try {
+        const supabase = getSupabase();
+
+        const { error: updateError } = await supabase
+          .from('workout_plan_days')
+          .update({
+            completed_at: new Date().toISOString(),
+            session_id: sessionId,
+          })
+          .eq('id', dayId);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        // Refresh plans
+        await fetchPlans();
+
+        return true;
+      } catch (err) {
+        console.error('Error marking day completed:', err);
+        setError(err instanceof Error ? err.message : 'Failed to mark day completed');
+        return false;
+      }
+    },
+    [user, fetchPlans]
+  );
+
+  /**
+   * Get adherence stats for the active plan
+   */
+  const getAdherenceStats = useCallback(() => {
+    if (!activePlan) {
+      return { totalDays: 0, completedDays: 0, adherencePercent: 0 };
+    }
+
+    const totalDays = activePlan.days.length;
+    const completedDays = activePlan.days.filter((d: any) => d.completed_at).length;
+    const adherencePercent = totalDays > 0 ? Math.round((completedDays / totalDays) * 100) : 0;
+
+    return { totalDays, completedDays, adherencePercent };
+  }, [activePlan]);
+
+  /**
+   * Get today's plan day (if exists in active plan)
+   */
+  const getTodaysPlanDay = useCallback(() => {
+    if (!activePlan) return null;
+
+    const today = new Date().getDay();
+    return activePlan.days.find((d) => d.day_of_week === today) || null;
+  }, [activePlan]);
+
   return {
     plans,
     activePlan,
@@ -352,6 +421,9 @@ export function useWorkoutPlans() {
     setActivePlanById,
     deletePlan,
     getTodaysWorkout,
+    markDayCompleted,
+    getAdherenceStats,
+    getTodaysPlanDay,
   };
 }
 

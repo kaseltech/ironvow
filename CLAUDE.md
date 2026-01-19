@@ -32,6 +32,8 @@ IronVow is a fitness app that uses AI (Claude 3 Haiku) to generate personalized 
 - **`/src/components/ExerciseDetailModal.tsx`** - Shows exercise images, instructions, YouTube link
 - **`/src/components/WorkoutCard.tsx`** - Displays workout in session
 - **`/src/components/WeeklyPlanner.tsx`** - Multi-day workout planning UI
+- **`/src/components/ExerciseSwapModal.tsx`** - Unified swap modal for equipment variants and alternatives
+- **`/src/components/BottomNav.tsx`** - Shared bottom navigation component
 
 ### Hooks
 - **`/src/hooks/useExerciseDetail.ts`** - Fetches exercise details with caching
@@ -69,6 +71,45 @@ npm run build && npx cap sync && npx cap open ios
 ```
 
 ## Recent Features (January 2025)
+
+### Session Persistence & Recovery
+- Active workouts stored in Supabase with full workout data (`workout_sessions.workout_data`)
+- Sessions recover automatically on app refresh/crash
+- **Files**: `src/hooks/useSupabase.ts` (useWorkoutSessions), `src/app/workout/page.tsx`
+
+### Progress-Aware AI Generation
+- User PRs passed to AI for personalized weight suggestions
+- Recent training data informs recovery-aware programming
+- Deload detection when weekly volume >100k lbs
+- **Files**: `src/app/page.tsx`, `supabase/functions/generate-workout/index.ts`
+
+### Workout Bookmarking
+- Save button saves workouts with all exercises to database
+- `useBookmarkedWorkouts` hook manages saved workouts
+- **Files**: `src/hooks/useSupabase.ts`, `src/app/page.tsx`
+
+### Weekly Plan Adherence Tracking
+- Plan days track completion via `completed_at` and `session_id`
+- `getAdherenceStats()` calculates completion percentage
+- **Files**: `src/hooks/useWorkoutPlans.ts`, `supabase/migrations/019_session_improvements.sql`
+
+### Unified Swap Modal
+- New `ExerciseSwapModal` component replaces duplicated code
+- Consistent UX between single workout and weekly plan swaps
+- Mobile-optimized with 44-48px touch targets
+- **Files**: `src/components/ExerciseSwapModal.tsx`, `src/lib/muscleInference.ts`
+
+### Smart Suggestions
+- "Due for Training" cards for muscles not trained in 4+ days
+- "Last Workout" repeat option on main page
+- Context tags showing PRs, injuries, experience level
+- **File**: `src/app/page.tsx`
+
+### Enhanced Completion Screen
+- PR celebration with trophy badges
+- 5-star workout rating
+- Mobile-optimized touch targets
+- **File**: `src/app/workout/page.tsx`
 
 ### Equipment Toggle for Swap Modal
 - When swapping an exercise, users can quickly toggle between equipment variants (barbell ↔ dumbbell ↔ cable ↔ machine)
@@ -168,16 +209,20 @@ verify_jwt = false
 
 ## Pending Features
 
-### Enhanced Workout History
-- Expandable workout cards in profile history
-- Detail page at `/workout-history/[sessionId]`
-- Bookmark functionality
-- "Do Again" button to reload past workouts
-
 ### Exercises Pending Review UI
 - Admin interface to review AI-generated exercises in `exercises_pending` table
 - Approve, reject, or merge with existing exercises
 - Currently exercises are stored but no review UI exists
+
+### Historical Data Overview
+- Year-at-a-glance calendar heatmap for workout frequency
+- Strength peaks per muscle group over time
+- Volume trend charts
+
+### Workout Sharing
+- Public workout summary page (no auth required)
+- Shareable URL generation
+- Social preview metadata (OG tags)
 
 ## Supabase Project
 

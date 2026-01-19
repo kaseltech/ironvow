@@ -597,7 +597,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: WorkoutRequest = await req.json();
-    const { userId, location, targetMuscles: rawTargetMuscles, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles: rawSwapMuscles, freeformPrompt, includeWarmup = true } = body;
+    const { userId, location, targetMuscles: rawTargetMuscles, duration, experienceLevel, workoutStyle = 'traditional', injuries, equipment, customEquipment, excludeExerciseIds, swapExerciseId, swapTargetMuscles: rawSwapMuscles, freeformPrompt, includeWarmup = true, userPRs, recentTraining, intensityLevel } = body;
 
     console.log('=== GENERATE WORKOUT REQUEST ===');
     console.log('Location:', location);
@@ -646,10 +646,62 @@ serve(async (req) => {
       }
     }
 
+    // Fetch user's PRs for weight suggestions if not provided
+    let prContext = '';
+    let fetchedPRs: any[] = userPRs || [];
+    if (!userPRs && userId) {
+      const { data: prs } = await supabase
+        .from('user_personal_records')
+        .select('exercise_name, pr_weight, pr_reps, estimated_1rm')
+        .eq('user_id', userId)
+        .limit(20);
+      fetchedPRs = prs || [];
+    }
+
+    if (fetchedPRs.length > 0) {
+      const prSummary = fetchedPRs.slice(0, 10).map((pr: any) =>
+        `${pr.exercise_name || pr.exerciseName}: ${pr.pr_weight || pr.prWeight}lbs × ${pr.pr_reps || pr.prReps}`
+      ).join(', ');
+      prContext = `\n\nUSER STRENGTH HISTORY: ${prSummary}. Use these as reference for suggesting appropriate weights (aim for 5-10% progression if user is ready).`;
+    }
+
+    // Check for deload recommendation based on recent training
+    let deloadContext = '';
+    let suggestDeload = intensityLevel === 'deload';
+
+    if (!suggestDeload && recentTraining?.suggestDeload) {
+      suggestDeload = true;
+    }
+
+    // Check 7-day volume for deload trigger
+    if (!suggestDeload && userId) {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentSessions } = await supabase
+        .from('user_session_summary')
+        .select('total_volume')
+        .eq('user_id', userId)
+        .gte('started_at', sevenDaysAgo);
+
+      if (recentSessions && recentSessions.length >= 5) {
+        const weeklyVolume = recentSessions.reduce((sum, s) => sum + (s.total_volume || 0), 0);
+        // Suggest deload if very high volume (over 100k lbs in a week)
+        if (weeklyVolume > 100000) {
+          suggestDeload = true;
+          console.log(`[Deload] Suggesting deload: ${weeklyVolume} lbs volume in 7 days`);
+        }
+      }
+    }
+
+    if (suggestDeload) {
+      deloadContext = `\n\n⚠️ DELOAD RECOMMENDED: User has trained intensely recently. Reduce weight by 40-50%, keep same reps. Focus on form and recovery.`;
+    }
+
     console.log('User weight context:', {
       gender: userWeightContext.gender,
       bodyWeight: userWeightContext.bodyWeightLbs,
       experience: userWeightContext.experienceLevel,
+      hasPRs: fetchedPRs.length > 0,
+      suggestDeload,
     });
 
     // Map broad muscle groups to specific muscles in database
@@ -1211,7 +1263,7 @@ USER CONTEXT:
 - Location: ${location}
 - Duration: ${duration} minutes
 ${goalContext}
-${locationContext}${equipmentContext}${injuryContext}
+${locationContext}${equipmentContext}${injuryContext}${prContext}${deloadContext}
 
 Interpret the user's request and create an appropriate workout. Consider their experience level, available equipment, and any limitations.
 
@@ -1296,7 +1348,7 @@ YOU MUST ONLY USE EXERCISES THAT TARGET THESE MUSCLES: ${targetMuscles.join(', '
 - If target is chest/shoulders/triceps (push): NO squats, NO deadlifts, NO leg exercises
 - If target is back/biceps (pull): NO chest press, NO push-ups, NO tricep exercises
 - If target is quads/hamstrings/glutes (legs): NO upper body exercises
-${locationContext}${equipmentContext}${injuryContext}
+${locationContext}${equipmentContext}${injuryContext}${prContext}${deloadContext}
 
 TIME BUDGET (${workoutStyle === 'strength' ? '5x5 STRENGTH' : 'STANDARD'}):
 - Total workout time: ${duration} minutes
