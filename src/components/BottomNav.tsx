@@ -80,7 +80,11 @@ export function BottomNav() {
         }}
       >
         {navItems.map(item => {
-          const isActive = pathname === item.href;
+          // Handle both exact match and trailing slash variants
+          const normalizedPath = pathname?.replace(/\/$/, '') || '/';
+          const isActive = item.href === '/'
+            ? normalizedPath === '/' || normalizedPath === ''
+            : normalizedPath === item.href || normalizedPath.startsWith(item.href + '/');
           return (
             <button
               key={item.label}
