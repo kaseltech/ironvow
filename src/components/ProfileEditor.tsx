@@ -20,7 +20,7 @@ export function ProfileEditor({ isOpen, onClose }: ProfileEditorProps) {
   const [experienceLevel, setExperienceLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
   const [heightFeet, setHeightFeet] = useState('');
   const [heightInches, setHeightInches] = useState('');
-  const [birthYear, setBirthYear] = useState('');
+  const [birthDate, setBirthDate] = useState(''); // YYYY-MM-DD format
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,9 +42,7 @@ export function ProfileEditor({ isOpen, onClose }: ProfileEditorProps) {
       }
 
       if (profile.date_of_birth) {
-        // Extract year from date_of_birth (format: YYYY-MM-DD)
-        const year = profile.date_of_birth.split('-')[0];
-        if (year) setBirthYear(year);
+        setBirthDate(profile.date_of_birth);
       }
     }
   }, [profile, isOpen]);
@@ -58,14 +56,11 @@ export function ProfileEditor({ isOpen, onClose }: ProfileEditorProps) {
         ? parseInt(heightFeet) * 12 + parseInt(heightInches)
         : null;
 
-      // Convert birth year to date_of_birth format (YYYY-01-01)
-      const dateOfBirth = birthYear ? `${birthYear}-01-01` : null;
-
       await updateProfile({
         gender,
         experience_level: experienceLevel,
         height_inches: heightTotal,
-        date_of_birth: dateOfBirth,
+        date_of_birth: birthDate || null,
       });
 
       await refetch();
@@ -91,8 +86,19 @@ export function ProfileEditor({ isOpen, onClose }: ProfileEditorProps) {
 
   if (!mounted || !isOpen) return null;
 
-  const currentYear = new Date().getFullYear();
-  const age = birthYear ? currentYear - parseInt(birthYear) : null;
+  // Calculate age from birth date
+  const calculateAge = (dateStr: string): number | null => {
+    if (!dateStr) return null;
+    const birthDateObj = new Date(dateStr);
+    const today = new Date();
+    let age = today.getFullYear() - birthDateObj.getFullYear();
+    const monthDiff = today.getMonth() - birthDateObj.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateObj.getDate())) {
+      age--;
+    }
+    return age;
+  };
+  const age = calculateAge(birthDate);
 
   const modalContent = (
     <div
@@ -273,27 +279,24 @@ export function ProfileEditor({ isOpen, onClose }: ProfileEditorProps) {
             </div>
           </div>
 
-          {/* Birth Year */}
+          {/* Birth Date */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ color: colors.textMuted, fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.5rem' }}>
-              Birth Year {age && <span style={{ color: colors.accent, fontWeight: 400 }}>({age} years old)</span>}
+              Birth Date {age !== null && <span style={{ color: colors.accent, fontWeight: 400 }}>({age} years old)</span>}
             </label>
             <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={birthYear}
-              onChange={(e) => setBirthYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-              placeholder="1990"
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
               style={{
-                width: '100px',
                 padding: '0.75rem',
                 borderRadius: '0.5rem',
                 background: colors.inputBg,
                 border: `1px solid ${colors.borderSubtle}`,
                 color: colors.text,
                 fontSize: '1rem',
-                textAlign: 'center',
+                colorScheme: 'dark',
               }}
             />
           </div>
