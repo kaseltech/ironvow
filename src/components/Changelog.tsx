@@ -18,6 +18,23 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.4.0',
+    date: 'January 19, 2026',
+    title: 'Workout Tracking & Streaks',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Streak tracker - see your current streak, longest streak, and motivational messages' },
+      { type: 'added', description: 'Calendar heatmap - GitHub-style grid showing last 12 weeks of workout activity' },
+      { type: 'added', description: 'Weekly/monthly stats - workouts completed this week and this month' },
+      { type: 'added', description: 'Days since last workout indicator' },
+      { type: 'added', description: 'PR days highlighted with gold border on calendar' },
+      { type: 'added', description: 'Tap calendar days to see workout details (volume, exercises)' },
+      { type: 'added', description: 'Color intensity on calendar reflects workout volume' },
+      { type: 'improved', description: 'History tab now shows tracking widgets before workout list' },
+      { type: 'fixed', description: 'Theme colors now properly applied to all History tab components' },
+    ],
+  },
+  {
     version: '2.3.0',
     date: 'January 19, 2026',
     title: 'Bookmarks & Stability',

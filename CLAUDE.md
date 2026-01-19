@@ -34,6 +34,8 @@ IronVow is a fitness app that uses AI (Claude 3 Haiku) to generate personalized 
 - **`/src/components/WeeklyPlanner.tsx`** - Multi-day workout planning UI
 - **`/src/components/ExerciseSwapModal.tsx`** - Unified swap modal for equipment variants and alternatives
 - **`/src/components/BottomNav.tsx`** - Shared bottom navigation component
+- **`/src/components/StreakTracker.tsx`** - Displays workout streaks and weekly/monthly stats
+- **`/src/components/WorkoutCalendar.tsx`** - GitHub-style heatmap showing workout activity
 
 ### Hooks
 - **`/src/hooks/useExerciseDetail.ts`** - Fetches exercise details with caching
@@ -71,6 +73,16 @@ npm run build && npx cap sync && npx cap open ios
 ```
 
 ## Recent Features (January 2025)
+
+### Workout Tracking & Streaks (v2.4.0)
+- **Streak Tracker**: Shows current streak (consecutive workout days), longest streak ever, motivational messages
+- **Calendar Heatmap**: GitHub-style 12-week grid showing workout frequency with color intensity based on volume
+- **Weekly/Monthly Stats**: "This Week" and "This Month" workout counts displayed prominently
+- **PR Day Highlighting**: Days with personal records have gold borders on the calendar
+- **Interactive Calendar**: Tap any day to see workout details (volume, exercises, PR status)
+- **Files**: `src/components/StreakTracker.tsx`, `src/components/WorkoutCalendar.tsx`
+- **Data Functions**: `calculateStreakData()` and `generateCalendarData()` in `src/hooks/useStrengthData.ts`
+- **Location**: Profile > History tab (above workout list)
 
 ### Session Persistence & Recovery
 - Active workouts stored in Supabase with full workout data (`workout_sessions.workout_data`)
@@ -214,8 +226,8 @@ verify_jwt = false
 - Approve, reject, or merge with existing exercises
 - Currently exercises are stored but no review UI exists
 
-### Historical Data Overview
-- Year-at-a-glance calendar heatmap for workout frequency
+### Year-at-a-Glance View
+- Full year calendar heatmap (currently shows 12 weeks)
 - Strength peaks per muscle group over time
 - Volume trend charts
 
