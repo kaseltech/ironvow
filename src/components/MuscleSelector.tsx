@@ -289,6 +289,7 @@ export function MuscleSelector({
             marginTop: '1.25rem',
             paddingTop: '1.25rem',
             borderTop: `1px solid ${colors.borderSubtle}`,
+            animation: 'slideDown 0.2s ease-out',
           }}
         >
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.625rem' }}>
@@ -431,6 +432,18 @@ export function MuscleSelector({
           </button>
         </div>
       )}
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

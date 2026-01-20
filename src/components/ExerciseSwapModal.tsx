@@ -36,6 +36,18 @@ const EQUIPMENT_LABELS: Record<EquipmentType, string> = {
   band: 'Band',
 };
 
+// Full names for tooltips (especially for abbreviated labels)
+const EQUIPMENT_TOOLTIPS: Record<EquipmentType, string> = {
+  barbell: 'Barbell',
+  dumbbell: 'Dumbbell',
+  cable: 'Cable Machine',
+  machine: 'Machine',
+  'smith machine': 'Smith Machine',
+  kettlebell: 'Kettlebell',
+  bodyweight: 'Bodyweight (no equipment)',
+  band: 'Resistance Band',
+};
+
 const EQUIPMENT_ORDER: EquipmentType[] = [
   'barbell',
   'dumbbell',
@@ -168,6 +180,8 @@ export function ExerciseSwapModal({
                         key={eq}
                         onClick={() => !isActive && isAvailable && onEquipmentSwap(eq)}
                         disabled={isActive || isLoading || !isAvailable}
+                        title={EQUIPMENT_TOOLTIPS[eq]}
+                        aria-label={`Switch to ${EQUIPMENT_TOOLTIPS[eq]}`}
                         style={{
                           padding: '0.625rem 1rem',
                           minHeight: '44px',
@@ -209,17 +223,59 @@ export function ExerciseSwapModal({
             </>
           )}
 
-          {/* Loading State */}
+          {/* Loading State - Skeleton */}
           {loadingAlternatives && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
-              Loading alternatives...
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: colors.inputBg,
+                    border: `1px solid ${colors.borderSubtle}`,
+                    borderRadius: '0.75rem',
+                    padding: '1rem',
+                    minHeight: '60px',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                  }}
+                >
+                  <div style={{
+                    height: '14px',
+                    width: '60%',
+                    background: `linear-gradient(90deg, ${colors.borderSubtle} 25%, ${colors.cardBg} 50%, ${colors.borderSubtle} 75%)`,
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 1.5s infinite',
+                    borderRadius: '4px',
+                    marginBottom: '0.5rem',
+                  }} />
+                  <div style={{
+                    height: '10px',
+                    width: '40%',
+                    background: `linear-gradient(90deg, ${colors.borderSubtle} 25%, ${colors.cardBg} 50%, ${colors.borderSubtle} 75%)`,
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 1.5s infinite',
+                    borderRadius: '4px',
+                  }} />
+                </div>
+              ))}
+              <style>{`
+                @keyframes shimmer {
+                  0% { background-position: 200% 0; }
+                  100% { background-position: -200% 0; }
+                }
+              `}</style>
             </div>
           )}
 
           {/* Empty State */}
           {!loadingAlternatives && alternatives.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: colors.textMuted }}>
-              No alternatives found. Try AI suggestions below.
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem', opacity: 0.5 }}>🔍</div>
+              <p style={{ color: colors.textMuted, marginBottom: '0.5rem' }}>
+                No matching exercises found
+              </p>
+              <p style={{ color: colors.accent, fontSize: '0.875rem' }}>
+                ↓ Try AI-generated suggestions below
+              </p>
             </div>
           )}
 

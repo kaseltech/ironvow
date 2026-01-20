@@ -74,6 +74,16 @@ npm run build && npx cap sync && npx cap open ios
 
 ## Recent Features (January 2026)
 
+### Accessibility & Keyboard Navigation (v2.5.1)
+- **Keyboard Navigation**: Full keyboard support for all dropdowns (Arrow keys, Enter, Escape, Tab)
+- **Equipment Tooltips**: Hover over KB, BW, Smith to see full equipment names
+- **ARIA Accessibility**: Proper roles and labels for screen readers (`role="listbox"`, `aria-expanded`, etc.)
+- **Loading Skeletons**: Shimmer animations in swap modal while loading alternatives
+- **Visual Focus Indicators**: Clear outline on focused dropdown items
+- **Mobile Responsive**: Location buttons wrap on very small screens
+- **Animation Polish**: Slide-down animation for muscle group expansion
+- **Files**: `src/components/PrimaryContext.tsx`, `src/components/ExerciseSwapModal.tsx`, `src/components/MuscleSelector.tsx`
+
 ### UI/UX Polish & Accessibility (v2.5.0)
 - **Profile Editor Modal**: Edit gender, experience level, height, and birth date from Settings without re-running onboarding
 - **Age Calculation**: Now calculated from full birth date (month/day), not just year

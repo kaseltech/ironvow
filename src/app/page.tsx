@@ -1733,12 +1733,26 @@ export default function Home() {
               boxShadow: canGenerate
                 ? '0 10px 30px rgba(201, 167, 90, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3)'
                 : 'none',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.15s ease',
               WebkitTapHighlightColor: 'transparent',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.625rem',
+            }}
+            onMouseDown={(e) => {
+              if (canGenerate && !generating) {
+                e.currentTarget.style.transform = 'scale(0.98)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(201, 167, 90, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2)';
+              }
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = canGenerate ? '0 10px 30px rgba(201, 167, 90, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3)' : 'none';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = canGenerate ? '0 10px 30px rgba(201, 167, 90, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3)' : 'none';
             }}
           >
             {generating ? (

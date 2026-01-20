@@ -159,7 +159,8 @@ function LoginContent() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8A9BAE] hover:text-[#C9A75A] transition-colors"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-[#8A9BAE] hover:text-[#C9A75A] hover:bg-[#444444] transition-colors rounded-lg p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -18,6 +18,25 @@ interface ChangelogEntry {
 // Changelog data - add new entries at the top
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.5.1',
+    date: 'January 19, 2026',
+    title: 'Accessibility & Keyboard Navigation',
+    platform: 'all',
+    changes: [
+      { type: 'added', description: 'Full keyboard navigation for dropdowns - use arrow keys, Enter, Escape' },
+      { type: 'added', description: 'Equipment tooltips - hover KB, BW, Smith for full names' },
+      { type: 'added', description: 'ARIA labels and roles for screen reader support' },
+      { type: 'added', description: 'Loading skeleton animations in swap modal' },
+      { type: 'added', description: 'Slide-down animation when expanding muscle groups' },
+      { type: 'improved', description: 'Location buttons now wrap on very small screens' },
+      { type: 'improved', description: 'Visual focus indicators on dropdown items' },
+      { type: 'improved', description: 'Skip Rest button with gradient styling and press feedback' },
+      { type: 'improved', description: 'Exercise names handle long text with proper wrapping' },
+      { type: 'improved', description: 'Empty state in swap modal shows helpful guidance' },
+      { type: 'fixed', description: 'Password toggle on login has proper 44px touch target' },
+    ],
+  },
+  {
     version: '2.5.0',
     date: 'January 19, 2026',
     title: 'UI/UX Polish & Accessibility',

@@ -43,8 +43,29 @@ export function PrimaryContext({
   const { colors } = useTheme();
   const [showDurationDropdown, setShowDurationDropdown] = useState(false);
   const [showGymDropdown, setShowGymDropdown] = useState(false);
+  const [focusedDurationIndex, setFocusedDurationIndex] = useState(-1);
+  const [focusedGymIndex, setFocusedGymIndex] = useState(-1);
   const durationRef = useRef<HTMLDivElement>(null);
   const gymRef = useRef<HTMLDivElement>(null);
+
+  // Reset focus when dropdowns open/close
+  useEffect(() => {
+    if (showDurationDropdown) {
+      const currentIndex = durations.indexOf(duration);
+      setFocusedDurationIndex(currentIndex >= 0 ? currentIndex : 0);
+    } else {
+      setFocusedDurationIndex(-1);
+    }
+  }, [showDurationDropdown, duration]);
+
+  useEffect(() => {
+    if (showGymDropdown) {
+      const currentIndex = gymProfiles.findIndex(g => g.id === selectedGym?.id);
+      setFocusedGymIndex(currentIndex >= 0 ? currentIndex : 0);
+    } else {
+      setFocusedGymIndex(-1);
+    }
+  }, [showGymDropdown, selectedGym?.id, gymProfiles]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -59,6 +80,87 @@ export function PrimaryContext({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Keyboard navigation for duration dropdown
+  const handleDurationKeyDown = (e: React.KeyboardEvent) => {
+    if (!showDurationDropdown) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setShowDurationDropdown(true);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setFocusedDurationIndex(prev => Math.min(prev + 1, durations.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setFocusedDurationIndex(prev => Math.max(prev - 1, 0));
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (focusedDurationIndex >= 0 && focusedDurationIndex < durations.length) {
+          setDuration(durations[focusedDurationIndex]);
+          setShowDurationDropdown(false);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowDurationDropdown(false);
+        break;
+      case 'Tab':
+        setShowDurationDropdown(false);
+        break;
+    }
+  };
+
+  // Keyboard navigation for gym dropdown
+  const handleGymKeyDown = (e: React.KeyboardEvent) => {
+    if (!showGymDropdown) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setShowGymDropdown(true);
+      }
+      return;
+    }
+
+    // Include "Manage Gyms" as the last option
+    const totalOptions = gymProfiles.length + 1;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setFocusedGymIndex(prev => Math.min(prev + 1, totalOptions - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setFocusedGymIndex(prev => Math.max(prev - 1, 0));
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (focusedGymIndex >= 0 && focusedGymIndex < gymProfiles.length) {
+          setSelectedGym(gymProfiles[focusedGymIndex]);
+          setShowGymDropdown(false);
+        } else if (focusedGymIndex === gymProfiles.length) {
+          // Manage Gyms option
+          setShowGymDropdown(false);
+          onManageGyms();
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowGymDropdown(false);
+        break;
+      case 'Tab':
+        setShowGymDropdown(false);
+        break;
+    }
+  };
 
   const handleLocationClick = (locId: string) => {
     setSelectedLocation(locId);
@@ -85,7 +187,15 @@ export function PrimaryContext({
       }}
     >
       {/* Row 1: Location Buttons */}
-      <div style={{ display: 'flex', gap: '0.625rem', marginBottom: '1rem' }}>
+      <div
+        className="location-buttons-row"
+        style={{
+          display: 'flex',
+          gap: '0.625rem',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+        }}
+      >
         {locations.map(loc => {
           const isSelected = selectedLocation === loc.id;
           const IconComponent = loc.Icon;
@@ -95,8 +205,10 @@ export function PrimaryContext({
               key={loc.id}
               onClick={() => handleLocationClick(loc.id)}
               style={{
-                flex: 1,
+                flex: '1 1 auto',
+                minWidth: 'calc(33% - 0.5rem)',
                 padding: '0.875rem 1rem',
+                minHeight: '48px',
                 borderRadius: '0.875rem',
                 background: isSelected
                   ? `linear-gradient(135deg, ${colors.accent} 0%, ${colors.accentHover} 100%)`
@@ -130,9 +242,13 @@ export function PrimaryContext({
             <div ref={gymRef} style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowGymDropdown(!showGymDropdown)}
+                onKeyDown={handleGymKeyDown}
+                aria-haspopup="listbox"
+                aria-expanded={showGymDropdown}
                 style={{
                   width: '100%',
                   padding: '0.875rem 1rem',
+                  minHeight: '48px',
                   borderRadius: '0.875rem',
                   background: colors.cardBg,
                   border: `1.5px solid ${colors.border}`,
@@ -175,6 +291,7 @@ export function PrimaryContext({
 
               {showGymDropdown && (
                 <div
+                  role="listbox"
                   style={{
                     position: 'absolute',
                     top: 'calc(100% + 0.5rem)',
@@ -188,9 +305,14 @@ export function PrimaryContext({
                     zIndex: 100,
                   }}
                 >
-                  {gymProfiles.map((gym, idx) => (
+                  {gymProfiles.map((gym, idx) => {
+                    const isSelected = selectedGym?.id === gym.id;
+                    const isFocused = focusedGymIndex === idx;
+                    return (
                     <button
                       key={gym.id}
+                      role="option"
+                      aria-selected={isSelected}
                       onClick={() => {
                         setSelectedGym(gym);
                         setShowGymDropdown(false);
@@ -198,7 +320,8 @@ export function PrimaryContext({
                       style={{
                         width: '100%',
                         padding: '0.875rem 1rem',
-                        background: selectedGym?.id === gym.id ? colors.accentMuted : 'transparent',
+                        minHeight: '48px',
+                        background: isFocused ? colors.accentMuted : isSelected ? colors.accentMuted : 'transparent',
                         border: 'none',
                         borderBottom: idx < gymProfiles.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
                         color: colors.text,
@@ -208,6 +331,8 @@ export function PrimaryContext({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         textAlign: 'left',
+                        outline: isFocused ? `2px solid ${colors.accent}` : 'none',
+                        outlineOffset: '-2px',
                       }}
                     >
                       <div>
@@ -218,11 +343,12 @@ export function PrimaryContext({
                           {(gym.equipment_ids?.length || 0) + (gym.custom_equipment?.length || 0)} equipment items
                         </div>
                       </div>
-                      {selectedGym?.id === gym.id && (
+                      {isSelected && (
                         <CheckIcon size={18} color={colors.accent} />
                       )}
                     </button>
-                  ))}
+                    );
+                  })}
                   <button
                     onClick={() => {
                       setShowGymDropdown(false);
@@ -231,7 +357,8 @@ export function PrimaryContext({
                     style={{
                       width: '100%',
                       padding: '0.75rem 1rem',
-                      background: 'transparent',
+                      minHeight: '48px',
+                      background: focusedGymIndex === gymProfiles.length ? colors.accentMuted : 'transparent',
                       borderTop: `1px solid ${colors.borderSubtle}`,
                       border: 'none',
                       color: colors.accent,
@@ -242,6 +369,8 @@ export function PrimaryContext({
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '0.375rem',
+                      outline: focusedGymIndex === gymProfiles.length ? `2px solid ${colors.accent}` : 'none',
+                      outlineOffset: '-2px',
                     }}
                   >
                     <PlusIcon size={16} color={colors.accent} />
@@ -282,8 +411,12 @@ export function PrimaryContext({
         <div ref={durationRef} style={{ position: 'relative' }}>
           <button
             onClick={() => setShowDurationDropdown(!showDurationDropdown)}
+            onKeyDown={handleDurationKeyDown}
+            aria-haspopup="listbox"
+            aria-expanded={showDurationDropdown}
             style={{
               padding: '0.625rem 1rem',
+              minHeight: '44px',
               borderRadius: '0.75rem',
               background: colors.cardBg,
               border: `1.5px solid ${colors.border}`,
@@ -313,6 +446,7 @@ export function PrimaryContext({
 
           {showDurationDropdown && (
             <div
+              role="listbox"
               style={{
                 position: 'absolute',
                 top: 'calc(100% + 0.5rem)',
@@ -326,9 +460,14 @@ export function PrimaryContext({
                 minWidth: '120px',
               }}
             >
-              {durations.map((mins, idx) => (
+              {durations.map((mins, idx) => {
+                const isSelected = duration === mins;
+                const isFocused = focusedDurationIndex === idx;
+                return (
                 <button
                   key={mins}
+                  role="option"
+                  aria-selected={isSelected}
                   onClick={() => {
                     setDuration(mins);
                     setShowDurationDropdown(false);
@@ -336,23 +475,27 @@ export function PrimaryContext({
                   style={{
                     width: '100%',
                     padding: '0.75rem 1rem',
-                    background: duration === mins ? colors.accentMuted : 'transparent',
+                    minHeight: '44px',
+                    background: isFocused ? colors.accentMuted : isSelected ? colors.accentMuted : 'transparent',
                     border: 'none',
                     borderBottom: idx < durations.length - 1 ? `1px solid ${colors.borderSubtle}` : 'none',
-                    color: duration === mins ? colors.accent : colors.text,
+                    color: isSelected ? colors.accent : colors.text,
                     fontSize: '0.9375rem',
-                    fontWeight: duration === mins ? 600 : 500,
+                    fontWeight: isSelected ? 600 : 500,
                     cursor: 'pointer',
                     textAlign: 'left',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    outline: isFocused ? `2px solid ${colors.accent}` : 'none',
+                    outlineOffset: '-2px',
                   }}
                 >
                   <span>{mins} min</span>
-                  {duration === mins && <CheckIcon size={16} color={colors.accent} />}
+                  {isSelected && <CheckIcon size={16} color={colors.accent} />}
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

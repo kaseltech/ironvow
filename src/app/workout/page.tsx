@@ -1065,13 +1065,20 @@ export default function WorkoutPage() {
                 onClick={skipRest}
                 style={{
                   marginTop: '2rem',
-                  background: 'transparent',
-                  border: '2px solid rgba(201, 167, 90, 0.3)',
-                  color: colors.accent,
-                  padding: '1rem 2rem',
+                  background: `linear-gradient(135deg, ${colors.accent}, ${colors.accentHover})`,
+                  border: 'none',
+                  color: colors.bg,
+                  padding: '1rem 2.5rem',
                   borderRadius: '0.75rem',
                   fontSize: '1rem',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(201, 167, 90, 0.3)',
+                  transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+                  minHeight: '48px',
                 }}
+                onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
+                onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
               >
                 Skip Rest →
               </button>
@@ -1085,9 +1092,12 @@ export default function WorkoutPage() {
                   <h1
                     style={{
                       fontFamily: 'var(--font-libre-baskerville)',
-                      fontSize: '1.75rem',
+                      fontSize: 'clamp(1.25rem, 5vw, 1.75rem)',
                       color: colors.text,
                       marginBottom: '0',
+                      wordBreak: 'break-word',
+                      maxWidth: '100%',
+                      textAlign: 'center',
                     }}
                   >
                     {exercise.name}
